@@ -1,0 +1,151 @@
+.b-edit-account {
+  padding: 78px 0 0;
+
+  @include media("<desktop") {
+    padding: 60px 0 0;
+  }
+
+  @include media("<tablet") {
+    padding: 40px 0 4px;
+  }
+
+  h1 {
+    text-align: center;
+  }
+
+  h2 {
+    margin: 0 0 25px;
+  }
+
+  .b-settings {
+    padding: 36px 25px 37px;
+    text-align: center;
+
+    @include media("<desktop") {
+      padding: 25px 5px 54px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 4px;
+    }
+
+    .col {
+      display: inline-block;
+      vertical-align: top;
+      margin: 0 50px;
+      width: 300px;
+
+      @include media("<desktop") {
+        margin: 0 20px;
+        width: 278px;
+      }
+
+      @include media("<tablet") {
+        margin: 0;
+        width: auto;
+        display: block;
+      }
+
+      /* one item */
+      &:first-child:nth-last-child(1) {
+        width: 524px;
+        margin: 0 auto;
+        display: block;
+
+        h2 {
+          text-align: center;
+        }
+
+        .b-form {
+          padding: 0 33px;
+        }
+
+        .form-item {
+          margin-left: 0;
+          margin-right: 0;
+        }
+
+        .form-actions {
+          text-align: center;
+        }
+
+        @include media("<tablet") {
+          width: auto;
+
+          .b-form {
+            padding: 0;
+          }
+        }
+      }
+    }
+  }
+
+  .b-newsl-settings {
+    text-align: left;
+
+    @include media("<tablet") {
+      text-align: center;
+    }
+
+    .form-item {
+      margin-left: 24px;
+      margin-right: 24px;
+    }
+
+    .form-actions {
+      text-align: left;
+      padding-top: 64px;
+
+      @include media("<tablet") {
+        text-align: center;
+      }
+
+      .btn {
+        margin-left: 0;
+        margin-right: 0;
+      }
+    }
+
+    .w-btn {
+      text-align: center;
+      padding-top: 4px;
+
+      @include media("<desktop") {
+        padding-top: 0;
+      }
+
+      .unsubscribe-link {
+        text-decoration: none;
+        font-size: 11px;
+        letter-spacing: 1px;
+        line-height: 18px;
+
+        .no-touchevents &:hover,
+        .no-js &:hover{
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  .b-resricted {
+    p {
+      padding: 0 0 18px;
+    }
+
+    .form-type-textfield {
+      padding-left: 60px;
+      padding-right: 60px;
+      text-align: center;
+
+      label {
+        width: 100%;
+      }
+    }
+
+    .form-actions {
+      padding-top: 47px;
+    }
+
+  }
+}

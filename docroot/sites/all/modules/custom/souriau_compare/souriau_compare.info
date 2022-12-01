@@ -1,0 +1,4 @@
+name = Souriau Compare Part Numbers
+description = Provides Compare Part Numbers.
+core = 7.x
+package = SOURIAU

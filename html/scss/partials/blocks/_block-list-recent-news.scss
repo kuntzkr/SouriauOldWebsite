@@ -1,0 +1,120 @@
+.b-list-recent-news {
+  padding: 0 0 78px;
+
+  @include media("<desktop") {
+    padding: 0 0 32px;
+  }
+
+  @include media("<tablet") {
+    padding: 0;
+    background: $white;
+    border-bottom: 1px solid #dbdbdb;
+  }
+
+  .news-wrapper {
+    margin: 0 -10px;
+    @extend .clearfix;
+
+    @include media("<desktop") {
+      margin: 0 -7px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 -20px;
+    }
+  }
+}
+
+.item-recent-news {
+  width: 50%;
+  margin: 0 0 22px 0;
+  padding: 0 10px;
+  float: left;
+
+  @include media("<desktop") {
+    padding: 0 7px;
+    margin: 0 0 13px;
+  }
+
+  @include media("<tablet") {
+    float: none;
+    padding: 0;
+    width: 100%;
+  }
+
+  .wrapper {
+    border-top: 4px solid $orange;
+    padding: 9px 0 0;
+    display: block;
+    background: #FFF;
+  }
+
+  .pic {
+    display: block;
+    width: 100%;
+    margin-top: -9px;
+
+    img {
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  .b-content-wrapper {
+    padding: 34px 35px 54px;
+
+    @include media("<desktop") {
+      padding: 34px 35px 50px;
+    }
+
+    @include media("<tablet") {
+      padding: 45px 35px 50px;
+    }
+  }
+
+  .w-tags {
+    margin: 0 0 11px;
+
+    @include media("<tablet") {
+      margin: 0 0 21px;
+    }
+  }
+
+  p {
+    padding: 0 0 8px;
+
+    @include media("<desktop") {
+      padding: 0 0 16px;
+    }
+  }
+
+  h3 {
+    font-size: 32px;
+    line-height: 42px;
+    margin: 0 0 16px;
+
+    @include media("<tablet") {
+      font-size: 20px;
+      line-height: 30px;
+      margin: 0 0 30px;
+    }
+
+    a {
+      display: block;
+      @include transition(opacity 0.3s ease-in-out);
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: none;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .b-date {
+    color: $grey;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+  }
+}

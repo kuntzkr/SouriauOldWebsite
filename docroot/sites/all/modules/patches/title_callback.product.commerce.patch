@@ -1,0 +1,15 @@
+diff --git a/modules/product/commerce_product_ui.module b/modules/product/commerce_product_ui.module
+index 6f42f24..1a42805 100644
+--- a/modules/product/commerce_product_ui.module
++++ b/modules/product/commerce_product_ui.module
+@@ -126,7 +126,9 @@ function commerce_product_ui_menu() {
+  *   A page title of the format "Product: [SKU]".
+  */
+ function commerce_product_ui_product_title($product) {
+-  return t('Product: @sku', array('@sku' => $product->sku));
++  if (!empty($product)) {
++    return t('Product: @sku', array('@sku' => $product->sku));
++  }
+ }
+ /**
+  * Access callback: determines if the user can create any type of product.

@@ -1,0 +1,13 @@
+diff --git a/media_feeds.module b/media_feeds.module
+index c034a75..edb4122 100644
+--- a/media_feeds.module
++++ b/media_feeds.module
+@@ -61,7 +61,7 @@ function media_feeds_feeds_processor_targets_alter(&$targets, $entity_type, $bun
+  */
+ function media_feeds_set_target($source, $entity, $target, $values, $config = array()) {
+   if (empty($values)) {
+-    return;
++    $values = [];
+   }
+ 
+   if (!is_array($values)) {

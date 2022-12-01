@@ -1,0 +1,534 @@
+<?php
+
+/**
+ * @file
+ * Souriau Ecommerce module.
+ */
+
+include_once 'souriau_eco.inc';
+include_once 'souriau_eco.form.inc';
+include_once 'includes/souriau_eco.erp_sales_order.inc';
+include_once 'souriau_eco.mail.inc';
+
+/**
+ * Implements hook_permission().
+ */
+function souriau_eco_permission() {
+  return [
+    'bypass_access_order_history' => [
+      'title' => t('Access to order history'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_eco_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' || $module == 'ctools' || $module == 'page_manager') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_css_alter().
+ */
+function souriau_eco_css_alter(&$css) {
+  foreach ($css as $key => $value) {
+    if (strpos($key, 'addressfield.css')) {
+      unset($css[$key]);
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_eco_menu() {
+  $items = [];
+
+  $items['souriau/ajax/address/cancel'] = [
+    'page callback' => 'souriau_eco_address_cancel_callback',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/address/delete/confirm/%commerce_customer_profile'] = [
+    'page callback' => 'souriau_eco_address_delete_confirm_callback',
+    'page arguments' => [5],
+    'access callback' => 'souriau_eco_address_delete_confirm_access',
+    'access arguments' => [5],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/address/create/form'] = [
+    'page callback' => 'souriau_eco_address_edit_form_callback',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/address/edit/form/%commerce_customer_profile'] = [
+    'page callback' => 'souriau_eco_address_edit_form_callback',
+    'page arguments' => [5],
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/cart/%ctools_js/%commerce_line_item/%commerce_order/delete'] = [
+    'title' => 'Contact',
+    'page callback' => 'souriau_eco_confirm_detete_callback',
+    'page arguments' => [3, 4, 5],
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/order/%commerce_product/%/sample/add'] = [
+    'title' => 'Contact',
+    'page callback' => 'souriau_eco_sample_add_callback',
+    'page arguments' => [3, 4],
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/mini-cart/%ctools_js/%commerce_line_item/%commerce_order/delete'] = [
+    'title' => 'Delete',
+    'page callback' => 'souriau_eco_minicart_confirm_delete_callback',
+    'page arguments' => [3, 4, 5],
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['souriau/ajax/mini-cart'] = [
+    'title' => 'Minicart',
+    'page callback' => 'souriau_eco_minicart_load',
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_eco.pages.inc',
+  ];
+
+  $items['admin/souriau-site-settings/souriau-ecommerce'] = [
+    'title' => 'Commerce settings',
+    'description' => '',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => ['administer souriau site settings'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_eco_form_site_settings_souriau_ecommerce'],
+    'file' => 'souriau_eco.form.inc',
+  ];
+
+  return $items;
+}
+
+/**
+ * Is sku in order checker.
+ *
+ * @param object $sku
+ *   Commerce product.
+ * @param object $order
+ *   Commerce order.
+ *
+ * @return bool
+ *   TRUE if sku in order FALSE otherwise.
+ */
+function souriau_eco_is_sku_in_order($sku, $order) {
+  if (empty($sku->sku) || empty($order)) {
+    // Nothing to do here.
+    watchdog('souriau_eco', 'Invalid data given in souriau_eco_is_sku_in_order().', [], WATCHDOG_WARNING);
+    return FALSE;
+  }
+
+  try {
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+    foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
+      if (!in_array($line_item_wrapper->type->value(), commerce_product_line_item_types())) {
+        continue;
+      }
+      // Check if there is already the same PN in this Line item.
+      if ($sku->product_id == $line_item_wrapper->commerce_product->raw()) {
+        return TRUE;
+      }
+    }
+  }
+  catch (Exception $e) {
+    watchdog('souriau_eco', 'Exception %message in !function.', [
+      '%message' => $e->getMessage(),
+      '!function' => __FUNCTION__,
+    ], WATCHDOG_WARNING);
+  }
+
+  return FALSE;
+}
+
+/**
+ * SKU previously ordered count.
+ *
+ * @param object $sku
+ *   Commerce product.
+ * @param int $period
+ *   Order Delay period in sec.
+ * @param int $uid
+ *   Order owner.
+ *
+ * @return int
+ *   count of total orders of an sku.
+ */
+function souriau_eco_sku_sample_previously_ordered_count($sku, $period, $uid) {
+  $ordered_count = 0;
+  $time = REQUEST_TIME - $period;
+  $statuses = [
+    'checkout_complete',
+    'completed',
+    'pending',
+    'processing',
+    'shipped'
+  ];
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'commerce_order')
+    ->propertyCondition('type', 'samples_order')
+    ->propertyCondition('created', $time, '>')
+    ->propertyCondition('uid', $uid)
+    ->propertyCondition('status', $statuses, 'IN');
+
+  $result = $query->execute();
+  if (isset($result['commerce_order'])) {
+    $orders = entity_load('commerce_order', array_keys($result['commerce_order']));
+    foreach ($orders as $order) {
+      if (souriau_eco_is_sku_in_order($sku, $order)) {
+        $ordered_count += 1;
+      }
+    }
+  }
+  return $ordered_count;
+}
+
+/**
+ * Cart summary delete submit.
+ */
+function souriau_eco_line_item_delete_submit(&$form, &$form_state) {
+  // Load the order without refreshing it.
+  // Prevent trigerring Rules multiple times before the order is actually updated.
+  $order = $form_state['order'];
+  $order_id = $order->order_id;
+  $line_item = $form_state['line_item'];
+  $refreshed = &drupal_static('commerce_cart_commerce_order_load', array());
+  if (!isset($refreshed[$order_id])) {
+    $refreshed[$order_id] = TRUE;
+  }
+
+  // Actually delete Line_item from the Order.
+  commerce_cart_order_product_line_item_delete($order, $line_item->line_item_id);
+
+  // Update the mini-cart contents after the line_item has been deleted.
+  module_load_include('inc', 'souriau_common', 'includes/souriau_common.minicart');
+  $cart_content = souriau_common_minicart_header_build_cart();
+  $cart_data = $cart_content['link_path'];
+  $minicart_cart_content = souriau_common_header_build_popup_cart();
+
+  // Updating minicart contents.
+  $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+  $form_state['ajax_commands'][] = ajax_command_replace('#header-cart-count', $cart_data);
+  $form_state['ajax_commands'][] = ajax_command_replace('.w-popup-cart', $minicart_cart_content);
+
+  // Check referer to see if user is on checkout page.
+  // If in checkout page replace the cart contents.
+  $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+  if (strpos($referer, '/checkout') !== FALSE) {
+    // Need to Update the Main Cart form as well.
+    module_load_include('inc', 'souriau_eco', 'plugins/content_types/cart_view/cart_view');
+    $maincart_contents = souriau_eco_cart_view_content_type_render();
+    $form_state['ajax_commands'][] = ajax_command_replace('.b-summary-cart', $maincart_contents->content);
+  }
+}
+
+/**
+ * Callback for form cancel.
+ */
+function souriau_eco_address_delete_confirm_access($commerce_customer_profile) {
+  global $user;
+
+  return ($user->uid == $commerce_customer_profile->uid);
+}
+
+/**
+ * Implements hook_date_formats().
+ */
+function souriau_eco_date_formats() {
+  return [
+    [
+      'type' => 'souriau_date_short',
+      'format' => 'm-d-Y',
+      'locales' => [],
+    ],
+    [
+      'type' => 'souriau_date_short_with_time',
+      'format' => 'm-d-Y H:i',
+      'locales' => [],
+    ],
+    [
+      'type' => 'souriau_date_short_slash',
+      'format' => 'm/d/Y',
+      'locales' => [],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_date_format_types().
+ */
+function souriau_eco_date_format_types() {
+  return [
+    'souriau_date_short' => t('Souriau date format short', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'souriau_date_short_with_time' => t('Souriau date format short with time', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'souriau_date_short_slash' => t('Souriau date format short with slashes delimeter', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+  ];
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function souriau_eco_entity_insert($entity, $type) {
+  souriau_eco_entity_update($entity, $type);
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function souriau_eco_entity_update($entity, $type) {
+  if ($type == 'commerce_product' || $entity->type == 'sku') {
+    // Make the 3d file published on update.
+    $stp = field_get_items('commerce_product', $entity, 'field_sku_3d_model');
+    if (!empty($stp[0])) {
+      $file = file_load($stp[0]['fid']);
+      if ($file->published != FILE_PUBLISHED) {
+        $file->published = FILE_PUBLISHED;
+        file_save($file);
+      }
+    }
+  }
+  if ($type != 'commerce_order' || $entity->type != 'samples_order') {
+    return;
+  }
+  // Sample order notify for EU and ROW sample orders.
+  if (!drupal_is_cli() && !souriau_eco_is_mouser_order($entity) && $entity->status == 'completed' && $entity->original->status != 'completed') {
+    _souriau_eco_commerce_order_samples_order_notify($entity);
+  }
+  // Sample order notify for US/CA/MX sample orders.
+  elseif ((drupal_is_cli() || souriau_eco_is_mouser_order($entity)) && $entity->original->status != $entity->status && $entity->status != 'canceled') {
+    _souriau_eco_commerce_order_samples_order_notify_mouser_orders($entity);
+  }
+  // For both EU, ROW and US/CA/MX sample orders.
+  elseif (($entity->status == 'canceled' && $entity->original->status != 'canceled')) {
+    _souriau_eco_commerce_order_samples_order_notify($entity);
+  }
+}
+
+/**
+ * Helper function to check if an order is mouser order or worldwide.
+ */
+function souriau_eco_is_mouser_order($entity) {
+  global $language;
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $entity)->language($language->language);
+  if (!isset($order_wrapper->commerce_customer_shipping->commerce_customer_address)) {
+    return;
+  }
+  $shipping_info = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
+
+  $settings = domain_conf_variable_get(SOURIAU_COMMON_DOMAIN_CENTRAL, 'souriau_site_settings_souriau_ecommerce');
+  $countries = empty($settings['stock']['shipping_accepted_countries']) ? 'CA|MX|US|CN' : $settings['stock']['shipping_accepted_countries'];
+  $shipping_accepted_countries = explode('|', $countries);
+
+  return (in_array($shipping_info['country'], $shipping_accepted_countries));
+}
+
+/**
+ * Samples orders - Notify users and CSR.
+ */
+function _souriau_eco_commerce_order_samples_order_notify_mouser_orders($order) {
+  if (!in_array($order->status, ['shipped', 'pending', 'completed'])) {
+    return;
+  }
+
+  global $language;
+  if ($order->status == 'pending') {
+    $mail_key = 'checkout_waiting_sample_notify_user';
+    $mail_key_admin = 'checkout_waiting_sample_notify_csr';
+  }
+  elseif ($order->status == 'completed') {
+    $mail_key = 'checkout_processing_started_sample_notify';
+    $mail_key_admin = 'checkout_processing_started_sample_notify_csr';
+  }
+  elseif ($order->status == 'shipped') {
+    $mail_key = 'checkout_shipment_started_sample_notify';
+    $mail_key_admin = 'checkout_shipment_started_sample_notify_csr';
+  }
+  // Notify users.
+  $params = ['commerce-order' => $order];
+  $user = user_load($order->uid);
+  if (!empty($mail_key)) {
+    drupal_mail('souriau_eco', $mail_key, $user->mail, user_preferred_language($user), $params);
+  }
+
+  // Notify Customer Service.
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order)->language($language->language);
+  $shipping_info = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
+  $csr = souriau_common_get_csr_for_country($shipping_info['country']);
+  $csr = str_replace(' ', '', $csr);
+  if (!empty($csr) && !empty($mail_key_admin)) {
+    $message = drupal_mail('souriau_eco', $mail_key_admin, trim($csr), $language, $params);
+  }
+}
+
+/**
+ * Samples orders. Notify Admins.
+ *
+ * @param object $order
+ *   Commerce Order.
+ */
+function _souriau_eco_commerce_order_samples_order_notify($order) {
+  if ($order->status == 'canceled') {
+    $params = ['commerce-order' => $order];
+    $user = user_load($order->uid);
+    drupal_mail('souriau_eco', 'checkout_completed_cancelation', $user->mail, user_preferred_language($user), $params);
+    return;
+  }
+
+  // Notify only EU and ROW users.
+  $params = ['commerce-order' => $order];
+  $user = user_load($order->uid);
+  drupal_mail('souriau_eco', 'checkout_completed_sample_notify_row_usr', $user->mail, user_preferred_language($user), $params);
+
+  // Notify Customer Service.
+  global $language;
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order)->language($language->language);
+  $shipping_info = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
+  $params = ['commerce-order' => $order];
+  $csr = souriau_common_get_csr_for_country($shipping_info['country']);
+  $csr = str_replace(' ', '', $csr);
+  if (!empty($csr)) {
+    drupal_mail('souriau_eco', 'checkout_completed_sample_notify_row_usr', trim($csr), $language, $params);
+  }
+}
+
+/**
+ * Helper function for samples order checkout complete. Notify Admin Users.
+ *
+ * @see souriau_eco_commerce_checkout_complete()
+ */
+function _souriau_eco_commerce_order_samples_order_notify_admins($order, $site_commerce_settings) {
+  global $language;
+  $to_users = [];
+  foreach ($site_commerce_settings['orders']['notify']['users'] as $user_name) {
+    $user = user_load_by_name($user_name);
+    if (empty($user)) {
+      continue;
+    }
+    $to_users[] = $user->mail;
+  }
+  $to_users = implode(',', $to_users);
+  $to_users = str_replace(' ', '', $to_users);
+  $params = ['commerce-order' => $order];
+  drupal_mail('souriau_eco', 'checkout_completed_errors', trim($to_users), $language, $params);
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_eco_preprocess_html(&$variables) {
+  if (drupal_match_path(current_path(), 'checkout/*')) {
+    switch (arg(3)) {
+      case 'shipping':
+        $new_title = t('Shipping address', [], ['context' => SOURIAU_COMMON_T_COMMERCE]);
+        break;
+
+      case 'complete':
+        $new_title = t('Order confirmation', [], ['context' => SOURIAU_COMMON_T_COMMERCE]);
+        break;
+
+      default:
+        $new_title = t('Cart', [], ['context' => SOURIAU_COMMON_T_COMMERCE]);
+        break;
+    }
+    $variables['head_title'] = $new_title . ' ' . $variables['head_title'];
+  }
+}
+
+/**
+ * Callback for the rules action which creates the javascript.
+ *
+ * Uses the $order and stores the script in the session to inject it using
+ * hook_page_build on the next page request.
+ *
+ * @param object $order
+ *   The order object.
+ */
+function souriau_eco_gtm_send_order($order) {
+  // Add the javascript only when we are on the order complete page.
+  $script = souriau_eco_create_gtm_script($order);
+  $_SESSION['souriau_eco_gtm_tag_manager'] = $script;
+}
+
+/**
+ * Implements hook_page_build().
+ */
+function souriau_eco_page_build(&$page) {
+
+  if (!empty($_SESSION['souriau_eco_gtm_tag_manager'])) {
+    // Data escaped via drupal_json_encode().
+    $script = $_SESSION['souriau_eco_gtm_tag_manager'];
+    $page['page_top']['#attached']['js'][] = array(
+      'type' => 'inline',
+      'data' => $script,
+    );
+    unset($_SESSION['souriau_eco_gtm_tag_manager']);
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ *
+ * Used to add current user(sample_manager) country to match against shipping country.
+ */
+function souriau_eco_views_query_alter(&$view, &$query) {
+  if ($view->name !== 'souriau_eco_erp_orders') {
+    return;
+  }
+  // Remove the condition for admin users.
+  if (user_access('administer site configuration')) {
+    unset($query->where[1]['conditions'][0]);
+    return;
+  }
+  $views = ['page', 'page_1', 'views_data_export_1'];
+  if (in_array($view->current_display, $views)) {
+    global $user;
+    $user = user_load($user->uid);
+    $wrapper = entity_metadata_wrapper('user', $user);
+    $query->where[1]['conditions'][0]['value'] = $wrapper->field_mouser_responsible_countri->value();
+  }
+}
+
+/**
+ * Helper function to clean decimal number to avoid trailing zeros.
+ */
+function souriau_eco_clean_decimal($decimal) {
+  $position = strpos($decimal, '.');
+  if ($position === FALSE) {
+    return $decimal;
+  }
+  else {
+    return rtrim(rtrim($decimal, '0'), '.');
+  }
+}

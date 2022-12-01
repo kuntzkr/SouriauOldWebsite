@@ -1,0 +1,171 @@
+.b-sub-categories {
+  background: $grey2;
+  padding: 20px 0 71px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  @include clearfix();
+
+  @include media("<desktop") {
+    padding-bottom: 60px;
+  }
+
+  @include media("<tablet") {
+    padding: 20px 0 20px;
+  }
+
+  .b-tabs & {
+    padding-bottom: 50px;
+
+    @include media("<desktop") {
+      padding-bottom: 40px;
+    }
+
+    @include media("<tablet") {
+      padding-top: 0;
+    }
+  }
+
+  .items {
+    margin: 0 -10px;
+
+    @include media("<desktop") {
+      margin: 0 -7px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 -10px;
+    }
+  }
+
+  .item {
+    background: #FFF;
+    float: left;
+    width: 221px;
+    height: 304px;
+    overflow: hidden;
+    box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+    text-align: center;
+    position: relative;
+    padding: 25px 15px;
+    margin: 0 9px 19px 10px;
+    @include box-sizing(border-box);
+    text-decoration: none;
+
+    @include media("<desktop") {
+      width: 233px;
+      height: 304px;
+      margin: 0 7px 14px 7px;
+    }
+
+    @include media("<tablet") {
+      width: 100%;
+      display: table;
+      float: none;
+      min-height: 116px;
+      height: auto;
+      margin: 0 0 16px;
+    }
+
+    &:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0;
+      background: #003865;
+      z-index: 1;
+      @include transition(opacity 0.3s ease-in-out);
+      visibility: hidden;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover {
+      .text {
+        h5 {color: #FFF};
+      }
+
+      .view-more {
+        display: inline-block;
+      }
+
+      &:before {
+        opacity: 0.9;
+        visibility: visible;
+      }
+    }
+  }
+
+  .b-pic {
+    display: block;
+    height: 146px;
+    margin: 0 0 23px;
+
+    img {
+      display: inline-block;
+    }
+
+    @include media("<tablet") {
+      float: left;
+      width: 92px;
+      height: 66px;
+      margin: 0 24px 0 0;
+    }
+  }
+
+  .pic {
+    height: 100%;
+    width: 100%;
+
+    img {
+      max-height: 100%;
+    }
+  }
+
+  .title {
+    height: 90px;
+    overflow: hidden;
+    padding: 0 25px;
+
+    @include media("<desktop") {
+      padding: 0 30px;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+      height: auto;
+    }
+  }
+
+  h5 {
+    @include transition(color 0.3s ease-in-out);
+    @include media("<tablet") {
+      font-size: 20px;
+      line-height: 24px;
+      margin: 0;
+    }
+  }
+
+  .text {
+    position: absolute;
+    bottom: 25px;
+    left: 0;
+    right: 0;
+    z-index: 2;
+
+    @include media("<tablet") {
+      position: static;
+      overflow: hidden;
+      vertical-align: middle;
+      display: table-cell;
+      width: 100%;
+      text-align: left;
+    }
+  }
+
+  .view-more {
+    display: none;
+    margin: 21px 0 46px;
+  }
+}

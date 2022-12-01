@@ -1,0 +1,51 @@
+diff --git a/publish_button.module b/publish_button.module
+index 3315427..dff1e94 100644
+--- a/publish_button.module
++++ b/publish_button.module
+@@ -205,9 +205,10 @@ function publish_button_permission() {
+  */
+ function _publish_button_publish_permissions($type) {
+   global $user;
+-  if (user_access('publish button publish any ' . $type) ||
+-      user_access('publish button publish own ' . $type) ||
+-      user_access('publish button publish any content types') == TRUE) {
++  if (user_access('publish to production edition') ||
++    user_access('publish button publish any ' . $type) ||
++    user_access('publish button publish own ' . $type) ||
++    user_access('publish button publish any content types') == TRUE) {
+     return TRUE;
+   }
+   else {
+@@ -220,9 +221,10 @@ function _publish_button_publish_permissions($type) {
+  */
+ function _publish_button_unpublish_permissions($type) {
+   global $user;
+-  if (user_access('publish button unpublish any ' . $type) ||
+-      user_access('publish button unpublish own ' . $type) ||
+-      user_access('publish button unpublish any content types') == TRUE) {
++  if (user_access('unpublish production editions') ||
++    user_access('publish button unpublish any ' . $type) ||
++    user_access('publish button unpublish own ' . $type) ||
++    user_access('publish button unpublish any content types') == TRUE) {
+     return TRUE;
+   }
+   else {
+diff --git a/publish_button_views_handler_node_link.inc b/publish_button_views_handler_node_link.inc
+index 2de8ecd..f54c2ca 100644
+--- a/publish_button_views_handler_node_link.inc
++++ b/publish_button_views_handler_node_link.inc
+@@ -63,13 +63,7 @@ class publish_button_views_handler_node_link extends views_handler_field_node_li
+         $this->options['alter']['query'] = drupal_get_destination();
+         $this->options['alter']['query']['csrf_token'] = $csrf_token;
+         $text = empty($this->options[$status]) ? t($status) : t($this->options[$status]);
+-        $publish_button = array(
+-          '#type' => 'button',
+-          '#access' => TRUE,
+-          '#value' =>  $text ,
+-          '#weight' => '30',
+-        );
+-        return $publish_button;
++        return $text;
+       }
+     }
+   }

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Compare Page Feature feature.
+ */
+
+include_once 'souriau_compare_page_feature.features.inc';

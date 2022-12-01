@@ -1,0 +1,218 @@
+.b-address-book {
+  padding: 0 0 48px;
+
+  @include media("<desktop") {
+    padding: 16px 0 78px;
+  }
+
+  @include media("<tablet") {
+    padding: 6px 0 14px;
+  }
+
+  h1 {
+    text-align: center;
+    margin: 0 0 79px;
+
+    @include media("<desktop") {
+      margin: 0 0 34px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 38px;
+    }
+  }
+
+  .b-create-new-address {
+    font-size: 0;
+    line-height: 0;
+
+    a {
+      display: inline-block;
+      color: #003865;
+      font-size: 11px;
+      letter-spacing: 1px;
+      line-height: 18px;
+      text-decoration: none;
+      margin: 0 0 30px;
+      text-transform: uppercase;
+
+      &.hide-btn {
+        margin-top: -150px;
+        margin-bottom: 0;
+        line-height: 0;
+      }
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.b-list-address {
+  width: 780px;
+  margin: 0 auto 46px;
+  @include clearfix();
+
+  @include media("<desktop") {
+    width: auto;
+    margin: 0 0 49px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 -8px 49px;
+  }
+
+  .b-shipping-info & {
+    margin: 0 auto 25px;
+
+    @include media("<tablet") {
+      margin: 0 -8px 11px
+    }
+  }
+
+  .b-row {
+    @include clearfix();
+    width: 100%;
+  }
+
+  .b-title {
+    color: $grey;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    text-align: center;
+    margin: 0 0 27px;
+
+    @include media("<tablet") {
+      margin: 0 0 20px;
+    }
+  }
+}
+
+.b-address-item {
+  text-align: left;
+  width: 380px;
+  margin: 0 0 20px;
+  min-height: 222px;
+  border: 1px solid #e5e5e5;
+  display: inline-block;
+  @include box-sizing(border-box);
+  padding: 37px 70px 37px 108px;
+  position: relative;
+
+  @include media("<desktop") {
+    width: 357px;
+    padding: 37px 70px 37px 89px;
+  }
+
+  @include media("<tablet") {
+    width: 100%;
+    min-height: 1px;
+    padding: 29px 70px 32px 23px;
+    margin: 0 0 13px;
+    float: none;
+  }
+
+  .b-shipping-info & {
+    padding-left: 120px;
+
+    @include media("<desktop") {
+      padding-left: 109px;
+    }
+
+    @include media("<tablet") {
+      padding-left: 75px;
+      padding-right: 45px;
+    }
+  }
+
+  .b-check {
+    position: absolute;
+    left: 39px;
+    top: 36px;
+
+    @include media("<desktop") {
+      left: 30px;
+    }
+
+    @include media("<tablet") {
+      left: 26px;
+      top: 31px;
+    }
+
+    .ajax-progress {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .throbber {
+      margin: 0;
+
+      @include media("<tablet") {
+        width: 55px;
+      }
+    }
+
+    .form-type-radio {
+      .jcf-radio {
+        left: 0;
+      }
+
+      label {
+        padding-left: 24px;
+      }
+    }
+  }
+
+  p {
+    padding: 0;
+  }
+
+  .b-btns-edit {
+    position: absolute;
+    right: 6px;
+    top: 14px;
+    display: none;
+
+    @include media("<desktop") {
+      right: 2px;
+    }
+
+    @include media("<tablet") {
+      right: 0;
+      top: 12px;
+    }
+
+    .b-shipping-info & {
+      @include media("<desktop") {
+        right: 10px;
+      }
+
+      @include media("<tablet") {
+        top: 7px;
+        right: 2px;
+      }
+    }
+
+    a {
+      float: left;
+      margin-right: 8px;
+    }
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    .b-btns-edit {
+      display: block;
+    }
+  }
+
+  .touch & {
+    .b-btns-edit {display: block;}
+  }
+}
+

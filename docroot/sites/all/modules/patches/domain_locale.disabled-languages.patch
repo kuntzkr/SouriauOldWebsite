@@ -1,0 +1,36 @@
+diff --git a/domain_locale.module b/domain_locale.module
+index 65244e2..ea4e4d2 100644
+--- a/domain_locale.module
++++ b/domain_locale.module
+@@ -106,9 +106,9 @@ function domain_locale_domain_delete($domain, $form_values = array()) {
+  *
+  * - Insert domain locale entries for the newly inserted domain.
+  */
+-function domain_locale_domain_insert($domain) {
+-  domain_locale_restore_default($domain['domain_id']);
+-}
++// function domain_locale_domain_insert($domain) {
++//   domain_locale_restore_default($domain['domain_id']);
++// }
+ 
+ /**
+  * Implements hook_domain_warnings_alter().
+@@ -289,12 +289,12 @@ function domain_locale_insert_domain($domain_id, $params = array()) {
+     }
+   }
+ 
+-  // Make all languages enabled under the hood
+-  db_update('languages')
+-    ->fields(array(
+-      'enabled' => 1,
+-    ))
+-    -> execute();
++  // // Make all languages enabled under the hood
++  // db_update('languages')
++  //   ->fields(array(
++  //     'enabled' => 1,
++  //   ))
++  //   -> execute();
+ }
+ 
+ /**

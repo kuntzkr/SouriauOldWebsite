@@ -1,0 +1,190 @@
+.b-product-item {
+  background: $white;
+  margin: 0 0 17px;
+  text-align: left;
+  padding: 10px 35px 10px 10px;
+  box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+
+  @include media("<desktop") {
+    padding: 8px 24px 8px 10px;
+  }
+
+  @include media("<tablet") {
+    padding: 11px 15px;
+    margin: 0 -8px 9px;
+  }
+
+  @extend .clearfix;
+
+  .pic {
+    float: left;
+    width: 192px;
+    margin-right: 12px;
+    overflow: hidden;
+    min-height: 30px;
+
+    @include media("<tablet") {
+      display: none;
+    }
+  }
+
+  h3 {
+    color: $blue2;
+    font-family: $avenir-std;
+    font-size: 24px;
+    line-height: 36px;
+    margin: 0 0 -4px;
+
+    a {
+      color: inherit;
+      @include transition(opacity 0.3s ease-in-out);
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        opacity: 0.8;
+        text-decoration: none;
+      }
+    }
+
+    @include media("<tablet") {
+      font-size: 16px;
+    }
+  }
+
+  .b-part-numb {
+    color: $orange;
+    font-family: $avenir-std;
+    font-size: 16px;
+    line-height: 24px;
+    margin: 9px 0 0;
+    width: 190px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    text-align: right;
+
+    @include media("<tablet") {
+      float: left;
+      width: auto;
+      text-align: left;
+      margin: 0 10px 0 0;
+    }
+  }
+
+  .b-add-info {
+    p {
+      padding: 0 0 13px;
+
+      @include media("<tablet") {
+        padding: 0 0 8px;
+      }
+    }
+  }
+
+  .b-info {
+    overflow: hidden;
+    padding: 14px 0 0;
+
+    @include media("<desktop") {
+      padding: 27px 0 0;
+      overflow: visible;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 11px;
+
+      @include clearfix();
+    }
+  }
+
+  .b-product-info {
+    float: left;
+    width: 470px;
+    margin: 0 30px 0 0;
+
+    @include media("<desktop") {
+      width: 270px;
+    }
+
+    @include media("<tablet") {
+      width: 100%;
+      float: none;
+      display: block;
+      margin: 0 0 0;
+    }
+
+    &.full-width {
+      width: auto;
+      float: none;
+      margin: 0;
+
+      @include media("<desktop") {
+        width: auto;
+        overflow: hidden;
+      }
+    }
+  }
+
+  .b-links {
+    overflow: hidden;
+    padding: 0 0 20px;
+    clear: both;
+
+    @include media("<desktop") {
+      clear: both;
+      padding: 0 0 20px 60px;
+    }
+
+    @include media("<tablet") {
+      clear: none;
+      float: right;
+      padding: 2px 10px 0 0;
+      text-align: right;
+
+    }
+
+    .link {
+      margin: 0 32px 0 0;
+
+      @include media("<tablet") {
+        margin: 0 0 0 12px;
+        padding: 0;
+      }
+    }
+
+    .ico {
+      @include media("<tablet") {
+        position: static;
+        display: block;
+        margin: 0;
+      }
+    }
+
+    .text {
+      @include media("<tablet") {
+        display: none;
+      }
+    }
+
+    .where-to-buy-link .ico {
+      @include media("<tablet") {
+        width: 13px;
+        height: 18px;
+      }
+    }
+
+    .add-to-cart-link .ico {
+      @include media("<tablet") {
+        width: 17px;
+        height: 17px;
+      }
+    }
+
+    .add-to-project-link .ico {
+      @include media("<tablet") {
+        width: 17px;
+        height: 12px;
+        margin: 2px 0 0;
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+diff --git a/includes/translation.handler.inc b/includes/translation.handler.inc
+index e0eb1d2..7b119fd 100644
+--- a/includes/translation.handler.inc
++++ b/includes/translation.handler.inc
+@@ -834,19 +834,30 @@ class EntityTranslationDefaultHandler implements EntityTranslationHandlerInterfa
+     if (!empty($this->entityInfo['entity keys']['language'])) {
+       $language_key = $this->entityInfo['entity keys']['language'];
+       if (!empty($this->entity->{$language_key})) {
+-        return $this->entity->{$language_key};
++        return $this->getLanguageCode($lang = $this->entity->{$language_key});
+       }
+     }
+ 
+     $translations = $this->getTranslations();
+     if (!empty($translations->original)) {
+-      return $translations->original;
++      return $this->getLanguageCode($lang = $translations->original);
+     }
+     else {
+       // When we are creating an entity and no language is specified fall back
+       // to the default language for the current entity and bundle.
+-      return $this->getDefaultLanguage();
++      return $this->getLanguageCode($lang = $this->getDefaultLanguage());
++    }
++  }
++
++  /**
++   * Fallback compatibility to always retrieve Langcode of the $language.
++   * @MUFE patch.
++   */
++  public function getLanguageCode($language) {
++    if (is_object($language)) {
++      return $language->language;
+     }
++    return $language;
+   }
+ 
+   /**

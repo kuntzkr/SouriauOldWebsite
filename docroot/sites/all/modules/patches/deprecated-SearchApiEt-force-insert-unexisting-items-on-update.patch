@@ -1,0 +1,98 @@
+diff --git a/includes/SearchApiEtDatasourceController.php b/includes/SearchApiEtDatasourceController.php
+index eb9222f..01cea41 100644
+--- a/includes/SearchApiEtDatasourceController.php
++++ b/includes/SearchApiEtDatasourceController.php
+@@ -465,4 +465,45 @@ class SearchApiEtDatasourceController extends SearchApiEntityDataSourceControlle
+     // indexed translations.
+     return $trackable_item_ids;
+   }
++
++  /**
++   * Force insert for given item if it not available on the given indexes.
++   *
++   * @param string $item_id
++   *   The item ID to track.
++   * @param SearchApiIndex[] $indexes
++   *   The indexes for which item should be tracked.
++   *
++   * @return SearchApiIndex[]|null
++   *   All indexes for which any items were added; or NULL if items were added
++   *   for all of them.
++   *
++   * @throws SearchApiDataSourceException
++   *   If any error state was encountered.
++   */
++  public function forceItemInsert($item_id, $indexes) {
++    $index_ids = [];
++    foreach ($indexes as $index_name => $index) {
++      $index_ids[] = $index->id;
++    }
++    $query = db_select($this->table, 't')
++      ->condition('t.' . $this->indexIdColumn, $index_ids, 'IN')
++      ->condition('t.' . $this->itemIdColumn, $item_id)
++      ->fields('t', array($this->itemIdColumn, $this->indexIdColumn))
++      ->groupBy($this->indexIdColumn);
++
++    $query->addExpression('COUNT(t.' . $this->itemIdColumn . ')', 'ic');
++    $query->havingCondition('ic', 0);
++    $result = $query->execute()->fetchAllAssoc($this->indexIdColumn);
++    if ($result) {
++      $nexists_indexes = [];
++      foreach ($indexes as $index_name => $index) {
++        if (isset($result[$index_name])) {
++          $nexists_indexes[$index_name] = $index;
++        }
++      }
++      $indexes = $nexists_indexes;
++    }
++    return $this->trackItemInsert([$item_id], $indexes);
++  }
+ }
+diff --git a/search_api_et.module b/search_api_et.module
+index 25712a1..93a2ec1 100644
+--- a/search_api_et.module
++++ b/search_api_et.module
+@@ -364,8 +364,42 @@ function search_api_et_entity_translation_insert($entity_type, $entity, $transla
+ function search_api_et_entity_translation_update($entity_type, $entity, $translation, $values = array()) {
+   list($entity_id) = entity_extract_ids($entity_type, $entity);
+   $item_id = SearchApiEtHelper::buildItemId($entity_id, $translation['language']);
++  $item_type = SearchApiEtHelper::getItemType($entity_type);
+ 
+-  search_api_track_item_change(SearchApiEtHelper::getItemType($entity_type), array($item_id));
++  search_api_et_add_not_exists_items($item_id, $item_type);
++  search_api_track_item_change($item_type, array($item_id));
++}
++
++/**
++ * Validate if item exists in indexes.
++ *
++ * @param string $item_id
++ *   The item ID to track.
++ * @param string $type
++ *   The type of items, specific to the data source.
++ */
++function search_api_et_add_not_exists_items($item_id, $type) {
++  try {
++    $datasource = search_api_get_datasource_controller($type);
++    if (!$datasource instanceof SearchApiEtDatasourceController) {
++      return;
++    }
++    $conditions = array(
++      'enabled' => 1,
++      'item_type' => $type,
++      'read_only' => 0,
++    );
++    $indexes = search_api_index_load_multiple(FALSE, $conditions);
++    if (!$indexes) {
++      return;
++    }
++    $datasource->forceItemInsert($item_id, $indexes);
++  }
++  catch (SearchApiException $e) {
++    $vars['%item_type'] = $type;
++    watchdog_exception('search_api', $e, '%type while inserting items of type %item_type: !message in %function (line %line of %file).', $vars);
++    return;
++  }
+ }
+ 
+ /**

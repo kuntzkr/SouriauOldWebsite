@@ -1,0 +1,222 @@
+.b-application {
+  background: $blue4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
+  .b-app-info {
+    padding: 69px 0 48px;
+
+    @include media("<desktop") {
+      padding: 53px 0 27px;
+    }
+
+    @include media("<tablet") {
+      padding: 53px 0 50px;
+    }
+
+    .container {
+      @include media("<tablet") {
+        padding: 0 35px;
+      }
+    }
+
+    h3 {
+      color: $white;
+      font-size: 24px;
+      line-height: 30px;
+
+      @include media("<desktop") {
+        margin: 0 0 7px;
+        line-height: 32px;
+      }
+    }
+
+    .b-title {
+      float: left;
+      width: 386px;
+      margin: 0 50px 0 0;
+
+      @include media("<desktop") {
+        float: none;
+        width: auto;
+      }
+    }
+
+    .b-text {
+      overflow: hidden;
+      padding: 6px 0 0;
+
+      @include media("<desktop") {
+        overflow: visible;
+      }
+
+      @include media("<tablet") {
+        padding: 22px 0 0;
+      }
+    }
+
+    p {
+      color: $white;
+    }
+  }
+
+  .b-app-list {
+    @include clearfix();
+  }
+
+  .item {
+    float: left;
+    width: 33.3333%;
+    height: 364px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+
+    &.lg-two-line {
+      width: 50%;
+    }
+
+    @include media("<desktop") {
+      width: 50%;
+      height: 340px;
+
+      &.sm-one-line {
+        width: 100%;
+      }
+    }
+
+    @include media("<tablet") {
+      height: 141px;
+    }
+
+    &:before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      opacity: 0.4;
+      z-index: 1;
+      content: "";
+      @include transition(opacity 0.3s ease-in-out);
+    }
+
+    &:hover, &:focus {
+      text-decoration: none;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      &:before {
+        opacity: 0.8;
+      }
+
+      .pic {
+        transform: scale(1.25, 1.25);
+      }
+
+      .b-text {
+        display: block;
+        opacity: 1;
+      }
+    }
+  }
+
+  .b-content {
+    padding: 20px 55px;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    display: table;
+    @include box-sizing(border-box);
+
+    @include media("<tablet") {
+      padding: 15px;
+    }
+
+    h3 {
+      color: $white;
+      font-size: 32px;
+      line-height: 42px;
+      margin: 0 0 8px;
+
+      span {
+        display: inline-block;
+      }
+
+      @include media("<desktop") {
+        margin: 0;
+      }
+
+      @include media("<tablet") {
+        font-size: 20px;
+        line-height: 25px;
+        margin: 0 0 -8px;
+      }
+    }
+
+    .b-text {
+      padding: 12px 0 7px;
+      display: none;
+      opacity: 0;
+      @include transition(opacity 0.3s ease-in-out);
+
+      p {
+        color: $white;
+        font-size: 14px;
+        line-height: 24px;
+      }
+    }
+  }
+
+  .a-center {
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  .pic {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    @include transition(transform 0.3s ease-in-out);
+
+    img {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      -moz-transform: translate(-50%, -50%);
+      -ms-transform: translate(-50%, -50%);
+      -webkit-transform: translate(-50%, -50%);
+      min-width: 100.5%;
+      min-height: 100.5%;
+      left: 50%;
+      max-width: inherit;
+
+      @include media("<tablet") {
+        width: 100%;
+      }
+    }
+  }
+
+  &.variant-2 {
+    .item {
+      @include media("<tablet") {
+        width: 100%;
+      }
+    }
+
+    .b-content h3 {
+      @include media("<tablet") {
+        font-size: 24px;
+        line-height: 54px;
+        margin: 0 0 -8px;
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+name = Souriau Common Toolkit
+description = Souriau Common Toolkit for Tools integration.
+core = 7.x
+package = Souriau Tools
+php = 5.2.4
+version = 7.x-0.01
+
+dependencies[] = souriau_ct_tool
+dependencies[] = souriau_tools

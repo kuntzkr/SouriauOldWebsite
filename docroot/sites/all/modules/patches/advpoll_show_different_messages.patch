@@ -1,0 +1,46 @@
+diff --git a/advpoll.module b/advpoll.module
+index e5388f5..8540d0e 100644
+--- a/advpoll.module
++++ b/advpoll.module
+@@ -265,7 +265,8 @@ function advpoll_theme($existing, $type, $theme, $path) {
+         'total' => 0,
+         'voted' => NULL,
+         'nid' => NULL,
+-        'cancel_form' => NULL
++        'cancel_form' => NULL,
++        'newly_voted' => FALSE,
+       ),
+       'path' => drupal_get_path('module', 'advpoll') . '/templates',
+       'template' => 'advpoll-results'
+@@ -464,6 +465,7 @@ function advpoll_display_results($nid, $data, $page = 0) {
+     $results = advpoll_get_votes($nid, $data->behavior);
+     $bars = '';
+     $final = advpoll_update_choices($data->choices, $results['choices']);
++    $newly_voted = $data->newly_voted;
+ 
+ //@todo: - update title to indicate that the source of a vote is a write in
+ //       Allow permission to determine whether or not to display a write in vote in results.
+@@ -499,6 +501,7 @@ function advpoll_display_results($nid, $data, $page = 0) {
+       'voted' => $votes,
+       'nid' => $nid,
+       'cancel_form' => $rendered_form,
++      'newly_voted' => $newly_voted,
+       )
+     );
+   }
+@@ -674,6 +677,7 @@ function advpoll_form_submit($form, &$form_state) {
+     return $form;
+   }
+   $data = advpoll_get_form_data($form_state);
++  $data->newly_voted = FALSE;
+   $count = count($data->choices);
+   $votes = $form['choice_' . $count]['#value'];
+ 
+@@ -735,6 +739,7 @@ function advpoll_form_submit($form, &$form_state) {
+   }
+ 
+   if (count($selected) > 0 && count($selected) <= $data->max_choices) {
++    $data->newly_voted = TRUE;
+     foreach ($selected as $item) {
+       $vote = array();
+       $vote['type'] = 'node';

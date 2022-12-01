@@ -1,0 +1,9 @@
+name = Souriau View Query Get Application Landing
+core = 7.x
+package = Souriau Features
+version = 7.x-0.02
+dependencies[] = views
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = souriau_query_get_singularity
+features_exclude[dependencies][ctools] = ctools

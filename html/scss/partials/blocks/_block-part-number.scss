@@ -1,0 +1,264 @@
+.b-part-number {
+  padding: 20px 0 96px;
+
+  @include media("<desktop") {
+    padding: 20px 0 17px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 15px 20px;
+  }
+
+  .b-pic {
+    width: 520px;
+    float: left;
+    margin: 32px 42px 0 0;
+
+    @include media("<desktop") {
+      width: 81%;
+      float: none;
+      margin: 0 auto 19px;
+    }
+
+    @include media("<tablet") {
+      width: 95%;
+      margin: 0 auto 10px;
+    }
+
+    img {
+      width: 100%;
+    }
+
+    .download-link {
+      margin: 71px 0 30px;
+
+      @include media("<desktop") {
+        margin: 30px 0 0;
+      }
+    }
+  }
+
+
+  .b-main {
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    @include media("<desktop") {
+      overflow: visible;
+    }
+
+    .title {
+      margin: 0 0 4px;
+
+      @include media("<desktop") {
+        margin: 0 0 9px;
+      }
+
+      @include media("<tablet") {
+        display: table;
+        width: 100%;
+        text-align: center;
+        margin: 0 0 6px;
+      }
+    }
+
+    h1 {
+      color: $blue3;
+      font-size: 32px;
+      line-height: 42px;
+      margin: 0;
+      display: inline;
+
+      @include media("<tablet") {
+        display: table-footer-group;
+        font-size: 24px;
+        line-height: 30px;
+      }
+    }
+
+    .b-new-icon {
+      display: inline-block;
+      color: $orange;
+      font-family: $avenir-next-regular;
+      font-size: 19px;
+      line-height: 24px;
+      padding: 0 8px;
+      border: 2px solid $orange;
+      vertical-align: bottom;
+      margin: 0px 0 4px 6px;
+
+      @include media("<tablet") {
+        margin: 0 0 10px;
+      }
+    }
+
+    .b-part-numb {
+      color: $blue3;
+      font-family: $avenir-next-regular;
+      font-size: 24px;
+      line-height: 36px;
+      padding: 0 0 12px;
+
+      @include media("<desktop") {
+        font-size: 16px;
+        line-height: 24px;
+        padding: 0 0 23px;
+      }
+
+      @include media("<tablet") {
+        text-align: center;
+        padding: 0 0 16px;
+      }
+    }
+
+    .b-wrapper {
+      @include media("<tablet") {
+        display: table;
+        width: 100%;
+      }
+    }
+
+    .b-main-info {
+      @include media("<tablet") {
+        display: table-footer-group;
+      }
+    }
+
+    .b-row {
+      border-bottom: 1px solid #f0f0f0;
+      margin: 0 0 19px;
+
+      @extend .clearfix;
+
+      @include media("<tablet") {
+        border-bottom: none;
+        margin: 0 0 22px;
+      }
+    }
+
+    .b-add-info {
+      font-size: 14px;
+      line-height: 24px;
+      color: $grey;
+      display: inline-block;
+
+      span {
+        font-weight: bold;
+      }
+    }
+
+    .b-stock-info {
+      margin: 2px 0 6px 15px;
+
+      @include media("<desktop") {
+        margin-right: 11px;
+      }
+    }
+
+    .b-description {
+      border-bottom: 1px solid #f0f0f0;
+      margin: 0 0 20px;
+
+      @include media("<desktop") {
+        padding-bottom: 14px;
+        margin: 0 0 15px;
+      }
+
+      @include media("<tablet") {
+        border-bottom: none;
+        padding: 0;
+        margin: 0 0 4px;
+      }
+
+      p {
+        padding: 0 0 16px;
+      }
+    }
+
+    .b-wrapper-btns {
+      display: table;
+      width: 100%;
+
+      @include media("<desktop") {
+        display: block;
+      }
+
+      .b-stock-info {
+        margin: 3px 5px;
+      }
+    }
+
+    .w-btn {
+      display: table-footer-group;
+
+      @include media("<desktop") {
+        float: right;
+        max-width: 30%;
+        margin-left: 5%;
+        margin-right: 11px;
+        display: block;
+      }
+
+      @include media("<tablet") {
+        display: block;
+        float: none;
+        max-width: inherit;
+        margin: 0 0 29px;
+        text-align: center;
+      }
+
+      .btn {
+        margin-top: 7px;
+
+        @include media("<desktop") {
+          margin-top: 0;
+        }
+      }
+    }
+
+    .w-link {
+      border-top: 1px solid #f0f0f0;
+      padding: 28px 0 0;
+
+      @include media("<desktop") {
+        border: none;
+        padding: 10px 0 0;
+      }
+
+      @include media("<desktop") {
+        padding: 0;
+      }
+    }
+
+    .b-links {
+      padding: 0 0 18px;
+      margin-right: -58px;
+
+      @include media("<desktop") {
+        padding: 0 0 25px;
+        margin-right: 0;
+      }
+
+      @include media("<tablet") {
+        padding: 0 0 33px;
+      }
+
+      @extend .clearfix;
+
+      a {
+        margin-right: 58px;
+
+        @include media("<desktop") {
+          margin: 5px 76px 0 0;
+        }
+
+        @include media("<tablet") {
+          margin: 0 0 1px;
+          padding-top: 3px;
+          padding-bottom: 3px;
+        }
+      }
+    }
+  }
+}

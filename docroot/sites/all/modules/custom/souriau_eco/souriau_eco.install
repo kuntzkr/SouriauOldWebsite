@@ -1,0 +1,203 @@
+<?php
+/**
+ * @file
+ * Install hooks.
+ */
+
+/**
+ * Implements hook_update_N().
+ *
+ * Swap sku layout contents to temporary field in batch process.
+ */
+function souriau_eco_update_7001(&$sandbox) {
+  foreach (['data', 'revision'] as $table) {
+    $query = db_select('commerce_product', 'c');
+    $query->fields('fsl', [
+      'entity_type',
+      'bundle',
+      'deleted',
+      'entity_id',
+      'revision_id',
+      'language',
+      'delta',
+      'field_sku_layout_value'
+    ]);
+    $query->leftJoin("field_{$table}_field_sku_layout", 'fsl', "fsl.entity_id = c.product_id AND (fsl.entity_type = 'commerce_product' AND fsl.deleted = '0')");
+    $query->leftJoin("field_{$table}_field_additional_sku_layout", 'fasl', "c.product_id = fasl.entity_id AND (fasl.entity_type = 'commerce_product' AND fasl.deleted = '0')");
+    $query->condition('c.type', ['SKU'], 'IN')->isNotNull('fsl.field_sku_layout_value')->isNull('fasl.field_additional_sku_layout_value');
+
+    $insert_query = db_insert("field_{$table}_field_additional_sku_layout")
+      ->fields([
+          'entity_type',
+          'bundle',
+          'deleted',
+          'entity_id',
+          'revision_id',
+          'language',
+          'delta',
+          'field_additional_sku_layout_value'
+        ])
+      ->from($query)
+      ->execute();
+  }
+
+  print t('All selected products sku layout copied to temporary field.') . PHP_EOL;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Delete current sku layout field.
+ */
+function souriau_eco_update_7002() {
+  $field_name = 'field_sku_layout';
+  if (field_info_field($field_name)) {
+    $instance = field_info_instance('commerce_product', 'field_sku_layout', 'sku');
+    field_delete_instance($instance);
+    field_purge_batch(100);
+    watchdog('souriau_eco', 'Deleted field :field_name field from all content type instances.', [':field_name' => $field_name]);
+  }
+  else {
+    watchdog('souriau_eco', '!field_name not exists to delete.', ['!field_name' => $field_name]);
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Create sku layout field with new format type.
+ */
+function souriau_eco_update_7003() {
+  $field_name = 'field_sku_layout';
+
+  // Make sure the field doesn't already exist.
+  if (!field_info_field($field_name)) {
+    // Create the field.
+    $field = [
+      'field_name' => $field_name,
+      'type' => 'text',
+      'settings' => [
+        'max_length' => 255,
+      ],
+    ];
+    field_create_field($field);
+    // Create the instance.
+    $instance = [
+      'field_name' => $field_name,
+      'entity_type' => 'commerce_product',
+      'bundle' => 'sku',
+      'label' => 'Layout',
+      'required' => FALSE,
+    ];
+
+    field_create_instance($instance);
+    watchdog('souriau_eco', '!field_name was added again .', ['!field_name' => $field_name]);
+  }
+  else {
+    watchdog('souriau_eco', '!field_name already exists.', ['!field_name' => $field_name]);
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Copy temporary field values to original sku layout field.
+ */
+function souriau_eco_update_7004(&$sandbox) {
+  foreach (['data', 'revision'] as $table) {
+    $query = db_select('commerce_product', 'c');
+    $query->fields('fasl', [
+      'entity_type',
+      'bundle',
+      'deleted',
+      'entity_id',
+      'revision_id',
+      'language',
+      'delta',
+      'field_additional_sku_layout_value'
+    ]);
+    $query->leftJoin("field_{$table}_field_sku_layout", 'fsl', "fsl.entity_id = c.product_id AND (fsl.entity_type = 'commerce_product' AND fsl.deleted = '0')");
+    $query->leftJoin("field_{$table}_field_additional_sku_layout", 'fasl', "c.product_id = fasl.entity_id AND (fasl.entity_type = 'commerce_product' AND fasl.deleted = '0')");
+    $query->condition('c.type', ['SKU'], 'IN')->isNull('fsl.field_sku_layout_value')->isNotNull('fasl.field_additional_sku_layout_value');
+
+    $insert_query = db_insert("field_{$table}_field_sku_layout")
+      ->fields([
+          'entity_type',
+          'bundle',
+          'deleted',
+          'entity_id',
+          'revision_id',
+          'language',
+          'delta',
+          'field_sku_layout_value'
+        ])
+      ->from($query)
+      ->execute();
+  }
+
+  print t('Full products updated to field sku layout.') . PHP_EOL;
+}
+
+/**
+ * Batch Update content.
+ *
+ * Update commerce price.
+ */
+function souriau_eco_update_7005(&$sandbox) {
+  // If first run of this update function then set progress variables.
+  if (!isset($sandbox['progress'])) {
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'commerce_product')
+      ->entityCondition('bundle', 'sku')
+      ->addMetaData('account', user_load(1))
+      ->count();
+    $total_count = $query->execute();
+    if (empty($total_count)) {
+      return;
+    }
+
+    $sandbox['progress'] = 0;
+    $sandbox['max'] = $total_count;
+    $sandbox['product_count'] = 0;
+  }
+
+  // How many items should be processed per pass.
+  $limit = 50;
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'commerce_product')
+    ->entityCondition('bundle', 'sku')
+    ->addMetaData('account', user_load(1))
+    ->range($sandbox['progress'], $limit);
+  $result = $query->execute();
+  $sandbox['result'] = $result['commerce_product'];
+
+  if (!isset($result['commerce_product'])) {
+    return;
+  }
+
+  while (!empty($sandbox['result'])) {
+    $item = array_shift($sandbox['result']);
+    $id = $item->product_id;
+    $product = commerce_product_load($id);
+    if (!empty($product->commerce_price)) {
+      continue;
+    }
+    $product->commerce_price[LANGUAGE_NONE][] = [
+      'amount' => 0,
+      'currency_code' => 'USD',
+      'data' => ['components' => []]
+    ];
+    commerce_product_save($product);
+    $sandbox['product_count']++;
+  }
+  // Update our progress information.
+  $sandbox['progress'] += $limit;
+  // Set the value for finished.
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] === TRUE) {
+    $message = t('Updated !count Products. DONE!', ['!count' => $sandbox['product_count']]);
+    watchdog('updb', $message);
+    drupal_set_message($message);
+  }
+}

@@ -1,0 +1,89 @@
+.b-single-news {
+  padding: 25px 0 31px;
+
+  @include media("<desktop") {
+    padding: 28px 0 33px;
+  }
+
+  @include media("<tablet") {
+    padding: 0;
+    margin: -60px 0 0;
+  }
+
+  h1 {
+    margin: 0 0 11px;
+
+    @include media("<tablet") {
+      margin: 0 0 5px;
+    }
+  }
+
+  .publicate-date {
+    margin-bottom: 26px;
+    display: block;
+
+    @include media("<tablet") {
+      margin-bottom: 21px;
+    }
+  }
+
+  .b-tag {
+    padding: 0 0 0 28px;
+
+    .ico-tag {
+      left: 1px;
+    }
+  }
+
+  p {
+    @include media("<tablet") {
+      font-size: 16px;
+      line-height: 30px;
+      padding: 0 0 30px;
+    }
+  }
+
+  .b-kicker {
+    p {
+      font-weight: 700;
+      padding: 0 0 36px;
+
+      @include media("<tablet") {
+        font-size: 16px;
+        line-height: 30px;
+        padding: 0 0 30px;
+      }
+    }
+  }
+
+  .description-col {
+    width: 41%;
+
+    @include media("<desktop") {
+      width: 39%;
+    }
+  }
+
+  .info-col {
+    width: 25.5%;
+
+    @include media("<desktop") {
+      width: 32%;
+    }
+  }
+
+  .w-tags, h1, .publicate-date, p, ul, ol, h2, h3, h4, h5, h6 {
+    margin-left: 211px;
+    margin-right: 211px;
+
+    @include media("<desktop") {
+      margin-left: 111px;
+      margin-right: 111px;
+    }
+
+    @include media("<tablet") {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+}

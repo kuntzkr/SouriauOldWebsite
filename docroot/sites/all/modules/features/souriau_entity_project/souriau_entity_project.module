@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Entity Project feature.
+ */
+
+include_once 'souriau_entity_project.features.inc';

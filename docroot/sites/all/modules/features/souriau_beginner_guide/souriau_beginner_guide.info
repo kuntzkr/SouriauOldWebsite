@@ -1,0 +1,15 @@
+name = Souriau Beginner Guide
+core = 7.x
+package = Souriau Features
+version = 7.x-0.06
+dependencies[] = page_manager
+dependencies[] = souriau_ct_application_domain
+dependencies[] = souriau_ct_sub_category
+dependencies[] = views
+features[ctools][] = page_manager:pages_default:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[page_manager_pages][] = beginner_guidance
+features[views_view][] = souriau_query_get_application_domains
+features[views_view][] = souriau_query_get_application_per_domain
+features_exclude[dependencies][ctools] = ctools

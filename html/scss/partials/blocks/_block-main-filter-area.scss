@@ -1,0 +1,155 @@
+.b-main-filter-area {
+  position: fixed;
+  height: 100%;
+  width: 953px;
+  top: 0;
+  z-index: 1000;
+  background: $white;
+  left: -100%;
+  perspective: 1px;
+  padding: 0 0 30px;
+  @include transition(left 0.4s ease-in-out);
+  overflow: hidden;
+
+  @include media("<desktop") {
+    width: 100%;
+  }
+
+  @include media("<tablet") {
+    padding: 0;
+  }
+
+  &.open {
+    left: 0;
+    box-shadow: 0 22px 40px rgba(169, 169, 169, 0.5);
+
+    &:before {
+      display: block;
+    }
+  }
+
+  &:before {
+    position: absolute;
+    left: 100%;
+    background: $white;
+    content: "";
+    height: 100%;
+    top: 0;
+    width: 2000px;
+    opacity: 0.0005;
+    display: none;
+  }
+
+  .wrapper {
+    height: 100%;
+    padding: 0;
+    margin: 0 auto;
+    width: 700px;
+    position: relative;
+    box-shadow: none;
+
+    @include media("<tablet") {
+      width: auto;
+      margin: 0 20px;
+      padding-bottom: 80px;
+    }
+  }
+
+  .b-header {
+    border-bottom: 1px solid #f2f3f5;
+    padding: 50px 0 24px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    margin: 0 0 25px;
+
+    @include media("<desktop") {
+      padding: 55px 0 26px;
+    }
+
+    @include media("<tablet") {
+      padding: 20px 0 5px;
+      margin: 0 0 18px;
+      z-index: 1;
+    }
+  }
+
+  .w-inside {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .b-content {
+    height: 100%;
+    overflow: auto;
+    box-shadow: none;
+  }
+
+  .close-link {
+    position: absolute;
+    right: -87px;
+    top: 32px;
+    z-index: 6;
+
+    @include media("<desktop") {
+      right: -10px;
+      top: 10px;
+    }
+
+    @include media("<tablet") {
+      top: 29px;
+    }
+
+    .ico {
+      display: block;
+      width: 30px;
+      height: 30px;
+      fill: $grey;
+      -moz-transform: rotate(45deg); /* Для Firefox */
+      -ms-transform: rotate(45deg); /* Для IE */
+      -webkit-transform: rotate(45deg); /* Для Safari, Chrome, iOS */
+      -o-transform: rotate(45deg); /* Для Opera */
+      transform: rotate(45deg);
+    }
+  }
+
+  h2 {
+    color: $blue3;
+    font-family: $avenir-next-regular;
+    font-size: 32px;
+    line-height: 42px;
+    margin: 0;
+    overflow: hidden;
+
+    @include media("<tablet") {
+      font-size: 30px;
+      line-height: 36px;
+      padding: 0 40px 0 0;
+    }
+  }
+
+  .clear-filter {
+    display: inline-block;
+    vertical-align: top;
+    color: $blue3;
+    font-family: $main-sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.86px;
+    line-height: 24px;
+    text-decoration: none;
+    margin: 6px 20px 10px 0;
+
+    .no-touchevents &:hover,
+    .no-js &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  #facets-ajax-wrapper {
+    height: 100%;
+  }
+}

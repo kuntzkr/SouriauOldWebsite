@@ -1,0 +1,301 @@
+.w-banner-block {
+  padding: 0;
+  position: relative;
+  height: 443px;
+  overflow: hidden;
+
+  @include media("<desktop") {
+    height: 456px;
+  }
+
+  @include media("<tablet") {
+    text-align: center;
+    padding: 0 0 7px;
+    height: 391px;
+  }
+
+  h1 {
+    margin: 0 0 43px;
+
+    @include media("<desktop") {
+      padding: 0 0 17px;
+      margin: 0 0 20px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 8px;
+      margin: 0;
+    }
+  }
+
+  .b-title {
+    padding: 40px 0 0;
+    text-align: left;
+
+    @include media("<desktop") {
+      padding: 21px 0 0;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  .title {
+    position: relative;
+    z-index: 1;
+    margin: 23px 0 0;
+
+    @include media("<desktop") {
+      margin: 11px 0 0;
+    }
+
+    @include media("<tablet") {
+      margin: 0;
+    }
+
+    h1 {
+      position: relative;
+      display: inline-block;
+      background: #003865;
+      padding: 13px 30px 13px 0;
+      color: $white;
+      margin: 0 0 23px;
+
+      @include media("<desktop") {
+        padding: 14px 16px 14px 0;
+        margin: 0 0 27px;
+      }
+
+      @include media("<tablet") {
+        padding: 6px 20px;
+        font-size: 30px;
+        margin: 0px 0 30px;
+      }
+
+      &:after {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 100%;
+        width: 1000px;
+        content: "";
+        background: #003865;
+
+        @include media("<tablet") {
+          display: none;
+        }
+      }
+
+      &:before {
+        display: none;
+      }
+    }
+  }
+
+
+
+  .w-breadcrumb {
+    padding-bottom: 10px;
+  }
+
+  .b-search-num {
+    display: inline-block;
+    position: relative;
+    z-index: 1;
+
+    @include clearfix();
+
+    @include media("<tablet") {
+      margin: 20px 0 13px;
+    }
+  }
+
+  .w-search-row {
+    display: block;
+  }
+
+  .b-banner {
+    display: block;
+    margin: 0;
+    height: 100%;
+    left: 0;
+    right: 0;
+    top: 0;
+    position: absolute;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+
+    .pic {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: none;
+    }
+
+    img {
+    //  width: 100%;
+      //min-height: 100%;
+     // max-width: inherit;
+    //  position: absolute;
+   //   left: 50%;
+   //   top: 50%;
+    //  transform: translate(-50%, -50%);
+    //  -moz-transform: translate(-50%, -50%);
+    //  -ms-transform: translate(-50%, -50%);
+    //  -webkit-transform: translate(-50%, -50%);
+
+      @include media("<desktop") {
+     //   width: auto;
+    //    height: 100%;
+      }
+
+      @include media("<tablet") {
+      //  height: 100%;
+      }
+    }
+  }
+
+  .b-bottom {
+    @include media("<tablet") {
+      position: absolute;
+      bottom: 19px;
+      left: 20px;
+      right: 20px;
+    }
+  }
+
+  .b-bottom .b-share {
+    display: none;
+
+    @include media("<tablet") {
+      display: inline-block;
+    }
+  }
+
+  .container {
+    //display: table;
+  }
+
+  .b-content {
+  //  display: table-cell;
+   // vertical-align: top;
+  }
+
+  .b-downloads-links {
+    float: right;
+    width: 215px;
+    background: #FFF;
+    position: relative;
+    z-index: 1;
+    margin: 82px 0 0 40px;
+    padding: 0;
+    max-height: 400px;
+    overflow: auto;
+    overflow-x: hidden;
+
+    ul {
+      margin-bottom: 0;
+      padding: 0;
+    }
+
+    h2 {
+      position: relative;
+      padding: 0 0 14px;
+      margin: 0 0 13px;
+
+      &:before {
+        bottom: 0;
+        width: 59px;
+        height: 1px;
+        background: #003865;
+        opacity: 0.4;
+        content: "";
+        position: absolute;
+        left: 0;
+      }
+    }
+
+    .wrapper {
+      padding: 25px;
+    }
+
+    .col-text {
+      width: 100%;
+      float: none;
+    }
+  }
+
+  &.product-banner {
+    height: 625px;
+
+    @include media("<desktop") {
+      height: 550px;
+    }
+
+    @include media("<tablet") {
+      height: 391px;
+    }
+  }
+
+  &.application-banner {
+    height: 483px;
+    margin: 0 0 -3px;
+
+    @include media("<desktop") {
+      height: 535px;
+      margin: 0 0 22px;
+    }
+
+    @include media("<tablet") {
+      height: 378px;
+      margin: 0 0 14px;
+    }
+  }
+
+  &.landing-app-banner {
+    height: 440px;
+
+    @include media("<desktop") {
+      height: 490px;
+    }
+
+    @include media("<tablet") {
+      height: 320px;
+    }
+  }
+
+  &.landing-cap-banner {
+    height: 257px;
+
+    @include media("<desktop") {
+      height: 296px;
+    }
+
+    @include media("<tablet") {
+      height: 319px;
+    }
+  }
+
+  &.domain-cap-banner {
+    height: 259px;
+
+    @include media("<desktop") {
+      height: 490px;
+    }
+
+    @include media("<tablet") {
+      height: 319px;
+    }
+  }
+
+  &.capability-banner {
+    height: 257px;
+
+    @include media("<tablet") {
+      height: 235px;
+      margin: 0 0 37px;
+    }
+  }
+}

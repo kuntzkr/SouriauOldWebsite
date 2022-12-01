@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Advpoll feature.
+ */
+
+include_once 'souriau_advpoll.features.inc';

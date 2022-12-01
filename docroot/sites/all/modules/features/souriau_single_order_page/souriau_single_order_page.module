@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Single Order Page feature.
+ */
+
+include_once 'souriau_single_order_page.features.inc';

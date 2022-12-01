@@ -1,0 +1,30 @@
+{
+  "name": "souriau",
+  "private": true,
+  "dependencies": {
+    "jcf": "1.2.3",
+    "jquery": "1.10.2",
+    "jquery-once": "1.2.6",
+    "bootstrap-sass": "3.3.6",
+    "slick-carousel": "~1.5.9",
+    "include-media": "~1.4.2",
+    "matchHeight": "0.7.0"
+  },
+  "overrides": {
+    "slick-carousel": {
+      "main": [
+        "slick/slick.js",
+        "slick/slick.scss",
+        "slick/slick-theme.scss",
+        "slick/fonts/*"
+      ]
+    },
+    "bootstrap-sass": {
+      "main": [
+        "assets/stylesheets/_bootstrap.scss",
+        "assets/fonts/bootstrap/*",
+        "assets/javascripts/bootstrap.js"
+      ]
+    }
+  }
+}

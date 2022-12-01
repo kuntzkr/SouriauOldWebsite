@@ -1,0 +1,610 @@
+<?php
+/**
+ * @file
+ * Souriau site.
+ */
+
+include_once 'souriau_site.seo.inc';
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_site_form_locale_languages_custom_form_alter(&$form, &$form_state) {
+  drupal_set_title(t('Add language'), [], ['context' => SOURIAU_COMMON_T_ADMIN]);
+  $languages = language_list();
+  // Added support for new langauges without origin source.
+  $site_languages = ['' => '- NONE -'];
+  foreach ($languages as $langcode => $language) {
+    if ($language->enabled) {
+      $site_languages[$langcode] = $language->name;
+    }
+  }
+  $language_options = _locale_prepare_predefined_list();
+  $form['custom language']['origin'] = [
+    '#type' => 'item',
+    '#title' => t('Source language', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#required' => count($site_languages) > 1,
+  ];
+  $form['custom language']['origin']['content'] = [
+    '#type' => 'select',
+    '#title' => t('Content', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#options' => $site_languages,
+    // count($site_languages) > 1,.
+    '#required' => FALSE,
+    '#default_value' => language_default('language'),
+  ];
+  $form['custom language']['origin']['interface'] = [
+    '#type' => 'select',
+    '#title' => t('Interface', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#options' => $language_options,
+    '#required' => FALSE,
+    '#empty_value' => '',
+  ];
+  $form['custom language']['#collapsible'] = FALSE;
+
+  if (!user_access('edit core settings')) {
+    $form['custom language']['prefix']['#type'] = 'value';
+    $form['custom language']['prefix']['#value'] = '';
+
+    $form['custom language']['domain']['#type'] = 'value';
+    $form['custom language']['domain']['#value'] = '';
+
+    $form['custom language']['direction']['#type'] = 'value';
+    $form['custom language']['direction']['#value'] = 0;
+  }
+  $form['#submit'] = ['souriau_site_form_locale_languages_custom_submit'];
+  array_unshift($form['#validate'], 'souriau_site_form_locale_languages_custom_validate');
+}
+
+/**
+ * Validaion callback for `locale_languages_custom_form`.
+ */
+function souriau_site_form_locale_languages_custom_validate($form, &$form_state) {
+  $form_state['values']['prefix'] = $form_state['values']['langcode'];
+  return TRUE;
+}
+
+/**
+ * Submit callback for `locale_languages_custom_form`.
+ */
+function souriau_site_form_locale_languages_custom_submit($form, &$form_state) {
+  if (isset($form_state['values']['name'])) {
+    $langcode  = $form_state['values']['langcode'];
+    locale_add_language($langcode, $form_state['values']['name'], $form_state['values']['native'], $form_state['values']['direction'], $form_state['values']['domain'], $form_state['values']['prefix'], 0);
+    $content   = $form_state['values']['content'];
+    $interface = $form_state['values']['interface'];
+    if (!empty($content)) {
+      db_update('languages')->fields(['source' => $content])->condition('language', $langcode)->execute();
+
+      souriau_site_create_content_t10n_queue($langcode, $content);
+
+      // Copy Email templates.
+      souriau_site_copy_mail_templates($langcode, $content);
+
+      if (empty($interface)) {
+        _souriau_site_set_no_src_interface_batch($form_state, $content, $langcode);
+      }
+      else {
+        _souriau_site_set_src_interface_batch($form_state, $interface, $langcode);
+      }
+    }
+    else {
+      // Enable Language on Global level and on Central domain.
+      _souriau_site_enable_language($langcode);
+    }
+    $form_state['redirect'] = 'admin/config/regional/language';
+  }
+}
+
+/**
+ * Helper function for set batch.
+ */
+function _souriau_site_set_no_src_interface_batch($form_state, $content, $langcode) {
+  drupal_set_message(t('The language %language has been created and can now be enabled and used soon. More information is available on the <a href="@locale-help">help screen</a>.', array(
+    '%language' => t($form_state['values']['name']),
+    '@locale-help' => url('admin/help/locale'),
+  ), ['context' => SOURIAU_COMMON_T_ADMIN]));
+
+  $batch = [
+    'operations'    => [
+      ['_souriau_site_interface_t10n_copy', [$content, $langcode]]
+    ],
+    'title'         => t('Copying interface translations'),
+    'init_message'  => t('Starting copying'),
+    'error_message' => t('Error copying interface translations'),
+    'finished'      => '_souriau_site_interface_t10n_copy_finished',
+  ];
+  batch_set($batch);
+}
+
+/**
+ * Helper function for set batch.
+ */
+function _souriau_site_set_src_interface_batch($form_state, $interface, $langcode) {
+  drupal_set_message(t('The language %language has been created and can now be enabled and used. More information is available on the <a href="@locale-help">help screen</a>.', array(
+    '%language' => t($form_state['values']['name']),
+    '@locale-help' => url('admin/help/locale'),
+  ), ['context' => SOURIAU_COMMON_T_ADMIN]));
+  if ($batch = locale_batch_by_language($interface, '_locale_batch_language_finished')) {
+    foreach ($batch['operations'] as $key => $operation) {
+      $batch['operations'][$key][0] = '_souriau_locale_batch_import';
+      $batch['operations'][$key][1] = [$batch['operations'][$key][1][0], $langcode];
+    }
+    batch_set($batch);
+  }
+}
+
+/**
+ * Create and fill queue for coping translation from one lang to another.
+ */
+function souriau_site_create_content_t10n_queue($target_lang_code, $source_lang_code) {
+  $languages = language_list();
+  $target_language_name = $languages[$target_lang_code]->name;
+  $query = db_select('entity_translation', 'et');
+  $query
+    ->fields('et', ['entity_id'])
+    ->fields('et', ['entity_type'])
+    ->condition('et.language', $source_lang_code)
+    ->orderBy('et.entity_type');
+  $results = $query->execute()->fetchAll();
+  $pending_languages = variable_get('souriau_site_pending_languages', []);
+
+  if (!isset($pending_languages[$target_lang_code])) {
+    // Count Total.
+    $pending_languages[$target_lang_code] = count($results);
+    // Mark pending languages.
+    variable_set('souriau_site_pending_languages', $pending_languages);
+    drupal_set_message(t('Content translations copying for @language_name has been queued', ['@language_name' => $target_language_name], ['context' => SOURIAU_COMMON_T_ADMIN]));
+    $queue = DrupalQueue::get('content_t10n_' . $target_lang_code, TRUE);
+    $queue->createQueue();
+    foreach ($results as $result) {
+      $result->source = $source_lang_code;
+      $result->target = $target_lang_code;
+      $queue->createItem($result);
+    }
+  }
+}
+
+/**
+ * Copy Mail templates translation from $source_lang to $dest_lang.
+ */
+function souriau_site_copy_mail_templates($dest_lang, $source_lang) {
+  if (empty($source_lang) || empty($dest_lang)) {
+    return;
+  }
+
+  module_load_include('inc', 'mail_edit', 'mail_edit.admin');
+  _mail_edit_module_load_include('alter.inc');
+
+  $templates = db_select('mail_edit', 'me')
+    ->fields('me')
+    ->condition('me.language', $source_lang)
+    ->execute()
+    ->fetchAll();
+
+  foreach ($templates as $template) {
+    $new_record = (array) $template;
+    $new_record['language'] = $dest_lang;
+    try {
+      drupal_write_record('mail_edit', $new_record, []);
+    }
+    catch (Exception $e) {
+      // There is nothing to do here.
+    }
+  }
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function souriau_site_cron_queue_info() {
+  $pending_languages = variable_get('souriau_site_pending_languages', []);
+  $queues = [];
+  foreach ($pending_languages as $langcode => $total) {
+    $queue_name = 'content_t10n_' . $langcode;
+    $queue = DrupalQueue::get($queue_name);
+    if ($queue->numberOfItems()) {
+      $queues[$queue_name] = [
+        'worker callback' => 'souriau_site_content_t10n_copy',
+        // Time, in seconds, to let this process run.
+        'time' => variable_get('souriau_content_t10n_batch_time', 150),
+      ];
+    }
+    else {
+      $queue->deleteQueue();
+      unset($pending_languages[$langcode]);
+      // Enable language.
+      _souriau_site_enable_language($langcode);
+    }
+  }
+  variable_set('souriau_site_pending_languages', $pending_languages);
+  return $queues;
+}
+
+/**
+ * Translation callback for translating batch.
+ *
+ * @see souriau_site_cron_queue_info()
+ */
+function souriau_site_content_t10n_copy($data) {
+  $entity_type = $data->entity_type;
+  $origin_lang = $data->source;
+  $dest_lang   = $data->target;
+  if (!is_numeric($data->entity_id)) {
+    return;
+  }
+  $entity = entity_load_single($entity_type, $data->entity_id);
+  if (empty($entity)) {
+    return;
+  }
+
+  try {
+    // @Important: FIRST. Add new translation.
+    $handler = entity_translation_get_handler($entity_type, $entity, TRUE);
+    $translations = $handler->getTranslations();
+
+    $new_t9n = $translations->data[$origin_lang];
+    $new_t9n['language'] = $dest_lang;
+    $new_t9n['source']    = $origin_lang;
+    $new_t9n['created'] = REQUEST_TIME;
+    $new_t9n['changed'] = REQUEST_TIME;
+    $new_t9n['translate'] = 1;
+
+    // For copy and unpublish.
+    // $new_t9n['status'] = 0;.
+
+    // Add the new translation.
+    $handler->setTranslation($new_t9n);
+
+    // Save field data and translations for the updated nodes.
+    $handler->saveTranslations();
+    // Recheck consistency.
+    if (empty($handler->getTranslations()->data[$dest_lang])) {
+      watchdog('souriau_site', "Retry translation for !entity_id (@entity_type):  !line", [
+        '!entity_id' => $data->entity_id,
+        '@entity_type' => $entity_type,
+        '!line' => __LINE__,
+      ], WATCHDOG_ERROR);
+      souriau_site_entity_retry_content_t10n_queue($data);
+    }
+
+    // @Important: THEN.
+    // Copy fields original transtation into current language.
+    draft_moderation_translations_update_from_original($entity, $entity_type, $dest_lang);
+
+    // Update pathauto.
+    // Check if Pathauto exist.
+    if ('node' == $entity_type && function_exists('pathauto_node_update_alias')) {
+      if (!isset($entity->is_draft) || $entity->is_draft) {
+        // Update pathauto info.
+        pathauto_node_update_alias($entity, 'update', ['language' => $dest_lang]);
+      }
+    }
+
+    // Save the translation.
+    $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+    $entity_wrapper->save();
+
+    // Recheck consistency.
+    if (empty($entity->translations->data[$dest_lang])) {
+      watchdog('souriau_site', "Retry translation for !entity_id (@entity_type):  !line", [
+        '!entity_id' => $data->entity_id,
+        '@entity_type' => $entity_type,
+        '!line' => __LINE__,
+      ], WATCHDOG_ERROR);
+      souriau_site_entity_retry_content_t10n_queue($data);
+    }
+  }
+  catch (Exception $e) {
+    watchdog('souriau_site', "Can't add a translation for !entity_id (@entity_type):  !exception", [
+      '!entity_id' => $data->entity_id,
+      '@entity_type' => $entity_type,
+      '!exception' => $e->getMessage(),
+    ], WATCHDOG_ERROR);
+  }
+}
+
+/**
+ * Readd into content translation Queue.
+ *
+ * To repeat translation later.
+ */
+function souriau_site_entity_retry_content_t10n_queue($data) {
+  $queue = DrupalQueue::get('content_t10n_' . $data->target, TRUE);
+  $queue->createQueue();
+
+  // Readd only once.
+  // Check if it was already readded.
+  if (!empty($data->readded)) {
+    // Nothing to do here.
+    return;
+  }
+
+  $data->readded = REQUEST_TIME;
+  $queue->createItem($data);
+}
+
+/**
+ * Implements hook_init().
+ */
+function souriau_site_init() {
+  // Display Translation progress in admin area.
+  if (arg(0) == 'admin' && user_access('administer domains')) {
+    $pending_languages = variable_get('souriau_site_pending_languages', []);
+    $languages = language_list();
+    if (empty($pending_languages)) {
+      return;
+    }
+
+    foreach ($pending_languages as $langcode => $total) {
+      if (intval($total) < 1) {
+        // Backcompatibility.
+        continue;
+      }
+      $language = $languages[$langcode];
+      $p1 = ['@language_name' => $language->name];
+      $p2 = ['context' => SOURIAU_COMMON_T_ADMIN];
+      $queue_name = 'content_t10n_' . $langcode;
+      $queue = DrupalQueue::get($queue_name, TRUE);
+      if ($count = $queue->numberOfItems()) {
+        if ($count == $total) {
+          $message = t('Content translation script is planned to be executed for language "@language_name"', $p1, $p2);
+        }
+        else {
+          $progress = 100 - round(100 * $count / $total);
+          $p1['@progress'] = $progress . '%';
+          $message = t('Content translation script is running for language "@language_name" (@progress)', $p1, $p2);
+        }
+      }
+      else {
+        $message = t('Content translation script is finishing running for "@language_name"', $p1, $p2);
+      }
+      drupal_set_message($message, 'warning');
+    }
+  }
+  // AJAX Check.
+  if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+    // AJAX request - nothing to do here.
+    return;
+  }
+}
+
+/**
+ * Perform interface translation import as a batch step.
+ *
+ * @param string $filepath
+ *   Path to a file to import.
+ * @param string $langcode
+ *   Language code.
+ * @param array $context
+ *   Is filled with `results` - list of files imported.
+ */
+function _souriau_locale_batch_import($filepath, $langcode, &$context) {
+  if (preg_match('!(/|\.)([^\./]+)\.po$!', $filepath, $origin)) {
+    $file = (object) ['filename' => drupal_basename($filepath), 'uri' => $filepath];
+    _locale_import_read_po('db-store', $file, LOCALE_IMPORT_KEEP, $langcode);
+    $context['results'][] = $filepath;
+  }
+}
+
+/**
+ * Copy interface translation from one language to another.
+ */
+function _souriau_site_interface_t10n_copy($origin_langcode, $target_langcode, &$context) {
+  $query = db_select('locales_target', 'lt');
+  $query
+    ->fields('lt', ['lid'])
+    ->condition('lt.language', $origin_langcode)
+    ->orderBy('lt.lid');
+
+  if (empty($context['sandbox'])) {
+    $total = $query
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+
+    $context['sandbox']['count'] = 0;
+    $context['sandbox']['current_id'] = 0;
+    $context['sandbox']['total'] = $total;
+    $context['finished'] = $total == 0;
+  }
+  else {
+    $translations = $query
+      ->fields('lt', ['lid', 'translation', 'plid', 'plural'])
+      ->condition('lid', $context['sandbox']['current_id'], '>')
+      ->range(0, variable_get('souriau_interface_t10n_batch_size', 50))
+      ->execute()
+      ->fetchAll();
+    foreach ($translations as $data) {
+      db_insert('locales_target')
+        ->fields([
+          'lid' => $data->lid,
+          'translation' => $data->translation,
+          'language' => $target_langcode,
+          'plid' => $data->plid,
+          'plural' => $data->plural,
+        ])->execute();
+      $context['sandbox']['count']++;
+      $context['sandbox']['current_id'] = $data->lid;
+    }
+    $context['finished'] = $context['sandbox']['count'] / $context['sandbox']['total'];
+    $context['message'] = t('Copying strings', [], ['context' => SOURIAU_COMMON_T_ADMIN]) . ' ' . $context['sandbox']['count'] . '/' . $context['sandbox']['total'];
+    if ($context['finished'] >= 1) {
+      $context['results'] = $context['sandbox']['total'];
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_site_form_domain_locale_form_alter(&$form, $form_state) {
+  $pending = variable_get('souriau_site_pending_languages', []);
+  if (count($pending)) {
+    $form['domain_language'] = array_diff_key($form['domain_language'], $pending);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_site_form_locale_languages_overview_form_alter(&$form, $form_state) {
+  $pending = variable_get('souriau_site_pending_languages', []);
+  if (count($pending)) {
+    foreach ($pending as $langcode => $total) {
+      $form['enabled'][$langcode] = [
+        '#type' => 'markup',
+        '#markup' => t('Pending', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+      ];
+      unset($form['site_default']['#options'][$langcode]);
+    }
+  }
+}
+
+/**
+ * Finished callback of language copy translations batch.
+ *
+ * Inform the user of translation strings copied.
+ */
+function _souriau_site_interface_t10n_copy_finished($success, $results) {
+  if ($success) {
+    drupal_set_message(format_plural(count($results), 'One translation string copied.', '@count translation strings copied.'));
+  }
+}
+
+/**
+ * Enable language callback.
+ */
+function _souriau_site_enable_language($langcode) {
+  // Enable on general level.
+  db_update('languages')->fields([
+    'enabled' => '1',
+  ])
+    ->condition('language', $langcode)
+    ->execute();
+
+  // Increment enabled language count if we are adding an enabled language.
+  variable_set('language_count', variable_get('language_count', 1) + 1);
+
+  // Enable on Central domain level.
+  $params = [
+    'domain_id' => SOURIAU_COMMON_DOMAIN_CENTRAL,
+    'language' => $langcode,
+    'weight' => 0,
+  ];
+  drupal_write_record('domain_locale', $params);
+}
+
+/**
+ * Batch API callback for the delete content.
+ *
+ * @param array $type
+ *   Entity type. (ex: node).
+ * @param array $bundle
+ *   Entity bundle (ex: article).
+ * @param int $batch_size
+ *   Number of items to index per batch.
+ * @param int $limit
+ *   Maximum number of items to index.
+ * @param array $context
+ *   An array (or object implementing ArrayAccess) containing the batch context.
+ */
+function _souriau_site_batch_delete_content_callback($type, $bundle, $batch_size, $limit, &$context) {
+
+  // Persistent data among batch runs.
+  if (!isset($context['sandbox']['limit'])) {
+    $context['sandbox']['limit'] = $limit;
+    $context['sandbox']['batch_size'] = $batch_size;
+    $context['sandbox']['progress'] = 0;
+  }
+
+  // Persistent data for results.
+  if (!isset($context['results']['deleted'])) {
+    $context['results']['deleted'] = 0;
+  }
+
+  // Number of items to index for this run.
+  $to_delete = min($context['sandbox']['limit'] - $context['sandbox']['progress'], $context['sandbox']['batch_size']);
+
+  // Index the items.
+  $q = new EntityFieldQuery();
+  $q->entityCondition('entity_type', $type)
+    ->entityCondition('bundle', $bundle)
+    ->addMetaData('account', user_load(1))
+    ->range(0, $to_delete);
+  $results = $q->execute();
+
+  if (!empty($results)) {
+    $entities = reset($results);
+    $ids = array_keys($entities);
+    if ($type == 'commerce_product' && $bundle == 'sku') {
+      _souriau_site_delete_sku_references($ids);
+    }
+    if (entity_delete_multiple($type, $ids) !== FALSE) {
+      $context['results']['deleted'] += count($ids);
+    }
+    $context['sandbox']['progress'] += count($ids);
+    drush_log(dt("Processed: !count entities of !type.", array('!count' => $context['results']['deleted'], '!type' => $bundle)), 'ok');
+  }
+
+  // Everything has been indexed.
+  if (empty($results) || $context['sandbox']['progress'] >= $context['sandbox']['limit']) {
+    $context['finished'] = 1;
+  }
+  else {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['limit'];
+
+  }
+}
+
+/**
+ * Batch API finishing callback for the deleting functionality.
+ *
+ * @param bool $success
+ *   Whether the batch finished successfully.
+ * @param array $results
+ *   Detailed information about the result.
+ */
+function _souriau_site_batch_deleting_finished($success, $results) {
+  // Display result messages.
+  if ($success) {
+    if (!empty($results['deleted'])) {
+      drush_log(format_plural($results['deleted'], 'Successfully processed 1 item.', 'Successfully processed @count items.', ['@count' => $results['deleted']]), 'success');
+    }
+    else {
+      drush_log(dt("Couldn't process items. Check the logs for details."), 'error');
+    }
+  }
+  else {
+    drush_log(dt("An error occurred while trying to process items. Check the logs for details."), 'error');
+  }
+}
+
+/**
+ * Helper for delete all SKU references.
+ */
+function _souriau_site_delete_sku_references($product_ids) {
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'commerce_line_item', '=')
+    ->entityCondition('bundle', commerce_product_line_item_types(), 'IN')
+    ->fieldCondition('commerce_product', 'product_id', $product_ids, 'IN');
+  $result = $query->execute();
+
+  if (!empty($result)) {
+    foreach ($result as $type => $entities) {
+      $ids = array_keys($entities);
+      $imploded_ids = implode(', ', $ids);
+      $q_orders = db_query("SELECT order_id FROM commerce_line_item WHERE line_item_id IN ($imploded_ids)");
+      $orders = $q_orders->fetchAll();
+      if (!empty($orders)) {
+        $o_ids = [];
+        foreach ($orders as $item) {
+          $o_ids[$item->order_id] = $item->order_id;
+        }
+        entity_delete_multiple('commerce_order', $o_ids);
+      }
+      entity_delete_multiple($type, $ids);
+    }
+  }
+}

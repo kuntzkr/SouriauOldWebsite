@@ -1,0 +1,57 @@
+diff --git a/js/plugins/media/library.js b/js/plugins/media/library.js
+index 5ec16df..5b74229 100644
+--- a/js/plugins/media/library.js
++++ b/js/plugins/media/library.js
+@@ -13,6 +13,10 @@
+      */
+     invoke: function (data, settings, instanceId) {
+       if (data.format == 'html') {
++        // CKEDITOR module support doesn't set this setting
++        if (typeof settings['global'] === 'undefined') {
++          settings['global'] = {id: 'media_wysiwyg'};
++        }
+         if (jQuery(data.node).is('[data-media-element]')) {
+           // Change the view mode for already-inserted media.
+           var mediaFile = Drupal.media.filter.extract_file_info(jQuery(data.node));
+diff --git a/media_ckeditor.module b/media_ckeditor.module
+index 6284dea..060e545 100644
+--- a/media_ckeditor.module
++++ b/media_ckeditor.module
+@@ -41,3 +41,37 @@ function media_ckeditor_pre_render_text_format($element) {
+ 
+   return $element;
+ }
++
++/**
++ * Implements hook_media_browser_params_alter().
++ */
++function media_ckeditor_media_browser_params_alter(&$stored_params) {
++// We add this custom param when the media dialog is invoked in library.js
++  if (isset($stored_params['id']) && $stored_params['id'] == 'media_wysiwyg') {
++// Set the default browser params from settings form if not already set.
++    if (empty($stored_params['enabledPlugins'])) {
++      $stored_params['enabledPlugins'] = variable_get('media_wysiwyg_wysiwyg_browser_plugins', []);
++    }
++    if (empty($stored_params['file_directory'])) {
++      $stored_params['file_directory'] = variable_get('media_wysiwyg_wysiwyg_upload_directory', '');
++    }
++    if (empty($stored_params['types'])) {
++      $stored_params['types'] = variable_get('media_wysiwyg_wysiwyg_allowed_types', ['image']);
++    }
++    if (empty($stored_params['file_extensions'])) {
++      // Possible only for Image.
++      $stored_params['file_extensions'] = 'png gif jpg jpeg';
++      // Uncomment if we need to upload not only images.
++      // $extensions = '';
++      // foreach ($stored_params['types'] as $type) {
++      // $type = file_type_load($type);
++      // $extensions .= implode(' ', file_type_get_valid_extensions($type));
++      // }
++      // $stored_params['file_extensions'] = implode(' ', $extensions);.
++    }
++
++    // Extra params for use only public file system. (wysiwyg)
++    $stored_params['schemes'] = ['public' => 'public'];
++    $stored_params['uri_scheme'] = 'public';
++  }
++}

@@ -1,0 +1,89 @@
+.b-list-documents {
+  padding: 0 0 44px;
+  border-top: 1px solid #f2f2f2;
+
+  @include media("<tablet") {
+    padding: 0 0 32px;
+  }
+}
+
+.item-document {
+  display: block;
+  border-bottom: 1px solid #f2f2f2;
+  padding: 23px 0 28px 17px;
+  @extend .clearfix;
+
+  @include media("<desktop") {
+    padding: 15px 0 20px 20px;
+  }
+
+  @include media("<tablet") {
+    padding: 15px 0 18px 4px;
+  }
+
+  .ico {
+    width: 20px;
+    height: 23px;
+    fill: #ff3a3a;
+    float: left;
+    vertical-align: top;
+    margin: 0 28px 0 0;
+
+    @include media("<desktop") {
+      margin: 0 14px 0 0;
+    }
+  }
+
+  .b-wrapper {
+    overflow: hidden;
+    padding: 4px 0 0;
+
+    @include media("<desktop") {
+      padding: 6px 0 0;
+    }
+  }
+
+  .b-title {
+    display: inline-block;
+    vertical-align: top;
+    margin: 0 14px 0 0;
+
+    @include media("<desktop") {
+      display: block;
+      margin-bottom: 4px;
+    }
+  }
+
+  h3 {
+    color: $blue2;
+    font-family: $avenir-std;
+    font-size: 16px;
+    //font-weight: bold;
+    line-height: 18px;
+    margin: 0;
+    letter-spacing: -0.9px;
+  }
+
+  .b-info {
+    display: inline-block;
+    color: $grey;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    vertical-align: bottom;
+  }
+
+  .link-download-doc {
+    float: right;
+    margin: 6px 0 0 10px;
+
+    .ico {
+      width: 12px;
+      height: 14px;
+    }
+
+    @include media("<tablet") {
+      display: none;
+    }
+  }
+}

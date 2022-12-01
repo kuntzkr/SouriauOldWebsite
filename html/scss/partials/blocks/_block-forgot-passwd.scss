@@ -1,0 +1,51 @@
+.b-forgot-passwd {
+  padding: 72px 0 56px;
+
+  @include media("<desktop") {
+    padding-top: 51px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 -2px;
+    padding: 39px 0 31px;
+  }
+
+  .b-wrapper {
+    width: 688px;
+    border: 1px solid #e5e5e5;
+    margin: 0 auto;
+    @include box-sizing(border-box);
+    padding: 54px 78px 50px;
+
+    @include media("<tablet") {
+      width: 100%;
+      border: none;
+      padding: 0;
+    }
+  }
+
+  .b-text {
+    padding: 30px 0 28px;
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  h1 {
+    text-align: center;
+
+    @include media("<tablet") {
+      line-height: 36px;
+      letter-spacing: -0.3px;
+      margin: 0 0 41px;
+    }
+  }
+
+  .b-inside-wrapper {
+    @include media("<tablet") {
+      border: 1px solid #e5e5e5;
+      padding: 19px 18px;
+    }
+  }
+}

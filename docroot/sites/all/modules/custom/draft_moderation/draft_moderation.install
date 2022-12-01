@@ -1,0 +1,102 @@
+<?php
+
+/**
+ * @file
+ * Draft Moderation install hooks.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function draft_moderation_install() {
+  // draft_moderation_menu_alter() needs to run after
+  // entity_translation_menu_alter().
+  db_update('system')
+    ->fields(array('weight' => 12))
+    ->condition('name', 'draft_moderation')
+    ->execute();
+
+  if (!db_field_exists('entity_translation', 'workflow')) {
+    db_add_field('entity_translation', 'workflow', array(
+      'description' => "Workflow status",
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+  }
+}
+
+/**
+ * Implements hook_schema_alter().
+ */
+function draft_moderation_schema_alter(&$schema) {
+  $schema['entity_translation']['fields']['workflow'] = array(
+    'description' => "Workflow status",
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  );
+}
+
+/**
+ * Update translations workflow status.
+ */
+function draft_moderation_update_7001() {
+
+  if (!db_field_exists('entity_translation', 'workflow')) {
+    db_add_field('entity_translation', 'workflow', array(
+      'description' => "Workflow status",
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+  }
+
+  db_query("UPDATE {entity_translation} SET `workflow` = 0");
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function draft_moderation_uninstall() {
+  db_drop_field('entity_translation', 'workflow');
+}
+
+/**
+ * Fixes compatibility with newest entity_translation version.
+ */
+function draft_moderation_update_7002() {
+  $spec = array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    // If we have existing data we cannot enforce this to be NOT NULL.
+    'not null' => FALSE,
+    'description' => 'The entity revision id this translation relates to',
+  );
+  db_change_field('entity_translation', 'revision_id', 'revision_id', $spec);
+}
+
+/**
+ * Fixes compatibility with newest entity_translation version.
+ */
+function draft_moderation_update_7003() {
+  $spec = array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    // If we have existing data we cannot enforce this to be NOT NULL.
+    'not null' => TRUE,
+    'description' => 'The entity revision id this translation relates to',
+  );
+  db_change_field('entity_translation', 'revision_id', 'revision_id', $spec);
+
+  if (!db_field_exists('entity_translation_revision', 'workflow')) {
+    db_add_field('entity_translation_revision', 'workflow', array(
+      'description' => "Workflow status",
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+  }
+  // Enable entity_translation_revisions.
+  variable_set('entity_translation_revision_enabled', FALSE);
+}

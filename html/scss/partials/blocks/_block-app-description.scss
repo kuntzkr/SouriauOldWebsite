@@ -1,0 +1,113 @@
+.b-app-description {
+  padding: 50px 0 33px;
+
+  @include media("<desktop") {
+    text-align: center;
+    padding: 50px 0 52px;
+  }
+
+  @include media("<tablet") {
+    padding: 27px 0 25px;
+  }
+
+  .b-title {
+    float: left;
+    width: 416px;
+    margin: 0 20px 0 0;
+    padding: 0 0 32px;
+
+    &.wide-title {
+      width: 100%;
+      float: none;
+      padding: 0;
+
+      @include media("<desktop") {
+        padding: 0 0 6px;
+      }
+
+      @include media("<tablet") {
+        padding: 0;
+      }
+    }
+
+    @include media("<desktop") {
+      float: none;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  h1 {
+    margin: 0 0 11px;
+
+    &:before {
+      @include media("<desktop") {
+        left: 50%;
+        transform: translateX(-50%);
+        -moz-transform: translateX(-50%);
+        -ms-transform: translateX(-50%);
+        -webkit-transform: translateX(-50%);
+      }
+
+      @include media("<tablet") {
+        width: 90px;
+      }
+    }
+
+    @include media("<desktop") {
+      margin: 0 0 19px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 14px;
+      padding: 0 0 19px;
+    }
+  }
+
+  .b-text {
+    overflow: hidden;
+    padding: 12px 0 0;
+
+    @include media("<desktop") {
+      overflow: visible;
+    }
+
+    &.a-left {
+      width: 525px;
+      margin: 0 50px 0 0;
+
+      @include media("<desktop") {
+        float: none;
+        width: 100%;
+      }
+    }
+  }
+
+  .b-row {
+    overflow: hidden;
+
+    @include media("<desktop") {
+      padding: 0 35px 20px;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  .w-search-row {
+    margin: 18px 0 0;
+
+    @extend .a-right;
+
+    @include media("<desktop") {
+      float: none;
+      margin: 29px 0 30px;
+    }
+
+    @include media("<tablet") {
+      margin: 15px 0;
+    }
+  }
+}

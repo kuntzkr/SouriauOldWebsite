@@ -1,0 +1,133 @@
+diff --git a/addressfield.address_formats.inc b/addressfield.address_formats.inc
+index 6bcec74..d27457a 100644
+--- a/addressfield.address_formats.inc
++++ b/addressfield.address_formats.inc
+@@ -28,7 +28,8 @@
+ function addressfield_get_address_format($country_code) {
+   $default_values = array(
+     'used_fields' => array('locality'),
+-    'required_fields' => array('locality'),
++    // 'required_fields' => array('locality').
++    'required_fields' => array(),
+     'dependent_locality_label' => t('Suburb'),
+     'locality_label' => t('City'),
+     'administrative_area_label' => t('Province'),
+diff --git a/addressfield.module b/addressfield.module
+index 68b45d9..1c74322 100644
+--- a/addressfield.module
++++ b/addressfield.module
+@@ -385,13 +385,6 @@ function addressfield_default_values($field, $instance, array $address = array()
+   if ($default_country == 'site_default') {
+     $default_country = variable_get('site_default_country', '');
+   }
+-  // Fallback to the first country in the list if the default country is not
+-  // available, or is empty even though the field is required.
+-  $not_available = $default_country && !isset($available_countries[$default_country]);
+-  $empty_but_required = empty($default_country) && !empty($instance['required']);
+-  if ($not_available || $empty_but_required) {
+-    $default_country = key($available_countries);
+-  }
+ 
+   $default_values = array(
+     'country' => $default_country,
+@@ -427,7 +420,8 @@ function addressfield_default_values($field, $instance, array $address = array()
+ function addressfield_field_is_empty($item, $field) {
+   // Every address field must have at least a country value or it is considered
+   // empty, even if it has name information.
+-  return empty($item['country']);
++  // return empty($item['country']);
++  return FALSE;
+ }
+ 
+ /**
+@@ -547,7 +541,7 @@ function addressfield_field_widget_form(&$form, &$form_state, $field, $instance,
+   if (!empty($input_address)) {
+     $address = $input_address;
+   }
+-  elseif (!empty($items[$delta]['country'])) {
++  elseif (!empty($items[$delta])) {
+     // Else use the saved value for the field.
+     $address = $items[$delta];
+   }
+@@ -608,7 +602,7 @@ function addressfield_field_widget_form(&$form, &$form_state, $field, $instance,
+  * Element validate callback: rebuilds the form on country change.
+  */
+ function addressfield_standard_country_validate($element, &$form_state) {
+-  if ($element['#default_value'] != $element['#value']) {
++  if (isset($element['#default_value']) && ($element['#default_value'] != $element['#value'])) {
+     $parents = $element['#parents'];
+     array_pop($parents);
+     $address = drupal_array_get_nested_value($form_state['values'], $parents);
+@@ -882,6 +876,7 @@ function _addressfield_country_options_list($field = NULL, $instance = NULL) {
+     $countries = country_get_list();
+   }
+ 
++  $none_option = array();
+   if (isset($field)) {
+     // If the instance is not specified, loop against all the instances of the field.
+     if (!isset($instance)) {
+@@ -894,6 +889,9 @@ function _addressfield_country_options_list($field = NULL, $instance = NULL) {
+     }
+     else {
+       $instances = array($instance);
++      if ($instance['required'] == 1) {
++        $none_option = array('' => t('- Select a value -'));
++      }
+     }
+ 
+     foreach ($instances as $instance) {
+@@ -904,5 +902,6 @@ function _addressfield_country_options_list($field = NULL, $instance = NULL) {
+     }
+   }
+ 
++  $countries = $none_option + $countries;
+   return $countries;
+ }
+diff --git a/plugins/format/address.inc b/plugins/format/address.inc
+index e9b801f..2afd4e6 100644
+--- a/plugins/format/address.inc
++++ b/plugins/format/address.inc
+@@ -18,6 +18,7 @@ $plugin = array(
+  * @see CALLBACK_addressfield_format_callback()
+  */
+ function addressfield_format_address_generate(&$format, $address, $context = array()) {
++  global $theme;
+   // Load the predefined address format for the selected country.
+   module_load_include('inc', 'addressfield', 'addressfield.address_formats');
+   $address_format = addressfield_get_address_format($address['country']);
+@@ -126,6 +127,11 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+     '#weight' => 100,
+   );
+ 
++  // Set address line 1 not required, if no country.
++  if (empty($address['country'])) {
++    $format['street_block']['thoroughfare']['#required'] = FALSE;
++  }
++
+   if (empty($format['locality_block']['postal_code']['#access'])) {
+     // Remove the prefix from the first widget of the block.
+     $element_children = element_children($format['locality_block']);
+@@ -264,6 +270,12 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+       'callback' => 'addressfield_standard_widget_refresh',
+       'wrapper' => $format['#wrapper_id'],
+     );
++
++    // Custom trigger for jcf select in the souriau theme.
++    if ($theme == 'souriau') {
++      $format['country']['#ajax']['event'] = 'selectCountry';
++    }
++
+     $format['country']['#element_validate'] = array('addressfield_standard_country_validate');
+     // Don't validate any element when the country is changed.
+     $format['country']['#limit_validation_errors'] = array();
+@@ -284,8 +296,8 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+       $format['country']['#empty_value'] = '';
+       // Hide all other fields until the country is selected.
+       if (empty($address['country'])) {
+-        $format['street_block']['#access'] = FALSE;
+-        $format['locality_block']['#access'] = FALSE;
++        $format['street_block']['#access'] = TRUE;
++        $format['locality_block']['#access'] = TRUE;
+       }
+     }
+   }

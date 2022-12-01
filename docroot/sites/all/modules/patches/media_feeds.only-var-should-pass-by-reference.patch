@@ -1,0 +1,14 @@
+diff --git a/includes/MediaFeedsLibraryProvider.inc b/includes/MediaFeedsLibraryProvider.inc
+index 3fb4dc2..887faea 100644
+--- a/includes/MediaFeedsLibraryProvider.inc
++++ b/includes/MediaFeedsLibraryProvider.inc
+@@ -37,7 +37,8 @@ class MediaFeedsLibraryProvider extends MediaFeedsProvider {
+     // Get the result.
+     $result = $query->execute();
+     if (!empty($result)) {
+-      $this->file = reset(file_load_multiple(array_keys($result['file'])));
++      $files = file_load_multiple(array_keys($result['file']));
++      $this->file = reset($files);
+     }
+   }
+ 

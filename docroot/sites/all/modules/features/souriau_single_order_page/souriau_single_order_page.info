@@ -1,0 +1,10 @@
+name = Souriau Single Order Page
+description = Single Order
+core = 7.x
+package = Souriau Features
+version = 7.x-0.04
+dependencies[] = ctools
+dependencies[] = page_manager
+features[ctools][] = page_manager:pages_default:1
+features[features_api][] = api:2
+features[page_manager_pages][] = single_order

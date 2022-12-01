@@ -1,0 +1,157 @@
+<?php
+/**
+ * @file
+ * Souriau Tools.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function souriau_tools_theme($existing, $type, $theme, $path) {
+  $path = drupal_get_path('module', 'souriau_tools') . '/templates';
+  return [
+    'souriau_tools_no_pn_result' => [
+      'template'  => 'souriau-tools-no-pn-result',
+      'variables' => ['variables' => NULL],
+      'path' => $path,
+    ],
+    'souriau_tools_found_result' => [
+      'template'  => 'souriau-tools-found-result',
+      'variables' => ['variables' => NULL],
+      'path' => $path,
+    ],
+    'souriau_tools_no_result' => [
+      'template'  => 'souriau-tools-no-result',
+      'variables' => ['variables' => NULL],
+      'path' => $path,
+    ],
+  ];
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_tools_preprocess_souriau_tools_no_pn_result(&$variables) {
+  $_html = &$variables['_html'];
+  $variables['missing'] = implode(', ', $variables['missing']);
+  $path = 'node/' . _souriau_tools_get_contact_page_nid();
+  $_html['link'] = l(t('CONTACT US', [], ['context' => SOURIAU_COMMON_T_OTHER]), $path, [
+    'attributes' => [
+      'class' => 'btn orange-btn-hover',
+    ],
+    'fragment' => 'p:category=technical&message=Part Numbers: ' . $variables['missing'],
+  ]);
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_tools_preprocess_souriau_tools_found_result(&$variables) {
+  $_html = &$variables['_html'];
+  $_html['part_numbers'] = '';
+  foreach ($variables['nids'] as $nid) {
+    $node = node_load($nid);
+    $node_view = node_view($node, 'tool_page');
+    $_html['part_numbers'] .= drupal_render($node_view);
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_tools_preprocess_souriau_tools_no_result(&$variables) {
+  $_html = &$variables['_html'];
+  $path = '/node/' . _souriau_tools_get_contact_page_nid();
+  $_html['link'] = l(t('CONTACT US', [], ['context' => SOURIAU_COMMON_T_OTHER]), $path, [
+    'attributes' => [
+      'class' => 'btn orange-btn-hover',
+    ],
+  ]);
+}
+
+/**
+ * Helper function for get nid of contact page.
+ *
+ * @return mixed
+ *   Node nid|False
+ */
+function _souriau_tools_get_contact_page_nid() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'webform')
+    ->fieldCondition('title_field', 'value', 'Contact')
+    ->addMetaData('account', user_load(1));
+  $entities = $query->execute();
+  if (!empty($entities)) {
+    $node = reset($entities['node']);
+    return $node->nid;
+  }
+  return FALSE;
+}
+
+/**
+ * Tools Ajax form callback.
+ */
+function souriau_tools_ajax_callback($form, $form_state) {
+  // Load callback for default form.
+  return souriau_tools_default_callback($form, $form_state);
+}
+
+/**
+ * Default callback with themes.
+ */
+function souriau_tools_default_callback($form, $form_state) {
+  // Example code.
+  $form_state['rebuild'] = TRUE;
+  // For Example we use inputted value as founded result.
+  $result = $part_number = isset($form_state['values']['part_number']) ? $form_state['values']['part_number'] : '';
+
+  return souriau_tools_result_processor($part_number, $result);
+}
+
+/**
+ * Helper function for rendering tool output.
+ *
+ * @param string $part_number
+ *   Default partnumber.
+ * @param mixed $result
+ *   Theme result.
+ *
+ * @return array
+ *   Theme output.
+ */
+function souriau_tools_result_processor($part_number, $result) {
+  if (empty($result)) {
+    // Return no result.
+    return theme('souriau_tools_no_result', ['input' => $part_number]);
+  }
+
+  if (!is_array($result)) {
+    $result = [$result];
+  }
+
+  // Check if we have information about found part numbers.
+  $not_found_pn = [];
+  foreach ($result as $key => $sku) {
+    $node_nid = souriau_common_get_part_number_nid($sku);
+
+    if (!$node_nid) {
+      $not_found_pn[] = $sku;
+      unset($result[$key]);
+      continue;
+    }
+    $result[$key] = $node_nid;
+  }
+
+  if (!empty($result)) {
+    // Return result of form.
+    return theme('souriau_tools_found_result', [
+      'input' => $part_number,
+      'nids' => $result,
+      'no_found' => $not_found_pn
+    ]);
+  }
+
+  // Return not found local PartNumber, link to contact page.
+  return theme('souriau_tools_no_pn_result', ['missing' => $not_found_pn]);
+}

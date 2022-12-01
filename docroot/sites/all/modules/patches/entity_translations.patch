@@ -1,0 +1,123 @@
+diff --git a/entity_translation.module b/entity_translation.module
+index f7ca0ab..e9ef2d9 100644
+--- a/entity_translation.module
++++ b/entity_translation.module
+@@ -605,7 +605,7 @@ function entity_translation_edit_access() {
+  *   release.
+  */
+ function entity_translation_form_language($langcode, $handler) {
+-  return entity_translation_get_existing_language($handler->getEntity(), $handler->getEntityType(), $langcode);
++  return entity_translation_get_existing_language($handler->getEntityType(), $handler->getEntity(), $langcode);
+ }
+ 
+ /**
+@@ -667,6 +667,10 @@ function entity_translation_add_access() {
+     }
+   }
+ 
++  if (isset($translations->data[$langcode]) && $langcode != $source) {
++    drupal_goto('node/' . $entity->nid . '/edit/' . $langcode);
++  }
++
+   return FALSE;
+ }
+ 
+@@ -746,7 +750,22 @@ function entity_translation_tab_access($entity_type, $entity) {
+  */
+ function entity_translation_language_load($langcode, $entity_type = NULL, $entity = NULL) {
+   $enabled_languages = entity_translation_languages($entity_type, $entity);
+-  return isset($enabled_languages[$langcode]) ? $langcode : FALSE;
++
++  if (isset($enabled_languages[$langcode])) {
++    return $langcode;
++  }
++
++  // Patch for better domains compatibility.
++  if (module_exists('domain_locale')) {
++    // Global (Default) language is always accessible.
++    $domains_language_default = domain_conf_variable_get($domain_id = 1, 'language_default');
++    if (is_object($domains_language_default) && $langcode == $domains_language_default->language) {
++      return $langcode;
++    }
++  }
++
++  // return isset($enabled_languages[$langcode]) ? $langcode : FALSE;
++  return FALSE;
+ }
+ 
+ /**
+@@ -1924,9 +1943,14 @@ function entity_translation_languages($entity_type = NULL, $entity = NULL) {
+   }
+   elseif (variable_get('entity_translation_languages_enabled', FALSE)) {
+     $languages = language_list('enabled');
+-    return $languages[1];
++    // Allow modules to alter the languages array.
++    $languages = $languages[1];
++    drupal_alter('entity_translation_languages', $languages);
++    return $languages;
+   }
+-  return language_list();
++  $languages = language_list();
++  drupal_alter('entity_translation_languages', $languages);
++  return $languages;
+ }
+ 
+ /**
+@@ -1998,12 +2022,16 @@ function entity_translation_pathauto_alias_alter(&$alias, array &$context) {
+       // Only create extra aliases if we are working on the original language to
+       // avoid infinite recursion.
+       if ($context['language'] == $translations->original) {
++        $languages = language_list();
+         foreach ($translations->data as $language => $translation) {
+           // We already have an alias for the original language, so let's not
+           // create another one.
+           if ($language == $translations->original) {
+             continue;
+           }
++          if (!isset($languages[$language])) {
++            continue;
++          }
+           pathauto_create_alias($entity_type, $context['op'], $context['source'], $context['data'], $context['type'], $language);
+         }
+       }
+diff --git a/includes/translation.handler.inc b/includes/translation.handler.inc
+index c2d205a..a069820 100644
+--- a/includes/translation.handler.inc
++++ b/includes/translation.handler.inc
+@@ -788,22 +788,33 @@ class EntityTranslationDefaultHandler implements EntityTranslationHandlerInterfa
+     if (!empty($this->entityInfo['entity keys']['language'])) {
+       $language_key = $this->entityInfo['entity keys']['language'];
+       if (!empty($this->entity->{$language_key})) {
+-        return $this->entity->{$language_key};
++        return $this->getLanguageCode($lang = $this->entity->{$language_key});
+       }
+     }
+ 
+     $translations = $this->getTranslations();
+     if (!empty($translations->original)) {
+-      return $translations->original;
++      return $this->getLanguageCode($lang = $translations->original);
+     }
+     else {
+       // When we are creating an entity and no language is specified fall back
+       // to the default language for the current entity and bundle.
+-      return $this->getDefaultLanguage();
++      return $this->getLanguageCode($lang = $this->getDefaultLanguage());
+     }
+   }
+ 
+   /**
++   * Fallback compatibility to always retrieve Langcode of the $language.
++   * @MUFE patch.
++   */
++  public function getLanguageCode($language) {
++    if (is_object($language)) {
++      return $language->language;
++    }
++    return $language;
++  }
++
++  /**
+    * @see EntityTranslationHandlerInterface::getLanguageKey()
+    */
+   public function getLanguageKey() {

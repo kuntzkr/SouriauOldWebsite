@@ -1,0 +1,8 @@
+name = Souriau ECommerce
+description = Ecommerce tools and plugins for SOURIAU.
+core = 7.x
+package = SOURIAU
+
+version = "7.x-0.01"
+
+dependencies[] = souriau_eco_feature

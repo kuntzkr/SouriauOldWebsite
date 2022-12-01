@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Social Share feature.
+ */
+
+include_once 'souriau_social_share.features.inc';

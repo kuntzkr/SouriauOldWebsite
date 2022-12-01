@@ -1,0 +1,209 @@
+.b-downloads {
+  padding: 65px 0 0;
+  margin: 0 0 39px;
+
+  @include media("<desktop") {
+    margin: 0 0 26px;
+    padding-top: 71px;
+  }
+
+  @include media("<tablet") {
+    display: none;
+  }
+
+  .col-text {
+    width: 200px;
+    margin: 0px 26px 0 0;
+    float: left;
+
+    @include media("<desktop") {
+      //padding-left: 10px;
+      margin-right: 32px;
+    }
+  }
+
+  .col-links {
+    overflow: hidden;
+    padding: 0 8px 0 0;
+  }
+
+  .column {
+    display: inline-block;
+    vertical-align: top;
+    width: 220px;
+    margin: 0 0 0 15px;
+
+    @include media("<desktop") {
+      width: 228px;
+    }
+  }
+
+  ul {
+    margin: 6px 0 27px;
+    padding: 0;
+    -webkit-column-count: 3;
+     -moz-column-count: 3;
+          column-count: 3;
+
+    @include media("<desktop") {
+      margin-top: 3px;
+
+      -webkit-column-count: 2;
+      -moz-column-count: 2;
+          column-count: 2;
+    }
+
+    li {
+      margin: 0 0 10px;
+      line-height: 20px;
+      padding: 0 0 6px 16px;
+      display: inline-block;
+      vertical-align: top;
+      width: 100%;
+      box-sizing: border-box;
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      display: inline-block;
+      color: inherit;
+      position: relative;
+      padding: 0 0 0 24px;
+      text-decoration: none;
+      @include transition(opacity 0.3s ease-in-out);
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: none;
+        opacity: 0.7;
+      }
+    }
+
+    .ico {
+      position: absolute;
+      left: 0;
+      top: 0px;
+      fill: #ff3a3a;
+      width: 16px;
+      height: 18px;
+    }
+  }
+}
+
+
+.b-downloads-links {
+  display: block;
+  width: 100%;
+  padding: 65px 0 0;
+  margin: 0 0 39px;
+
+  @include media("<desktop") {
+    margin: 0;
+    padding-top: 10px;
+  }
+
+  @include media("<tablet") {
+    display: none;
+  }
+
+  .col-text {
+    width: 200px;
+    margin: 0px 26px 0 0;
+    float: left;
+
+    @include media("<desktop") {
+      margin-right: 32px;
+    }
+  }
+
+  .col-links {
+    overflow: hidden;
+  }
+
+  .column {
+    display: inline-block;
+    vertical-align: top;
+    width: 340px;
+    margin: 0 0 0 15px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    @include media("<desktop") {
+      width: 228px;
+    }
+  }
+
+  ul {
+    margin: 6px 0 27px;
+    padding: 0;
+    -webkit-column-count: 2;
+    -moz-column-count: 2;
+    column-count: 2;
+
+    @include media("<desktop") {
+      margin-top: 3px;
+    }
+
+    li {
+      display: inline-block;
+      vertical-align: top;
+      padding: 0 15px 12px;
+      width: 100%;
+      box-sizing: border-box;
+      @include transition(all 0.3s ease-in-out);
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      color: inherit;
+      position: relative;
+      padding: 0 0 0 24px;
+      text-decoration: none;
+      display: inline-block;
+      @include transition(opacity 0.3s ease-in-out);
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: none;
+        opacity: 0.7;
+      }
+    }
+
+    .ico {
+      position: absolute;
+      left: 0;
+      top: 0px;
+      fill: #ff3a3a;
+      width: 16px;
+      height: 18px;
+    }
+  }
+
+  .hide-link {
+    opacity: 0;
+    overflow: hidden;
+    padding: 0;
+    height: 0;
+  }
+
+  .visible-link {
+    padding: 0 0 12px;
+    height: auto;
+    opacity: 1;
+  }
+
+  .more-visible {
+    color: #4a5763;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    padding: 0;
+    text-transform: uppercase;
+  }
+}

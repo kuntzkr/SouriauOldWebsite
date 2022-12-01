@@ -1,0 +1,17 @@
+name = Souriau My Projects
+description = Includes my project related pages and views
+core = 7.x
+package = Souriau Features
+version = 7.x-0.15
+dependencies[] = ctools
+dependencies[] = page_manager
+dependencies[] = views
+dependencies[] = views_data_export
+features[ctools][] = page_manager:pages_default:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[page_manager_pages][] = project_page
+features[page_manager_pages][] = projects
+features[views_view][] = souriau_project_csv
+features[views_view][] = souriau_query_user_project_list
+features[views_view][] = userzone_my_projects

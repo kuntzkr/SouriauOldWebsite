@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Training Page feature.
+ */
+
+include_once 'souriau_training_page.features.inc';

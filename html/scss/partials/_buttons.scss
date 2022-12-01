@@ -1,0 +1,1037 @@
+/**
+ * Buttons.
+ */
+
+.btn {
+  min-height: 37px;
+  display: inline-block;
+  color: #FFF;
+  font-family: $avenir-next-bold;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.64px;
+  line-height: 19px;
+  border-radius: 3px;
+  padding: 9px 39px;
+  text-align: center;
+  background: transparent;
+  border: 1px solid #FFF;
+  @include box-sizing(border-box);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  @include transition(all 0.4s ease-in-out);
+  text-decoration: none;
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+    color: #FFF;
+  }
+
+  &:focus, &:hover {
+    color: #FFF;
+  }
+
+  &.orange-btn {
+    background: $orange;
+    border-color: transparent;
+  }
+
+  &.orange-btn-hover {
+    background: $orange;
+    border-color: transparent;
+
+    .no-touchevents &:hover,
+    .no-js &:hover {
+      color: $orange;
+      border-color: $orange;
+      background: transparent;
+    }
+  }
+
+  &.blue-btn {
+    color: $blue3;
+    border-color: $blue3;
+
+    .no-touchevents &:hover,
+    .no-js &:hover {
+      color: $white;
+      border-color: $white;
+      background: $blue3;
+    }
+
+    &:focus {
+      color: $blue3;
+      border-color: $blue3;
+      background: $white;
+    }
+  }
+}
+
+.link-favourite {
+  display: inline-block;
+  vertical-align: top;
+  color: $grey;
+  font-family: $main-sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  position: relative;
+  padding: 0 0 0 18px;
+  text-decoration: none;
+  @include transition(color 0.2s ease-in-out);
+
+  &:before {
+    position: absolute;
+    left: 0;
+    top: 0;
+    content: "";
+    @include retina-sprite($star-empty-small-group);
+  }
+
+  .text {
+    display: block;
+    padding: 0 0 0 5px;
+  }
+
+  .text-favourite {
+    display: none;
+    padding: 0 0 0 5px;
+  }
+
+  &:focus {
+    color: $grey;
+    text-decoration: none;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    color: $orange;
+
+    &:before {
+      @include retina-sprite($star-full-small-group);
+    }
+  }
+
+  &.active {
+    color: $orange;
+
+    &:before {
+      @include retina-sprite($star-full-small-group);
+    }
+
+    .text {
+      display: none;
+    }
+
+    .text-favourite {
+      display: block;
+    }
+  }
+
+  &.without-text {
+    padding: 0 0 0 20px;
+    line-height: 20px;
+
+    .text {
+      padding: 0;
+      @extend .screen-reader-text;
+    }
+
+    .text-favourite {
+      padding: 0;
+      @extend .screen-reader-text;
+    }
+
+    &:before {
+      @include retina-sprite($star-empty-group);
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      &:before {
+        @include retina-sprite($star-full-group);
+      }
+    }
+
+    &.active{
+      &:before {
+        @include retina-sprite($star-full-group);
+      }
+    }
+  }
+}
+
+.link-plus {
+  display: inline-block;
+  vertical-align: top;
+  width: 20px;
+  height: 20px;
+  @include box-sizing(border-box);
+  border: 1.25px solid $orange;
+  color:  $orange;
+  font-size: 24px;
+  line-height: 18px;
+  font-weight: normal;
+  text-decoration: none;
+  text-align: center;
+  font-family: Arial, sans-serif;
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    color: #FFF;
+    background: $orange;
+  }
+
+  &:focus{
+    color: $orange;
+    text-decoration: none;
+  }
+}
+
+.view-more {
+  display: inline-block;
+  color: #FFF;
+  font-family: $avenir-next-bold;
+  font-size: 14px;
+  letter-spacing: 0.64px;
+  line-height: 19px;
+  min-height: 37px;
+  min-width: 170px;
+  padding: 9px 5px;
+  text-align: center;
+  border: 1px solid #FFF;
+  @include box-sizing(border-box);
+  border-radius: 3px;
+  text-decoration: none;
+  font-weight: bold;
+  cursor: pointer;
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    color: #FFF;
+  }
+
+  &:focus, &:hover {
+    color: #FFF;
+    text-decoration: none;
+  }
+
+  &.blue-btn {
+    color: $blue3;
+    border-color: $blue3;
+    @include transition(all 0.3s ease-in-out);
+
+    &:focus {
+      color: $blue3;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      color: #FFF;
+      background: $blue3;
+    }
+  }
+}
+
+.b-share {
+  display: inline-block;
+}
+
+.share-link {
+  display: block;
+  position: relative;
+  padding: 0 0 0 23px;
+  color: $grey;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  text-decoration: none;
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+
+    .ico-share {
+      fill: #003865;
+    }
+  }
+
+  &:focus {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .ico-share {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -7px 0 0;
+    width: 14px;
+    height: 14px;
+    fill: $grey;
+  }
+
+  .b-white & {
+    color: $white;
+
+    .ico-share {
+      fill: $white;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      text-decoration: underline;
+
+      .ico-share {
+        fill: $white;
+      }
+    }
+  }
+}
+
+.link-more {
+  color: #003865;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  display: inline-block;
+  vertical-align: top;
+  text-decoration: none;
+  //@include transition(opacity 0.3s ease-in-out);
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    color: #003865;
+    text-decoration: none;
+    opacity: 0.8;
+  }
+
+  &:focus {
+    text-decoration: none;
+  }
+
+  .glyphicon {
+    font-weight: bold;
+    margin-left: -2px;
+    margin-right: 5px;
+  }
+}
+
+.btn-back {
+  color: $grey;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  display: inline-block;
+  vertical-align: top;
+  text-transform: uppercase;
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .glyphicon {
+    font-weight: bold;
+    margin-left: 0;
+    margin-right: 0;
+    color: $blue3;
+  }
+}
+
+.download-link {
+  display: inline-block;
+  padding: 5px;
+  vertical-align: top;
+  position: relative;
+  padding-left: 20px;
+  font-size: 11px;
+  text-decoration: none;
+  letter-spacing: 1px;
+  line-height: 18px;
+
+  .ico {
+    width: 10px;
+    height: 13px;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -4px 0 0;
+    fill: #003865;
+    @include transition(opacity 0.3s ease-in-out);
+  }
+
+  &:focus {
+    text-decoration: none;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    opacity: 0.8;
+  }
+}
+
+.where-to-buy-link {
+  display: inline-block;
+  padding: 5px;
+  vertical-align: top;
+  position: relative;
+  padding-left: 18px;
+  font-size: 11px;
+  text-decoration: none;
+  letter-spacing: 1px;
+  line-height: 18px;
+  color: $grey;
+
+  .ico {
+    width: 11px;
+    height: 15px;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -7px 0 0;
+    fill: $grey;
+    @include transition(opacity 0.3s ease-in-out);
+  }
+
+  &:focus {
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    color: #003865;
+
+    .ico {
+      fill: #003865;
+    }
+  }
+}
+
+.add-to-project-link {
+  display: inline-block;
+  padding: 5px;
+  vertical-align: top;
+  position: relative;
+  padding-left: 22px;
+  font-size: 11px;
+  text-decoration: none;
+  letter-spacing: 1px;
+  line-height: 18px;
+  color: $grey;
+
+  .ico {
+    width: 14px;
+    height: 10px;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -6px 0 0;
+    fill: $grey;
+    @include transition(opacity 0.3s ease-in-out);
+  }
+
+  &:focus {
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    color: #003865;
+
+    .ico {
+      fill: #003865;
+    }
+  }
+}
+
+.b-compare-btn {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.compare-link {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+  padding: 5px 5px 5px 21px;
+  color: $grey;
+  font-family: $main-sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  text-decoration: none;
+
+  .ico {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 14px;
+    height: 10px;
+    fill: $grey;
+    @include transition(opacity 0.3s ease-in-out);
+    margin: -7px 0 0;
+  }
+
+  .ico-check {
+    width: 12px;
+    height: 12px;
+    fill: #003865;
+    stroke: #003865;
+    display: none;
+  }
+
+  &:focus {
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    color: #003865;
+
+    .ico-compare {
+      fill: #003865;
+    }
+  }
+
+  &.active {
+    color: #003865;
+
+    .ico-check {
+      display: block;
+    }
+
+    .ico-compare {
+      display: none;
+    }
+  }
+}
+
+.add-to-cart-link {
+  display: inline-block;
+  padding: 5px;
+  vertical-align: top;
+  position: relative;
+  padding-left: 22px;
+  font-size: 11px;
+  text-decoration: none;
+  letter-spacing: 1px;
+  line-height: 18px;
+  color: $grey;
+
+  .ico {
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin: -7px 0 0;
+    fill: $grey;
+    @include transition(opacity 0.3s ease-in-out);
+  }
+
+  &:focus {
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    color: #003865;
+
+    .ico {
+      fill: #003865;
+    }
+  }
+}
+
+.b-back-link {
+  padding: 26px 0;
+
+  a {
+    text-decoration: none;
+  }
+
+  @include media("<desktop") {
+    padding: 27px 7px;
+  }
+
+  @include media("<tablet") {
+    text-align: center;
+    padding: 16px 0;
+  }
+}
+
+.remove-link {
+  display: inline-block;
+  padding: 5px;
+
+  .ico {
+    width: 13px;
+    height: 17px;
+    display: block;
+    fill: $grey3;
+  }
+
+  .no-touchevents &:hover .ico,
+  .no-js &:hover .ico {
+    text-decoration: none;
+    fill: $grey;
+  }
+}
+
+.edit-link {
+  display: inline-block;
+  padding: 5px;
+
+  .ico {
+    width: 15px;
+    height: 15px;
+    fill: #a3a3a3;
+    display: block;
+  }
+
+  .no-touchevents &:hover .ico,
+  .no-js &:hover .ico {
+    text-decoration: none;
+    fill: $grey;
+  }
+}
+
+.link_search {
+  position: relative;
+  z-index: 1;
+  padding: 20px 39px 20px 60px;
+  display: inline-block;
+  background-color: $orange;
+  border-radius: 50px;
+  vertical-align: top;
+  border: none;
+  color: $white;
+  font-family: $avenir-next-bold;
+  font-size: 14px;
+  letter-spacing: 0.9px;
+  line-height: 19px;
+  font-weight: bold;
+
+  @include media("<tablet") {
+    padding: 15px 32px 15px 46px;
+    margin: 20px 0 14px;
+  }
+
+  .ico {
+    display: block;
+  }
+
+  .ico-search {
+    width: 20px;
+    height: 17px;
+    fill: $white;
+    position: absolute;
+    left: 32px;
+    top: 21px;
+
+    @include media("<tablet") {
+      left: 21px;
+      top: 16px;
+    }
+  }
+}
+
+.link-search-small {
+  position: relative;
+  padding: 0 0 0 23px;
+  color: $blue3;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  text-decoration: none;
+  display: inline-block;
+  vertical-align: top;
+  text-transform: uppercase;
+
+  &:focus {
+    text-decoration: none;
+    color: $blue3;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: underline;
+    color: $blue3;
+  }
+
+  .ico-search {
+    width: 16px;
+    height: 14px;
+    fill: $blue3;
+    position: absolute;
+    left: 0;
+    top: 2px;
+  }
+}
+
+.link-export {
+  position: relative;
+  padding: 0 0 0 23px;
+  color: $grey;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  text-decoration: none;
+  display: inline-block;
+  vertical-align: top;
+
+  .no-touchevents &:hover,
+  .no-js &:hover, &:focus{
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .ico {
+    width: 20px;
+    height: 13px;
+    fill: $grey;
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 4px;
+  }
+}
+
+.search-link {
+  display: inline-block;
+  text-decoration: none;
+  background: #003865;
+  border-radius: 4px;
+  padding: 7px 15px 7px 35px;
+  color: $white;
+  font-family: $main-sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  line-height: 18px;
+  min-height: 34px;
+  position: relative;
+  border-color: #003865;
+  text-transform: uppercase;
+
+  @include media("<desktop") {
+    padding: 5px;
+    background: none;
+    min-height: 1px;
+    border: none;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    color: #003865;
+    border-color: #003865;
+    background: $white;
+
+    .ico {
+      fill: #003865;
+    }
+  }
+
+  &:focus {
+    color: $white;
+    border-color: #003865;
+    background: #003865;
+  }
+
+  .ico {
+    width: 16px;
+    height: 14px;
+    fill: $white;
+    display: block;
+    position: absolute;
+    left: 14px;
+    top: 10px;
+    @include transition(fill 0.3s ease-in-out);
+
+    @include media("<desktop") {
+      width: 27px;
+      height: 23px;
+      position: static;
+      fill: $blue3;
+    }
+
+    @include media("<tablet") {
+      width: 20px;
+      height: 17px;
+    }
+  }
+}
+
+.link-download-doc {
+  text-decoration: none;
+  color: $grey;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  position: relative;
+  padding: 0 0 0 21px;
+  display: inline-block;
+  vertical-align: top;
+
+  .ico {
+    width: 12px;
+    height: 14px;
+    fill: $grey;
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 2px;
+  }
+
+  &:focus {
+    text-decoration: none;
+    color: $grey;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: none;
+    color: #003865;
+
+    .ico {
+      fill: #003865;
+    }
+  }
+}
+
+.web-link {
+  position: relative;
+  padding: 0 0 0 15px;
+  text-transform: uppercase;
+  color: #003865;
+  font-family: $main-sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 18px;
+  display: inline-block;
+  vertical-align: top;
+  text-decoration: none;
+
+  .no-touchevents &:hover,
+  .no-js &:hover {
+    text-decoration: underline;
+  }
+
+  .ico {
+    width: 10px;
+    height: 10px;
+    fill: #003865;
+    display: block;
+    position: absolute;
+    left: -3px;
+    top: 0;
+  }
+
+}
+
+.b-view {
+  display: inline-block;
+
+  .ico {
+    position: relative;
+    fill: #3f50b5;
+    width: 20px;
+    height: 13px;
+    display: block;
+  }
+}
+
+.link-filter {
+  display: inline-block;
+  vertical-align: top;
+  line-height: 32px;
+  color: $white;
+  font-family: $main-sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.51px;
+  background: $orange;
+  border: 1px solid $orange;
+  border-radius: 4px;
+  position: relative;
+  text-decoration: none;
+  padding: 0 19px 0 40px;
+  @include transition(all 0.3s ease-in-out);
+
+  &:focus, &:hover {
+    text-decoration: none;
+    color: $white;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+    background: $white;
+    color: $orange;
+
+    .ico {
+      fill: $orange;
+    }
+  }
+
+  .ico {
+    width: 14px;
+    height: 16px;
+    position: absolute;
+    left: 16px;
+    top: 3px;
+    display: block;
+    fill: $white;
+    @include transition(fill 0.3s ease-in-out);
+  }
+
+  @include media("<desktop") {
+    font-size: 12px;
+    padding: 0 10px 0 30px;
+    letter-spacing: 0;
+
+    .ico {
+      left: 8px;
+    }
+  }
+}
+
+.link-list-view {
+  display: inline-block;
+  vertical-align: top;
+  opacity: 0.3;
+  color: $grey;
+  text-decoration: none;
+  @include transition(opacity 0.3s ease-in-out);
+
+  &:focus {
+    text-decoration: none;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+  }
+
+  .ico {
+    width: 20px;
+    height: 16px;
+    display: block;
+    fill: $grey;
+  }
+}
+
+.link-table-view {
+  display: inline-block;
+  vertical-align: top;
+  opacity: 0.3;
+  color: $grey;
+  text-decoration: none;
+  @include transition(opacity 0.3s ease-in-out);
+
+  &:focus {
+    text-decoration: none;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    text-decoration: none;
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+  }
+
+  .ico {
+    width: 22px;
+    height: 17px;
+    display: block;
+    fill: $grey;
+  }
+}
+
+.list-sort {
+  display: inline-block;
+  vertical-align: top;
+  font-size: 10px;
+  line-height: 10px;
+  text-decoration: none;
+  color: #767677;
+  @include transition(color 0.3s ease-in-out);
+
+  @include clearfix();
+
+  &:focus {
+    text-decoration: none;
+    color: #767677;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover{
+    color: #000;
+    text-decoration: none;
+
+    .ico {
+      fill: #000;
+    }
+  }
+
+  &.active {
+    color: #000;
+
+    .ico {
+      fill: #000;
+    }
+  }
+
+  .ico {
+    float: left;
+    width: 9px;
+    height: 19px;
+    fill: #767677;
+    margin: 0 5px 0 0;
+    @include transition(fill 0.3s ease-in-out);
+  }
+
+  .text {
+    float: left;
+    height: 19px;
+
+    sup, sub {
+      font-size: 100%;
+      line-height: 100%;
+      display: block;
+    }
+
+    sup {
+      top: -1px;
+    }
+
+    sub {
+      top: 0px;
+      bottom: auto;
+    }
+  }
+}
+
+

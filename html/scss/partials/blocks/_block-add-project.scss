@@ -1,0 +1,79 @@
+.b-add-project {
+  width: 478px;
+  margin: 0 auto;
+  text-align: center;
+
+  @include media("<tablet") {
+    width: 100%;
+  }
+
+  h2 {
+    position: relative;
+    padding: 0 0 26px;
+    margin: 0 0 44px;
+
+    @include media("<tablet") {
+      padding: 0 0 34px;
+    }
+
+    &:before {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      -moz-transform: translateX(-50%);
+      -ms-transform: translateX(-50%);
+      -webkit-transform: translateX(-50%);
+      bottom: 0;
+      width: 90px;
+      height: 3px;
+      background: $orange;
+      content: "";
+    }
+  }
+
+  .wide-btns {
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+    }
+
+    .btn {
+      margin: 0 0 19px;
+    }
+
+    .btn-cancel {
+      width: 190px;
+      margin-right: 22px;
+      float: left;
+
+      @include media("<tablet") {
+        width: 100%;
+        margin-right: 0;
+        font-size: 13px;
+        padding: 7px 39px;
+        min-height: 35px;
+      }
+    }
+  }
+
+  .w-btn-stretch {
+    overflow: hidden;
+
+    @include media("<tablet") {
+      overflow: visible;
+      display: table-header-group;
+    }
+
+    .btn {
+      width: 100%;
+
+      @include media("<tablet") {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .align-btn-center {
+    display: inline-block;
+  }
+}

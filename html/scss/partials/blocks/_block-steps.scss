@@ -1,0 +1,59 @@
+.b-steps {
+  display: block;
+  padding: 70px 0 40px;
+
+  @include media("<desktop") {
+    padding: 60px 0 13px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 -20px -1px;
+    padding: 26px 0 28px;
+    border-bottom: 1px solid #f0f1f4;
+  }
+
+  ul {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+
+    @include media("<tablet") {
+      margin: 0;
+    }
+
+    li {
+      display: table-cell;
+      border-bottom: 4px solid rgba(185, 185, 185, 0.1);
+      padding: 0 0 17px;
+      text-align: center;
+      color: #6e7982;
+      font-size: 12px;
+      letter-spacing: 0.86px;
+      line-height: 24px;
+
+      @include media("<tablet") {
+        padding: 0 4px;
+        margin: 0 0 8px;
+        border-bottom: none;
+        border-right: 4px solid transparent;
+        border-left: 4px solid transparent;
+        display: block;
+      }
+
+      &:before {
+        display: none;
+      }
+
+      &.active {
+        border-bottom-color: #003865;
+        color: $blue3;
+
+        @include media("<tablet") {
+          border-left: 4px solid #003865;
+        }
+      }
+    }
+  }
+
+
+}

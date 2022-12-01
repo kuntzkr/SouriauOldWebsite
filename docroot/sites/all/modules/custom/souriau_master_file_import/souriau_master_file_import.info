@@ -1,0 +1,10 @@
+name = Souriau master file import
+description = Import SKU and Products using master file & Feeds.
+core = 7.x
+package = SOURIAU
+
+version = "7.x-0.01"
+core = "7.x"
+
+dependencies[] = feeds
+dependencies[] = souriau_feeds_importer

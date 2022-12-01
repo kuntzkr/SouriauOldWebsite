@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Application Landing feature.
+ */
+
+include_once 'souriau_ct_application_landing.features.inc';

@@ -1,0 +1,11 @@
+name = Souriau site
+description = Provides special logic for souriau site.
+core = 7.x
+package = SOURIAU
+php = 5.2.4
+version = 7.x-1.0
+
+dependencies[] = field_ui
+dependencies[] = entity_translation
+
+files[] = souriau_site.install

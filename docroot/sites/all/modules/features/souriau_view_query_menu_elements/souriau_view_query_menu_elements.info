@@ -1,0 +1,12 @@
+name = Souriau View Query Menu Elements
+core = 7.x
+package = Souriau Features
+version = 7.x-0.02
+dependencies[] = souriau_ct_capabilities_landing
+dependencies[] = souriau_ct_capability_domain
+dependencies[] = views
+dependencies[] = views_content
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = souriau_query_get_menu_elements
+features_exclude[dependencies][ctools] = ctools

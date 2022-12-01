@@ -1,0 +1,487 @@
+.b-popup {
+  &.modal-ios {
+    position: absolute;
+  }
+
+  .close {
+    opacity: 1;
+    filter: alpha(opacity=100);
+    background: none;
+    border: none;
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 1;
+
+    @include media("<tablet") {
+      right: 17px;
+    }
+
+    .ico {
+      width: 30px;
+      height: 30px;
+      display: block;
+      fill: $grey;
+      -moz-transform: rotate(45deg); /* Для Firefox */
+      -ms-transform: rotate(45deg); /* Для IE */
+      -webkit-transform: rotate(45deg); /* Для Safari, Chrome, iOS */
+      -o-transform: rotate(45deg); /* Для Opera */
+      transform: rotate(45deg);
+
+      @include media("<tablet") {
+        width: 21px;
+        height: 21px;
+      }
+    }
+  }
+
+  .popup-title {
+    h2 {
+      text-align: center;
+      color: $blue2;
+      font-size: 24px;
+      line-height: 36px;
+      font-family: $avenir-next-regular;
+      margin: 0 0 20px;
+
+      @include media("<tablet") {
+        margin: 0 0 23px;
+      }
+    }
+  }
+
+  .vertical-alignment-helper {
+    display:table;
+    height: 100%;
+    width: 100%;
+    pointer-events:none;
+  }
+
+  .vertical-align-center {
+    /* To center vertically */
+    display: table-cell;
+    vertical-align: middle;
+    pointer-events:none;
+  }
+
+  .modal-body {
+    /* Bootstrap sets the size of the modal in the modal-dialog class, we need to inherit it */
+    width: 590px;
+    height:inherit;
+    /* To center horizontally */
+    margin: 0 auto;
+    pointer-events:all;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+
+  .modal-dialog {
+    width: auto;
+    margin: 0;
+    padding: 30px 27px;
+    box-sizing: border-box;
+  }
+
+  .modal-content {
+    padding: 67px 56px 44px;
+    width:inherit;
+    height:inherit;
+    /* To center horizontally */
+    margin: 0 auto;
+    pointer-events:all;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+
+    @include media("<tablet") {
+      padding: 65px 15px 30px;
+    }
+  }
+
+  .b-text {
+    padding: 0 0 12px;
+    text-align: center;
+
+    @include media("<tablet") {
+      padding: 0 30px 5px;
+    }
+  }
+
+  p {
+    color: $grey;
+    font-size: 14px;
+    line-height: 24px;
+    margin: 0;
+    padding: 0 0 24px;
+  }
+
+  .wide-btns {
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+    }
+
+    .btn {
+      margin: 0 0 19px;
+    }
+
+    .btn-cancel {
+      width: 190px;
+      margin-right: 22px;
+      float: left;
+
+      @include media("<tablet") {
+        width: 100%;
+        margin-right: 0;
+        font-size: 13px;
+        padding: 7px 39px;
+        min-height: 35px;
+      }
+    }
+  }
+
+  .w-btn-stretch {
+    overflow: hidden;
+
+    @include media("<tablet") {
+      overflow: visible;
+      display: table-header-group;
+    }
+
+    .btn {
+      width: 100%;
+
+      @include media("<tablet") {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .align-btn-center {
+    display: inline-block;
+  }
+}
+
+.projects-popup {
+  .popup-title {
+    h2 {
+      position: relative;
+      padding: 0 0 26px;
+      margin: 0 0 44px;
+
+      @include media("<tablet") {
+        padding: 0 0 34px;
+      }
+
+      &:before {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        -moz-transform: translateX(-50%);
+        -ms-transform: translateX(-50%);
+        -webkit-transform: translateX(-50%);
+        bottom: 0;
+        width: 90px;
+        height: 3px;
+        background: $orange;
+        content: "";
+      }
+    }
+  }
+
+  .modal-dialog {
+    padding: 30px 15px;
+  }
+
+  .modal-content {
+    padding-bottom: 23px;
+
+    @include media("<tablet") {
+      padding: 76px 25px 53px;
+    }
+  }
+
+  .close {
+    @include media("<tablet") {
+      right: 29px;
+    }
+  }
+}
+
+.remove-popup {
+  .modal-content {
+    padding: 48px 56px 23px;
+
+    @include media("<tablet") {
+      padding: 65px 15px 0;
+    }
+  }
+}
+
+.add-to-project-popup {
+  .popup-title {
+    display: none;
+  }
+
+  .modal-body {
+    width: 298px;
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+
+  .modal-content {
+    padding: 16px 31px 64px;
+
+    @include media("<tablet") {
+      padding: 16px 15px 64px;
+    }
+  }
+
+  .w-btn {
+    display: block;
+
+    .btn {
+      display: block;
+    }
+  }
+
+  .b-text {
+    padding: 20px 0;
+  }
+}
+
+.inform-popup {
+  .modal-content {
+    @include media("<tablet") {
+      padding: 61px 15px 21px;
+    }
+  }
+
+  .popup-title {
+    h2 {
+      margin: 0 0 22px;
+    }
+  }
+
+  .b-text {
+    padding-bottom: 10px;
+  }
+
+  .align-btn-center {
+    @include media("<tablet") {
+      display: block;
+    }
+  }
+
+  .btn {
+    min-width: 266px;
+
+    @include media("<tablet") {
+      min-width: 1px;
+      width: 100%;
+    }
+  }
+}
+
+.where-to-buy-popup {
+  .close {
+    right: 24px;
+    top: 24px;
+  }
+
+  .modal-content {
+    padding: 63px 46px 50px 64px;
+
+    @include media("<desktop") {
+      padding: 63px 10px 30px 30px;
+    }
+
+    @include media("<tablet") {
+      padding: 63px 20px 15px 20px;
+    }
+  }
+
+  .modal-body {
+    width: 849px;
+
+    @include media("<desktop") {
+      width: 710px;
+    }
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+
+  .popup-title {
+    h2 {
+      text-align: left;
+      margin-bottom: 21px;
+    }
+  }
+
+  .list-locators {
+    padding: 0;
+  }
+
+  .item-locator {
+    width: 226px;
+    margin-bottom: 35px;
+
+    @include media("<desktop") {
+      margin-right: 15px;
+      width: 205px;
+      padding-left: 25px;
+    }
+
+    @include media("<tablet") {
+      width: auto;
+      margin-left: 0;
+      margin-right: 0;
+    }
+
+    p {
+      padding: 0;
+    }
+  }
+}
+
+.poll-popup {
+  .b-form {
+    @include media("<tablet") {
+      margin: 0;
+    }
+
+    .form-radios {
+      display: inline-block;
+    }
+
+    .form-type-radio {
+      margin-bottom: 20px;
+
+      label {
+        min-height: 20px;
+        line-height: 20px;
+        padding-left: 36px;
+
+        &:before {
+          width: 20px;
+          height: 20px;
+        }
+
+        &:after {
+          top: 4px;
+          left: 8px;
+          width: 12px;
+          height: 12px;
+          background: $grey;
+        }
+      }
+    }
+
+    legend {
+      font-size: 14px;
+      line-height: 24px;
+      text-transform: none;
+      letter-spacing: normal;
+      padding: 0;
+      margin: 0 0 52px;
+
+      @include media("<tablet") {
+        margin: 0 0 51px;
+      }
+    }
+
+    .form-actions {
+      padding: 41px 0 0;
+    }
+
+    .btn {
+      min-width: 190px;
+
+      @include media("<tablet") {
+        width: 235px;
+      }
+    }
+  }
+
+  .modal-content {
+    padding-top: 49px;
+    padding-bottom: 28px;
+
+    @include media("<tablet") {
+      padding-top: 76px;
+    }
+  }
+
+  .modal-dialog {
+    @include media("<tablet") {
+      padding: 15px;
+    }
+  }
+
+  .close {
+    @include media("<tablet") {
+      right: 30px;
+    }
+  }
+
+  .popup-title {
+    h2 {
+      margin: 0 0 18px;
+
+      @include media("<tablet") {
+       // letter-spacing: -0.8px;
+      }
+    }
+  }
+
+  .b-result {
+    padding: 0 0 10px;
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  h4 {
+    color: $grey;
+    font-family: $main-sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 24px;
+    margin: 0 0 12px;
+    text-align: center;
+  }
+
+  .b-message {
+    color: $orange;
+    font-size: 14px;
+    line-height: 24px;
+    font-family: $main-sans-serif;
+    padding: 0 0 35px;
+
+    @include media("<tablet") {
+      padding: 0 0 28px;
+    }
+  }
+
+  .b-progress-result {
+    width: 300px;
+    margin: 0 auto 14px;
+
+    @include media("<tablet") {
+      width: 249px;
+      margin-bottom: -4px;
+      padding: 9px 0 0;
+    }
+  }
+}

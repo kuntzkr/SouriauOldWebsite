@@ -1,0 +1,23 @@
+diff --git a/modules/file/file.module b/modules/file/file.module
+index 9e091af..7fdf149 100644
+--- a/modules/file/file.module
++++ b/modules/file/file.module
+@@ -173,11 +173,13 @@ function file_file_download($uri, $field_type = 'file') {
+           // Load all field items for that entity.
+           $field_items = field_get_items($entity_type, $entity, $field_name);
+ 
+-          // Find the field item with the matching URI.
+-          foreach ($field_items as $item) {
+-            if ($item['uri'] == $uri) {
+-              $field_item = $item;
+-              break;
++          if ($field_items) {
++            // Find the field item with the matching URI.
++            foreach ($field_items as $item) {
++              if ($item['uri'] == $uri) {
++                $field_item = $item;
++                break;
++              }
+             }
+           }
+         }

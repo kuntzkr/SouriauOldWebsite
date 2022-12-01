@@ -1,0 +1,58 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the Souriau install profile.
+ */
+
+/**
+ * Implements hook_update_N().
+ */
+function souriau_common_update_7001(&$sandbox) {
+
+  variable_set('souriau_phone_number_element_validate_patterns', [
+    'en-en' => "^([+(\d]{1,})(([\d() -]){5,16})([+(\d]{1})$",
+  ]);
+
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Set default password reset link.
+ */
+function souriau_common_update_7002(&$sandbox) {
+  // Password reset timeout.
+  variable_set('user_password_reset_timeout', 604800);
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Set date format.
+ */
+function souriau_common_update_7003(&$sandbox) {
+  $formats = souriau_master_file_import_date_formats();
+  // Set formats.
+  foreach ($formats as $format) {
+    variable_set('date_format_' . $format['type'], $format['format']);
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Set display_name for product_series taxonomy.
+ */
+function souriau_common_update_7004(&$sandbox) {
+  $vocabulary = taxonomy_vocabulary_machine_name_load('product_series');
+
+  $terms = taxonomy_term_load_multiple([], ['vid' => $vocabulary->vid]);
+
+  foreach ($terms as $term) {
+    if (!empty($term->field_display_name)) {
+      continue;
+    }
+    $term->field_display_name = $term->name_field;
+    taxonomy_term_save($term);
+  }
+}

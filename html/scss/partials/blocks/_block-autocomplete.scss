@@ -1,0 +1,146 @@
+.b-autocomplete-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #FFF;
+
+  .ui-autocomplete {
+   // display: block !important;
+    width: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0;
+    -webkit-box-shadow: 0px 15px 15px 0px rgba(0, 0, 0, 0.15);
+    -moz-box-shadow: 0px 15px 15px 0px rgba(0, 0, 0, 0.15);
+    box-shadow: 0px 15px 15px 0px rgba(0, 0, 0, 0.15);
+  }
+
+  .ui-menu-item {
+    position: relative;
+    border-bottom: 1px solid #f2f3f5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    &:before {
+      display: none;
+    }
+  }
+
+  .item-search {
+    @include clearfix();
+    @extend .container;
+    padding-top: 17px;
+    padding-bottom: 22px;
+    display: block;
+    text-decoration: none;
+
+    @include media("<desktop") {
+      padding-top: 11px;
+      padding-bottom: 28px;
+    }
+
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+      padding: 18px 15px 12px;
+    }
+
+    .group {
+      text-transform: uppercase;
+      color: $grey;
+      font-family: $main-sans-serif;
+      font-size: 14px;
+      line-height: 24px;
+      padding: 6px 15px 0 21px;
+      width: 149px;
+
+      @include media("<desktop") {
+        width: 137px;
+        padding: 8px 15px 0 0px;
+      }
+
+      @include media("<desktop") {
+        display: none;
+      }
+    }
+
+    .part-number {
+      color: $orange;
+      font-family: $avenir-next-regular;
+      line-height: 24px;
+      font-size: 16px;
+      text-transform: uppercase;
+      padding: 6px 0 0 37px;
+      width: 170px;
+
+      @include media("<desktop") {
+        padding: 8px 0 0 37px;
+        text-align: right;
+      }
+
+      @include media("<tablet") {
+        display: block;
+        width: auto;
+        float: none;
+        text-align: left;
+        padding: 10px 0 0;
+      }
+    }
+
+    .wrapper-info {
+      overflow: hidden;
+
+      @include media("<tablet") {
+        display: table-header-group;
+        overflow: visible;
+      }
+    }
+
+    .b-add-info {
+      color: $grey;
+      font-family: $main-sans-serif;
+      font-size: 14px;
+      line-height: 24px;
+      padding: 6px 0 0 25px;
+
+      @include media("<desktop") {
+        display: block;
+        float: none;
+        padding: 0;
+      }
+
+      span {
+        font-weight: bold;
+      }
+    }
+
+    h2 {
+      margin: 0;
+      display: inline-block;
+      width: 420px;
+      color: #2a4278;
+      font-size: 24px;
+      font-weight: normal;
+      line-height: 30px;
+      font-family: $avenir-next-regular;
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      @include media("<desktop") {
+        font-size: 20px;
+        line-height: 36px;
+        display: block;
+        width: auto;
+        margin: 0 0 -2px;
+      }
+
+      @include media("<tablet") {
+        font-size: 16px;
+        margin: 0 0 -5px;
+      }
+    }
+  }
+}

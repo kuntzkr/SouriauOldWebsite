@@ -1,0 +1,11 @@
+name = Souriau View Query Pathauto
+core = 7.x
+package = Souriau Features
+version = 7.x-0.02
+dependencies[] = views
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = get_category_from_productrange_hub
+features[views_view][] = get_catogory_from_subcategory
+features[views_view][] = get_subcategory_from_productrange
+features_exclude[dependencies][ctools] = ctools

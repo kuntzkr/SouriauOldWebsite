@@ -1,0 +1,53 @@
+<?php
+/**
+ * @file
+ * Tools integration.
+ */
+
+/**
+ * Implementation of hook_theme().
+ */
+function souriau_toolkit_theme() {
+  return [
+    'conduit_size_form_table' => [
+      // The renderable element is the form.
+      'render element' => 'form',
+    ],
+  ];
+}
+
+/**
+ * Theme callback for the form table.
+ */
+function theme_conduit_size_form_table(&$variables) {
+  // Get the useful values.
+  $form = $variables['form'];
+  $rows = $form['rows'];
+  $header = $form['#header'];
+
+  // Setup the structure to be rendered and returned.
+  $content = [
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => [],
+    '#attributes' => [
+      'class' => ['table-bordered'],
+    ],
+    '#sticky' => FALSE,
+  ];
+
+  // Traverse each row.  @see element_chidren().
+  foreach (element_children($rows) as $row_index) {
+    $row = [];
+    // Traverse each column in the row.  @see element_children().
+    foreach (element_children($rows[$row_index]) as $col_index) {
+      // Render the column form element.
+      $row[] = drupal_render($rows[$row_index][$col_index]);
+    }
+    // Add the row to the table.
+    $content['#rows'][] = $row;
+  }
+
+  // Redner the table and return.
+  return drupal_render($content);
+}

@@ -1,0 +1,136 @@
+.b-orders-list {
+  padding: 0 0 57px;
+
+  @include media("<desktop") {
+    padding: 17px 0 31px;
+  }
+
+  @include media("<tablet") {
+    padding: 5px 0 20px;
+  }
+
+  h1 {
+    text-align: center;
+    margin: 0 0 61px;
+
+    @include media("<desktop") {
+      margin: 0 0 30px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 43px;
+    }
+  }
+
+  h2 {
+    text-align: center;
+    margin: 0 0 54px;
+
+    @include media("<tablet") {
+      margin: 0 0 26px;
+    }
+  }
+
+  .b-view {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .w-table {
+    margin-bottom: 66px;
+
+    @include media("<tablet") {
+      margin-bottom: 43px;
+    }
+  }
+
+  table {
+    border-bottom: none;
+
+    @include media("<tablet") {
+      th, td {
+        min-width: 120px;
+      }
+    }
+
+    td {
+      border-bottom: 1px solid #f0f1f4;
+      padding: 24px 20px 22px;
+
+      @include media("<desktop") {
+        padding-left: 0;
+      }
+
+      @include media("<tablet") {
+        padding: 12px 12px 11px;
+      }
+    }
+
+    th {
+      padding: 8px 20px 6px;
+
+      @include media("<desktop") {
+        padding-left: 0;
+      }
+
+      @include media("<tablet") {
+        padding: 15px 12px 12px;
+      }
+    }
+
+    tr {
+      td, th {
+        &:last-child {
+          padding-left: 5px;
+          padding-right: 5px;
+          text-align: center;
+
+          @include media("<desktop") {
+            display: none;
+          }
+        }
+      }
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        td {
+          cursor: pointer;
+          background: #edeff7;
+        }
+
+        .b-view {
+          visibility: visible;
+          opacity: 1;
+        }
+      }
+    }
+
+    tr:nth-child(even) td {
+      background: none;
+    }
+  }
+
+  .order-num--col {
+    width: 15%;
+  }
+
+  .ar-num-col {
+    width: 14.5%;
+  }
+
+  .creation-col {
+    width: 15.5%;
+  }
+
+  .update-col {
+    width: 16.2%;
+  }
+
+  .acknow-col {
+    width: 18.8%;
+  }
+
+  .id-col {
+    width: 15%;
+  }
+}

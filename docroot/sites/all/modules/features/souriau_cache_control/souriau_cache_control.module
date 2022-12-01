@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Cache Control feature.
+ */
+
+include_once 'souriau_cache_control.features.inc';

@@ -1,0 +1,7 @@
+name = Site Overrides
+description = Overrides some contrib Views.
+core = 7.x
+package = QTools
+version = "7.x-0.2"
+
+dependencies[] = views

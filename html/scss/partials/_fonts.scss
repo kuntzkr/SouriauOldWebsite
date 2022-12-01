@@ -1,0 +1,12 @@
+/**
+ * Fonts.
+ */
+
+@include font-face(OpenSans, 'fonts/OpenSans/opensans-regular', normal, normal,  $file-formats: eot ttf svg woff woff2);
+@include font-face(OpenSans, 'fonts/OpenSans/opensans-italic', normal, italic,  $file-formats: eot ttf svg woff woff2);
+@include font-face(OpenSans, 'fonts/OpenSans/opensans-bold', bold, normal,  $file-formats: eot ttf  woff svg woff2);
+@include font-face(OpenSans, 'fonts/OpenSans/opensans-bolditalic', bold, italic,  $file-formats: eot ttf svg woff woff2);
+
+@include font-face(AvenirNextBold, 'fonts/AvenirNext/AvenirNextLTPro-Demi', normal, normal,  $file-formats: eot ttf woff woff2);
+@include font-face(AvenirNextRegular, 'fonts/AvenirNext/AvenirNextLTPro-Regular', normal, normal,  $file-formats: eot ttf woff woff2);
+@include font-face(AvenirStd, 'fonts/AvenirStd/AvenirLTStd-Roman', normal, normal,  $file-formats: eot ttf svg woff woff2);

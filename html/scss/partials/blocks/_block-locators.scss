@@ -1,0 +1,141 @@
+.b-locators {
+  padding: 24px 0 64px;
+
+  @include media("<desktop") {
+    padding: 10px 0 52px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 34px;
+  }
+
+  h1 {
+    margin: 0 0 43px;
+
+    @include media("<desktop") {
+      margin: 0 0 27px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 10px;
+    }
+  }
+
+
+}
+
+.b-filter-locators {
+  .b-form {
+    @include media("<tablet") {
+      margin: 0;
+    }
+
+    .form-type-select {
+      padding-top: 23px;
+      width: 224px;
+      display: inline-block;
+      margin-right: 30px;
+
+      @include media("<desktop") {
+        width: 200px;
+        margin-right: 10px;
+      }
+
+      @include media("<tablet") {
+        display: block;
+        width: 100%;
+        margin: 0 0 21px;
+      }
+    }
+
+    .b-country-filter {
+      width: 368px;
+
+      @include media("<desktop") {
+        width: 242px;
+      }
+
+      @include media("<tablet") {
+        width: 100%;
+      }
+    }
+
+    .jcf-select {
+      padding-left: 1px;
+      border-bottom-color: #003865;
+
+      .jcf-select-text {
+        color: #003865;
+        opacity: 1;
+      }
+
+      .jcf-select-opener {
+        border-top-color: #003865;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+.list-locators {
+  padding: 77px 0 0;
+
+  @include media("<tablet") {
+    padding: 24px 0 0;
+  }
+}
+
+.item-locator {
+  border-left: 1px solid #f2f2f2;
+  padding: 17px 0 24px 34px;
+  display: inline-block;
+  margin: 0 26px 74px 0;
+  width: 290px;
+  vertical-align: top;
+
+  @include media("<desktop") {
+    margin: 0 20px 44px 0;
+    width: 223px;
+  }
+
+  @include media("<tablet") {
+    width: auto;
+    display: block;
+    margin: 0 0 34px 14px;
+  }
+
+  &:nth-child(3n) {
+    margin-right: 0;
+  }
+
+  p {
+    padding: 0;
+  }
+
+  h3 {
+    color: $grey;
+    font-family: $main-sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 24px;
+    margin: 0 0 4px;
+  }
+
+  .b-type {
+    text-transform: uppercase;
+    color: #003865;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    margin: 0 0 17px;
+  }
+
+  .b-address-info {
+    margin: 0 0 13px;
+  }
+
+  .b-add-info {
+    margin: 0 0 17px;
+  }
+}

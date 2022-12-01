@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the User Sales Orders (external DB) feature.
+ */
+
+include_once 'souriau_erp_sales_order_page.features.inc';

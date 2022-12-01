@@ -1,0 +1,52 @@
+<?php
+/**
+ * @file
+ * Souriau Poll.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_poll_menu() {
+  $items = [];
+
+  $items['souriau/ajax/poll/%ctools_js'] = [
+    'page callback' => 'souirau_poll_poll_popup_callback',
+    'page arguments' => [1],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_poll.pages.inc',
+    'delivery callback' => 'ajax_deliver',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_poll_form_advpoll_choice_form_alter(&$form, &$form_state, $form_id) {
+  $form['submit']['#attributes'] = array('class' => ['orange-btn-hover']);
+  $form['submit']['#value'] = t('VOTE', [], ['context' => SOURIAU_COMMON_T_HEADER]);
+  $form['submit']['#prefix'] = '</fieldset><div class="form-block form-actions text-center">';
+  $form['submit']['#suffix'] = '</div>';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_poll_form_advpoll_cancel_vote_form_alter(&$form, &$form_state, $form_id) {
+  $form['actions']['cancel'] = [
+    '#prefix' => '<div class="form-block form-actions text-center">',
+    '#suffix' => '</div>',
+    '#markup' => l(t('Close', [], ['context' => SOURIAU_COMMON_T_HEADER]), '#',
+      [
+         'attributes' => [
+           'class' => 'btn orange-btn-hover ctools-close-modal'
+          ],
+         'external' => TRUE
+      ]
+    )
+  ];
+  unset($form['submit']);
+}

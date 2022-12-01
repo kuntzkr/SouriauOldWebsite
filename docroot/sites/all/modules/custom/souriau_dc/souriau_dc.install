@@ -1,0 +1,41 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the Souriau install profile.
+ */
+
+/**
+ * Implements hook_update_N().
+ */
+function souriau_dc_update_7001(&$sandbox) {
+  global $language;
+  if (!isset($sandbox['progress'])) {
+    // Init batch: Set `max` and `progress`.
+    // Find how many content items to update.
+    $view_data = views_get_view('souriau_download_center', TRUE);
+    $view_data->execute();
+    $sandbox['max'] = $view_data->total_rows;
+    $sandbox['page_count'] = ($sandbox['max'] <= 50) ? 1 : ceil($sandbox['max'] / 50);
+    $sandbox['progress'] = 0;
+    $sandbox['file_count'] = 0;
+  }
+  $view_data = views_get_view('souriau_download_center', TRUE);
+  $view_data->set_display('default');
+  $view_data->set_items_per_page(50);
+  $view_data->set_current_page($sandbox['progress']);
+  $view_data->execute();
+  foreach ($view_data->result as $row_obj) {
+    $file = file_load($row_obj->entity);
+    if (is_object($file) && $file->filemime == 'application/pdf' && $file->status && !file_exists(substr(drupal_realpath($file->uri), 0, -4) . '.jpg')
+      && file_exists(drupal_realpath($file->uri))) {
+      $sandbox['file_count']++;
+      souriau_common_create_thumbnails($file);
+    }
+  }
+  // Update our progress information.
+  $sandbox['progress']++;
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['page_count']) ? TRUE : FALSE;
+  if ($sandbox['#finished'] === TRUE) {
+    drupal_set_message(t('Pdf to thumbnail - Total Part Numbers Completed! !count', ['!count' => $sandbox['file_count']]));
+  }
+}

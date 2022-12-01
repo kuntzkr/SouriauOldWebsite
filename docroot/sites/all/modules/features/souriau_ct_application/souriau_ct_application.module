@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Application feature.
+ */
+
+include_once 'souriau_ct_application.features.inc';

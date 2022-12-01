@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "touchevents",
+    "cssanimations",
+    "csstransitions",
+    "csstransforms",
+    "csstransforms3d",
+    "objectfit",
+    "flexboxlegacy",
+    "flexbox",
+    "flexboxtweener",
+    "backgroundsize"
+  ]
+}

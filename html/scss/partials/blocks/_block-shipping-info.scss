@@ -1,0 +1,31 @@
+.b-shipping-info {
+  margin: -7px 0 0;
+  padding: 0 0 28px;
+
+  @include media("<desktop") {
+    margin: 3px 0 0;
+    padding: 0 0 48px;
+  }
+
+  @include media("<tablet") {
+    padding: 28px 0 48px;
+  }
+
+	h1 {
+		text-align: center;
+    margin: 0 0 44px;
+
+    @include media("<tablet") {
+      line-height: 36px;
+      margin: 0 0 27px;
+    }
+	}
+
+  .b-create-new-address {
+    margin: 0 0 30px;
+
+    @include media("<tablet") {
+      margin: 0 0 3px;
+    }
+  }
+}

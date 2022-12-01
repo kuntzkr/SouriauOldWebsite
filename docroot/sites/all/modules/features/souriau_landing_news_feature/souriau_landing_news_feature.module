@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Landing News Feature feature.
+ */
+
+include_once 'souriau_landing_news_feature.features.inc';

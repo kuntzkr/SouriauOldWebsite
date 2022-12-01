@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Site feature.
+ */
+
+include_once 'souriau_site_feature.features.inc';

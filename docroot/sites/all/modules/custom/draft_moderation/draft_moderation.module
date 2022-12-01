@@ -1,0 +1,1507 @@
+<?php
+
+/**
+ * @file
+ * Draft moderation.
+ */
+
+define('DRAFT_MODERATION_FIELD_REF', 'field_edition');
+define('DRAFT_MODERATION_FIELD_FLAG', 'field_draft');
+define('DRAFT_MODERATION_FIELD_LOG', 'field_log');
+define('DRAFT_MODERATION_FIELD_MODIFICATION_TYPE', 'field_modification_type');
+
+define('DRAFT_MODERATION_DISABLED', 0);
+define('DRAFT_MODERATION_ENABLED', 1);
+define('DRAFT_MODERATION_WORKFLOW', 2);
+
+define('DRAFT_MODERATION_WORKFLOW_IN_PROGRESS', 1);
+define('DRAFT_MODERATION_WORKFLOW_TO_VALIDATE', 2);
+define('DRAFT_MODERATION_WORKFLOW_REFUSED', 3);
+define('DRAFT_MODERATION_WORKFLOW_TO_VALIDATE_TC', 4);
+define('DRAFT_MODERATION_WORKFLOW_VALIDATED', 0);
+
+define('DRAFT_MODERATION_T_CONTEXT', 'Souriau: admin area');
+
+require_once 'draft_moderation.translations.inc';
+require_once 'draft_moderation.forms.inc';
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function draft_moderation_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  if (0 === strpos($root_path, 'node/%/')) {
+    $node = $router_item['map'][1];
+    if (is_numeric($node)) {
+      $node = node_load($node);
+    }
+    if (!$node || empty($data['tabs'])) {
+      return;
+    }
+    if (draft_moderation_supported_type($node->type)) {
+      $has_active = FALSE;
+      $first_tabs = array();
+      foreach ($data['tabs'][0]['output'] as $key => $element) {
+        if (!empty($element['#link']['#active'])) {
+          $has_active = TRUE;
+        }
+        if (in_array($element['#link']['href'], array('node/' . $node->nid, 'node/' . $node->nid . '/edit'))) {
+          $original_title = $data['tabs'][0]['output'][$key]['#link']['title'];
+
+          if ($node->is_draft) {
+            $data['tabs'][0]['output'][$key]['#link']['title'] = t('!action_name draft',
+              array('!action_name' => $original_title), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          }
+          else {
+            $data['tabs'][0]['output'][$key]['#link']['title'] = t('!action_name published',
+              array('!action_name' => $original_title), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          }
+
+          $first_tabs[] = $data['tabs'][0]['output'][$key];
+          unset($data['tabs'][0]['output'][$key]);
+        }
+        elseif ($element['#link']['href'] == 'node/' . $node->nid . '/translate') {
+          $data['tabs'][0]['output'][$key]['#link']['title'] = $node->is_draft ? t('Translations') : t('Published translations');
+          $first_tabs[] = $data['tabs'][0]['output'][$key];
+          unset($data['tabs'][0]['output'][$key]);
+        }
+      }
+
+      if ($node->is_draft) {
+        $menu_item = menu_get_item('node/' . $node->edition_id . '/translate');
+        if ($menu_item['access']) {
+          $menu_item['title'] = t('Published translations', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          array_unshift($data['tabs'][0]['output'], array(
+            '#theme' => 'menu_local_task',
+            '#link' => $menu_item,
+            '#active' => (!$has_active && $root_path === $menu_item['href']),
+          ));
+        }
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+        $menu_item = menu_get_item('node/' . $node->edition_id);
+        if ($menu_item['access']) {
+          $menu_item['title'] = t('View published', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          array_unshift($data['tabs'][0]['output'], array(
+            '#theme' => 'menu_local_task',
+            '#link' => $menu_item,
+            '#active' => (!$has_active && $root_path === $menu_item['href']),
+          ));
+        }
+      }
+      else {
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+        $menu_item = menu_get_item('node/' . $node->edition_id . '/translate');
+        if ($menu_item['access']) {
+          $menu_item['title'] = t('Draft translations', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          array_unshift($data['tabs'][0]['output'], array(
+            '#theme' => 'menu_local_task',
+            '#link' => $menu_item,
+            '#active' => (!$has_active && $root_path === $menu_item['href']),
+          ));
+        }
+        $menu_item = menu_get_item('node/' . $node->edition_id . '/edit');
+        if ($menu_item['access']) {
+          $menu_item['title'] = t('Edit draft', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          array_unshift($data['tabs'][0]['output'], array(
+            '#theme' => 'menu_local_task',
+            '#link' => $menu_item,
+            '#active' => (!$has_active && $root_path === $menu_item['href']),
+          ));
+        }
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+        $menu_item = menu_get_item('node/' . $node->edition_id . '/view');
+        if ($menu_item['access']) {
+          $menu_item['title'] = t('View draft', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+          array_unshift($data['tabs'][0]['output'], array(
+            '#theme' => 'menu_local_task',
+            '#link' => $menu_item,
+            '#active' => (!$has_active && $root_path === $menu_item['href']),
+          ));
+        }
+        array_unshift($data['tabs'][0]['output'], array_pop($first_tabs));
+      }
+      $data['tabs'][0]['count'] = count($data['tabs'][0]['output']);
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function draft_moderation_menu() {
+  return array(
+    'node/%node/publish' => array(
+      'title' => 'Publish',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('draft_moderation_node_publish_confirm', 1),
+      'access callback' => 'node_access',
+      'access arguments' => array('update', 1),
+      'weight' => 1,
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ),
+
+    'node/%node/publish/%entity_translation_language' => array(
+      'title' => 'Publish',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('draft_moderation_node_publish_confirm', 1, 3),
+      'access callback' => 'draft_moderation_publish_access',
+      'access arguments' => array('update', 1, 3),
+      'weight' => 1,
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ),
+
+    'node/%node/unpublish' => array(
+      'title' => 'Publish',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('draft_moderation_node_unpublish_confirm', 1),
+      'access callback' => 'node_access',
+      'access arguments' => array('update', 1),
+      'weight' => 1,
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ),
+
+    'node/%node/unpublish/%entity_translation_language' => array(
+      'title' => 'Publish',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('draft_moderation_node_unpublish_confirm', 1, 3),
+      'access callback' => 'draft_moderation_unpublish_access',
+      'access arguments' => array('update', 1, 3),
+      'weight' => 1,
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function draft_moderation_menu_alter(&$items) {
+  if (module_exists('entity_translation')) {
+    $items['node/%node']['access callback'] = 'draft_moderation_node_view_access';
+    $items['node/%node/edit']['page arguments'][3]['page callback'] = 'draft_moderation_node_page_edit';
+    $items['node/%node/translate']['access callback'] = 'draft_moderation_translation_tab_access';
+    $items['node/%node/translate']['page callback'] = 'draft_moderation_translation_overview';
+    unset($items['node/%node/translate']['file']);
+    $items['node/%node/translate']['module'] = 'draft_moderation';
+
+    $items['node/%node/edit/%entity_translation_language']['access callback'] = 'draft_moderation_translation_edit_access';
+
+    $items['node/%node/translate/delete/%entity_translation_language ']['access callback'] = 'draft_moderation_translation_delete_access';
+
+    if (!empty($items['taxonomy/term/%taxonomy_term/edit'])) {
+      // Minor improvement over entity_translation_edit_access().
+      // Added for better support of domains languages.
+      $items['taxonomy/term/%taxonomy_term/edit']['access callback'] = 'draft_moderation_taxonomy_term_edit_access';
+    }
+  }
+  else {
+    $items['node/%node/edit']['page callback'] = 'draft_moderation_node_page_edit';
+  }
+  // Hide menu Content.
+  $items['admin/content']['access callback'] = '_draft_moderation_admin_content_access';
+}
+
+/**
+ * Menu access callback for admin content.
+ *
+ * Core 'admin/content'.
+ */
+function _draft_moderation_admin_content_access() {
+  if (!empty($_GET['coreadmin'])) {
+    return user_access('bypass node access');
+  }
+  return FALSE;
+}
+
+/**
+ * Menu access callback for texonomy_term edit.
+ *
+ * @see entity_translation_edit_access()
+ */
+function draft_moderation_taxonomy_term_edit_access() {
+  global $language;
+
+  $args = func_get_args();
+
+  $access = call_user_func_array('entity_translation_edit_access', $args);
+
+  if ($access) {
+    // Access granted. Nothing to do here.
+    return $access;
+  }
+
+  $entity_type = array_shift($args);
+  $entity = array_shift($args);
+
+  $sub_action = arg(4);
+  if ('edit' != arg(3) || !empty($sub_action) || ('taxonomy_term' != $entity_type)) {
+    // Nothing to do here.
+    return FALSE;
+  }
+
+  $handler = entity_translation_get_handler($entity_type, $entity);
+  $translations = $handler->getTranslations();
+  $langcode = $language->language;
+
+  // Check if translation in current language exist.
+  if (!empty($translations->data) && isset($translations->data[$langcode])) {
+    // Nothing to do here.
+    return $access;
+  }
+
+  // Translation doesn't exist.
+  // Check if user has access to translate entity.
+  if (!empty($entity->tid) && entity_translation_tab_access($entity_type, $entity)) {
+    // Redirect to translate page.
+    $url = url('taxonomy/term/' . $entity->tid . '/translate');
+    header('Location: ' . $url, TRUE, $http_response_code = 302);
+    drupal_exit($url);
+  }
+  return FALSE;
+}
+
+/**
+ * Menu callback for node edit page.
+ *
+ * @param object $node
+ *   Node object.
+ */
+function draft_moderation_node_page_edit($node) {
+  $type_name = node_type_get_name($node);
+  if ($mode = draft_moderation_supported_type($node->type)) {
+    if (!$node->edition_id) {
+      if ($draft_nid = draft_moderation_create_draft($node)) {
+        node_save($node);
+      }
+    }
+    if (!$node->is_draft && !user_access('edit production editions')) {
+      drupal_goto('node/' . $node->edition_id . '/edit');
+    }
+  }
+
+  drupal_set_title(t('<em>Edit @type</em> @title', array('@type' => $type_name, '@title' => $node->title),
+    array('context' => DRAFT_MODERATION_T_CONTEXT)), PASS_THROUGH);
+  return drupal_get_form($node->type . '_node_form', $node);
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function draft_moderation_node_presave($node) {
+  $has_draft_moderation = draft_moderation_supported_type($node->type);
+  if (empty($has_draft_moderation)) {
+    return;
+  }
+
+  if ($node->is_new) {
+    if (!isset($node->is_draft) && !isset($node->edition_id)) {
+      draft_moderation_create_draft($node);
+    }
+  }
+
+  // Ensure that Draft is always unpublished.
+  if (!empty($node->is_draft) && !empty($node->status)) {
+    $node->status = 0;
+  }
+}
+
+/**
+ * Implements hook_entity_presave().
+ *
+ * Updates translations by the source language values.
+ */
+function draft_moderation_entity_presave($entity, $entity_type) {
+  draft_moderation_translations_update($entity, $entity_type, 'presave');
+}
+
+/**
+ * Implements hook_entity_translation_delete().
+ *
+ * Deletes translations from production node.
+ */
+function draft_moderation_entity_translation_delete($entity_type, $entity, $langcode) {
+  draft_moderation_translations_delete($entity, $entity_type, $langcode);
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function draft_moderation_node_insert($node) {
+  if (draft_moderation_supported_type($node->type)) {
+    if (!$node->is_draft && $node->edition_id) {
+      $draft_node = node_load($node->edition_id);
+      $draft_node->{DRAFT_MODERATION_FIELD_REF}[LANGUAGE_NONE] = array(array('target_id' => $node->nid));
+      $draft_node->edition_id = $node->nid;
+      node_save($draft_node);
+    }
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function draft_moderation_permission() {
+  $permissions = array(
+    'edit production editions' => array(
+      'title' => t('Edit production editions of any type', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'view draft editions' => array(
+      'title' => t('View draft revisions of any type', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'unpublish production editions' => array(
+      'title' => t('Unpublish production editions of any type', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'publish to production edition' => array(
+      'title' => t('Publish draft to production edition of any type', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'bypass workflow states' => array(
+      'title' => t('Bypass workflow restrictions', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'moderate translations' => array(
+      'title' => t('Moderate translations', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'view unpublished production editions' => array(
+      'title' => t('View unpublished production editions', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+    'save node for tc moderation' => array(
+      'title' => t('Save node for TC moderation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    ),
+  );
+
+  // Generate standard node permissions for all applicable node types.
+  foreach (node_type_get_types() as $type => $info) {
+    if (variable_get('node_permissions_' . $type, 1)) {
+      if (entity_translation_enabled_bundle('node', $type) && draft_moderation_supported_type($type)) {
+        $info = node_type_get_type($type);
+        $permissions += array(
+          "publish $type to production edition" => array(
+            'title' => t('%type_name: Publish to production edition', array('%type_name' => $info->name)),
+          ),
+        );
+      }
+    }
+  }
+  return $permissions;
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function draft_moderation_node_load($nodes, $types) {
+  foreach ($nodes as $nid => $node) {
+    if (draft_moderation_supported_type($node->type)) {
+      $nodes[$nid]->is_draft = FALSE;
+      $nodes[$nid]->edition_id = 0;
+      $draft_items = field_get_items('node', $nodes[$nid], DRAFT_MODERATION_FIELD_FLAG);
+      if (!empty($draft_items)) {
+        $draft_item = reset($draft_items);
+        $nodes[$nid]->is_draft = !!$draft_item['value'];
+      }
+      $edition_items = field_get_items('node', $nodes[$nid], DRAFT_MODERATION_FIELD_REF);
+      if (!empty($edition_items)) {
+        $edition_item = reset($edition_items);
+        $nodes[$nid]->edition_id = $edition_item['target_id'];
+      }
+      if ($node->is_draft) {
+        $node->supress_bidirectional = TRUE;
+      }
+    }
+  }
+}
+
+/**
+ * Clones a node by directly saving it.
+ */
+function draft_moderation_create_draft($node) {
+  global $user;
+  $draft_node = clone $node;
+  $draft_node->nid = NULL;
+  $draft_node->vid = NULL;
+  $draft_node->tnid = NULL;
+
+  $draft_node->name = isset($user->name) ? $user->name : NULL;
+  $draft_node->uid = $user->uid;
+  $draft_node->menu = NULL;
+
+  $draft_node->path = NULL;
+  $draft_node->files = array();
+  unset($draft_node->original);
+
+  $draft_node->{DRAFT_MODERATION_FIELD_FLAG}[LANGUAGE_NONE] = array(array('value' => 1));
+  $draft_node->is_draft = TRUE;
+  $draft_node->supress_bidirectional = TRUE;
+  if (empty($node->is_new)) {
+    $draft_node->{DRAFT_MODERATION_FIELD_REF}[LANGUAGE_NONE] = array(array('target_id' => $node->nid));
+    $draft_node->edition_id = $node->nid;
+  }
+
+  // Fix the Field Collection fields.
+  $entity_type = 'node';
+  $bundle = $draft_node->type;
+  $lang_code = $node->language;
+  foreach (field_info_instances($entity_type, $bundle) as $instance) {
+    $field = field_info_field_by_id($instance['field_id']);
+    $field_name = $field['field_name'];
+
+    $skip_fields = array(
+      DRAFT_MODERATION_FIELD_REF,
+      DRAFT_MODERATION_FIELD_FLAG,
+      DRAFT_MODERATION_FIELD_LOG,
+      DRAFT_MODERATION_FIELD_MODIFICATION_TYPE,
+    );
+    if (!in_array($field_name, $skip_fields)) {
+      if (field_is_translatable($entity_type, $field) && ('field_collection' == $field['type'])) {
+        if (!empty($draft_node->{$field_name}[$lang_code])) {
+          // Copy field value from original translation
+          // with support for Field Collection.
+          draft_moderation_copy_field_translation($entity_type, $draft_node, $draft_node, $field, $lang_code, $lang_code);
+        }
+      }
+    }
+  }
+  /* end Fix the Field Collection fields */
+
+  // Draft is always unpublished.
+  $draft_node->status = 0;
+
+  node_save($draft_node);
+  drupal_set_message(t('Draft edition (!draft_nid) has been created. !click_here to edit it.', array(
+    '!draft_nid' => $draft_node->nid,
+    '!click_here' => l(t('Click here', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)), 'node/' . $draft_node->nid . '/edit'),
+  ), array('context' => DRAFT_MODERATION_T_CONTEXT)));
+
+  $node->{DRAFT_MODERATION_FIELD_FLAG}[LANGUAGE_NONE] = array(array('value' => 0));
+  $node->is_draft = FALSE;
+  $node->{DRAFT_MODERATION_FIELD_REF}[LANGUAGE_NONE] = array(array('target_id' => $draft_node->nid));
+  $node->edition_id = $draft_node->nid;
+  return $node->edition_id;
+}
+
+/**
+ * Check if the specified CT has `draft_moderation` enabled.
+ */
+function draft_moderation_supported_type($bundle, $entity_type = 'node') {
+  return variable_get('draft_moderation_' . $entity_type . '_' . $bundle, 0);
+}
+
+/**
+ * Checks if user has access to Publish/Unpublish the Draft.
+ */
+function draft_moderation_user_has_publish_access($moderation_mode, $workflow_state, $node_type) {
+  if (user_access('bypass workflow states')) {
+    return TRUE;
+  }
+  if (!empty($moderation_mode) && (user_access('publish to production edition') || user_access("publish {$node_type} to production edition"))) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Implements hook_node_access().
+ */
+function draft_moderation_node_access($node, $op, $account) {
+  if (is_object($node)) {
+    $type = $node->type;
+    if ($mode = draft_moderation_supported_type($type)) {
+      if ($node->is_draft) {
+        if ($op == 'view') {
+          $has_permission = user_access('view draft editions', $account);
+          if ($has_permission) {
+            return NODE_ACCESS_ALLOW;
+          }
+          return NODE_ACCESS_DENY;
+        }
+      }
+      else {
+        if ($op == 'update' && !user_access('edit production editions', $account)) {
+          return NODE_ACCESS_DENY;
+        }
+        elseif ($op == 'view' && !$node->status && user_access('view unpublished production editions', $account)) {
+          return NODE_ACCESS_ALLOW;
+        }
+      }
+    }
+  }
+  return NODE_ACCESS_IGNORE;
+}
+
+/**
+ * Access callback.
+ */
+function draft_moderation_translation_tab_access($entity) {
+  if (entity_translation_tab_access('node', $entity)) {
+    if (draft_moderation_supported_type($entity->type)) {
+      return !!$entity->is_draft || user_access('edit production editions');
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback.
+ */
+function draft_moderation_translation_delete_access($entity) {
+  if (entity_translation_tab_access('node', $entity)) {
+    if (draft_moderation_supported_type($entity->type)) {
+      return user_access('edit production editions');
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback.
+ *
+ * Checks if current user can edit translation or not.
+ */
+function draft_moderation_translation_edit_access() {
+  global $user;
+
+  $user_languages = _draft_moderation_get_user_languages($user);
+  $args = func_get_args();
+  $entity_type = array_shift($args);
+  $entity = array_shift($args);
+  $original_langcode = array_shift($args);
+
+  $handler = entity_translation_get_handler($entity_type, $entity);
+  $langcode = entity_translation_get_existing_language($handler->getEntityType(), $handler->getEntity(), $original_langcode);
+
+  // Doesn't allow to edit non existent translation.
+  if ($original_langcode != $langcode) {
+    $translations = $handler->getTranslations();
+    if (!isset($translations->data[$original_langcode])) {
+      return FALSE;
+    }
+  }
+
+  if (DRAFT_MODERATION_WORKFLOW == draft_moderation_supported_type($entity->type, $entity_type)) {
+    $translations = $handler->getTranslations();
+    if (isset($translations->data[$langcode])) {
+      if ($translations->data[$langcode]['workflow'] == DRAFT_MODERATION_WORKFLOW_TO_VALIDATE) {
+        if (!user_access('bypass workflow states') && !user_access('moderate translations')) {
+          return FALSE;
+        }
+      }
+    }
+  }
+
+  if (isset($entity->domains) && isset($entity->domain_site) && !$entity->domain_site) {
+    if (is_array($entity->domains)) {
+      $user_languages = array_intersect_key($user_languages, $entity->domains);
+    }
+    else {
+      // If entity is not assigned to any domain.
+      return FALSE;
+    }
+  }
+
+  foreach ($user_languages as $domain_id => $languages) {
+    if (isset($languages[$langcode])) {
+      return call_user_func_array('entity_translation_edit_access', func_get_args());
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Access callback.
+ *
+ * Allow access to unpublished production node.
+ * It will be handled in Page Maneger.
+ */
+function draft_moderation_node_view_access($op, $node) {
+  if ($mode = draft_moderation_supported_type($node->type)) {
+
+    $supported_types = array();
+    /*variable_get('draft_moderation_supported_types_in_page_manager', array(
+    '30_years_webform',
+    'academy_landing',
+    'article',
+    'brand_landing',
+    'category',
+    'expertises',
+    'how_to',
+    'learn_landing',
+    'looks',
+    'magazine_landing',
+    'makeup_artists_landing',
+    'network_collaborator',
+    'people',
+    'product',
+    'program',
+    'testimonials',
+    'video_landing',
+    'webform',
+    ));*/
+
+    if ($op == 'view' && !$node->is_draft && !$node->status && in_array($node->type, $supported_types)) {
+      return NODE_ACCESS_ALLOW;
+    }
+  }
+
+  return node_access($op, $node);
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function draft_moderation_module_implements_alter(&$implementations, $hook) {
+  switch ($hook) {
+    case 'menu_alter':
+    case 'views_data_alter':
+      $group = $implementations['draft_moderation'];
+      unset($implementations['draft_moderation']);
+      $implementations['draft_moderation'] = $group;
+      break;
+
+  }
+}
+
+/**
+ * Implements hook_action_info().
+ */
+function draft_moderation_action_info() {
+  return array(
+    'draft_moderation_publish_action' => array(
+      'label' => t('Publish translation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+      'type' => 'system',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      'pass rows' => TRUE,
+    ),
+    'draft_moderation_unpublish_action' => array(
+      'label' => t('Unpublish translation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+      'type' => 'system',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      'pass rows' => TRUE,
+    ),
+    'draft_moderation_copy_original_to_translation_action' => array(
+      'label' => t('Copy original to translation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+      'type' => 'system',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      'pass rows' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Helper function. Action callback to publish `commerce_product`.
+ *
+ * Publish the current language translation of the `commerce_product`.
+ *
+ * @see draft_moderation_publish_action()
+ */
+function _draft_moderation_sku_publish_action($entity, $context) {
+  global $language;
+  $entity_type = $context['entity_type'];
+
+  $langcode = $language->language;
+  $lang_name = $language->name;
+
+  $t9n_handler = entity_translation_get_handler($entity_type, $entity);
+  $t9n_handler->setFormLanguage($langcode);
+  $t9ns = $t9n_handler->getTranslations();
+
+  if (!isset($t9ns->data[$langcode])) {
+    // If there is no translation then copy from original.
+    _draft_moderation_sku_copy_original_to_translation_action($entity, $context);
+    $t9n_handler = entity_translation_get_handler($entity_type, $entity, TRUE);
+    $t9n_handler->setFormLanguage($langcode);
+    $t9ns = $t9n_draft_handler->getTranslations();
+  }
+
+  $t9n = $t9ns->data[$langcode];
+  $t9n['status'] = 1;
+  $t9n_handler->setTranslation($t9n);
+  $t9n_handler->saveTranslations();
+
+  drupal_set_message(t('%title (@language) has been published.', array('%title' => $entity->title, '@language' => $lang_name)));
+}
+
+/**
+ * Helper function. Action callback to unpublish `commerce_product`.
+ *
+ * Unpublish the current language translation of the `commerce_product`.
+ *
+ * @see draft_moderation_unpublish_action()
+ */
+function _draft_moderation_sku_unpublish_action($entity, $context) {
+  global $language;
+  $entity_type = $context['entity_type'];
+
+  $langcode = $language->language;
+  $lang_name = $language->name;
+
+  $t9n_handler = entity_translation_get_handler($entity_type, $entity);
+  $t9n_handler->setFormLanguage($langcode);
+  $t9ns = $t9n_handler->getTranslations();
+  $t9n = $t9ns->data[$langcode];
+  $t9n['status'] = 0;
+  $t9n_handler->setTranslation($t9n);
+  $t9n_handler->saveTranslations();
+
+  drupal_set_message(t('%title (@language) has been unpublished.', array('%title' => $entity->title, '@language' => $lang_name), array('context' => DRAFT_MODERATION_T_CONTEXT)), 'warning');
+}
+
+/**
+ * Action callback.
+ *
+ * Copy the draft translation values to the production node.
+ */
+function draft_moderation_publish_action($entity, $context) {
+  if (!empty($context['rows'])) {
+    $row = reset($context['rows']);
+  }
+  $langcode = empty($row->entity_translation_node_language) ? NULL : $row->entity_translation_node_language;
+  $entity_type = $context['entity_type'];
+  $languages = language_list();
+
+  // Added support for commerce_product.
+  if ($entity_type == 'commerce_product') {
+    return _draft_moderation_sku_publish_action($entity, $context);
+  }
+
+  if ($entity_type != 'node') {
+    // There is nothing to do.
+    return;
+  }
+
+  if (draft_moderation_supported_type($entity->type)) {
+    if (!empty($langcode)) {
+      if ($entity->is_draft) {
+        $draft = $entity;
+        $production = entity_load_single($entity_type, $draft->edition_id);
+      }
+      else {
+        $production = $entity;
+        $draft = entity_load_single($entity_type, $production->edition_id);
+      }
+      $lang_name = $languages[$langcode]->name;
+      if (draft_moderation_publish_access('update', $draft, $langcode)) {
+        // Publish translation.
+        draft_moderation_publish($draft, $production, $langcode);
+        drupal_set_message(t('%title (@language) has been published.', array('%title' => $entity->title, '@language' => $lang_name)));
+      }
+      else {
+        drupal_set_message(t('%title (@language) has not been published (Access denied).', array('%title' => $entity->title, '@language' => $lang_name)));
+      }
+    }
+  }
+  else {
+    if (!isset($entity->original)) {
+      $entity->original = clone $entity;
+    }
+    drupal_set_message(t('%title has been published.', array('%title' => $entity->title)));
+    $entity->status = 1;
+    node_save($entity);
+  }
+}
+
+/**
+ * Action callback.
+ *
+ * Unpublish translation.
+ */
+function draft_moderation_unpublish_action($entity, $context) {
+  if (!empty($context['rows'])) {
+    $row = reset($context['rows']);
+  }
+  $langcode = empty($row->entity_translation_node_language) ? NULL : $row->entity_translation_node_language;
+  $entity_type = $context['entity_type'];
+  $handler = entity_translation_get_handler($entity_type, $entity);
+  $translations = $handler->getTranslations();
+  $source = $translations->original;
+
+  // Support for commerce_product.
+  if ($entity_type == 'commerce_product') {
+    return _draft_moderation_sku_unpublish_action($entity, $context);
+  }
+
+  if ($entity_type != 'node') {
+    // There is nothing to do.
+    return;
+  }
+
+  // Unpublish both: Production and Draft.
+  _draft_moderation_unpublish_node($entity, $langcode, $source);
+  if (draft_moderation_supported_type($entity->type) && !empty($langcode)) {
+    if ($entity->edition_id) {
+      $edition = entity_load_single($entity_type, $entity->edition_id);
+      if ($edition) {
+        _draft_moderation_unpublish_node($edition, $langcode, $source);
+      }
+    }
+  }
+}
+
+/**
+ * Helper function Action callback for `commerce_product`.
+ *
+ * Copy the original translation values
+ * to the current language translation of the `commerce_product`.
+ *
+ * @see draft_moderation_copy_original_to_translation_action()
+ */
+function _draft_moderation_sku_copy_original_to_translation_action($entity, $context) {
+  global $language;
+  $entity_type = $context['entity_type'];
+
+  $langcode = $language->language;
+  $lang_name = $language->name;
+
+  // Check the translation language.
+  if (empty($langcode) || ($langcode == $entity->translations->original)) {
+    // There is nothing to do.
+    return;
+  }
+
+  if (user_access('translate commerce_product entities')) {
+    // Copy fields original transtation into current language.
+    draft_moderation_translations_update_from_original($entity, $entity_type, $langcode);
+    // Save the translation.
+    $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+    $entity_wrapper->save();
+
+    drupal_set_message(t('%title (@language) has been updated from origin.', array('%title' => $entity->title, '@language' => $lang_name)));
+  }
+  else {
+    drupal_set_message(t('%title (@language) has not been updated (Access denied).', array('%title' => $entity->title, '@language' => $lang_name)));
+  }
+}
+
+/**
+ * Action callback.
+ *
+ * Copy the draft translation values to the production node.
+ */
+function draft_moderation_copy_original_to_translation_action($entity, $context) {
+  if (!empty($context['rows'])) {
+    $row = reset($context['rows']);
+  }
+  $langcode = empty($row->entity_translation_node_language) ? NULL : $row->entity_translation_node_language;
+  $entity_type = $context['entity_type'];
+  $languages = language_list();
+
+  // Added support for commerce_product.
+  if ($entity_type == 'commerce_product') {
+    return _draft_moderation_sku_copy_original_to_translation_action($entity, $context);
+  }
+
+  if ($entity_type != 'node') {
+    // There is nothing to do.
+    return;
+  }
+
+  // Check the translation language.
+  if (empty($langcode) || ($langcode == $entity->translations->original)) {
+    // There is nothing to do.
+    return;
+  }
+
+  if (draft_moderation_supported_type($entity->type)) {
+    if ($entity->is_draft) {
+      $draft = $entity;
+      $production = entity_load_single($entity_type, $draft->edition_id);
+    }
+    else {
+      $production = $entity;
+      $draft = entity_load_single($entity_type, $production->edition_id);
+    }
+    $lang_name = $languages[$langcode]->name;
+    if (user_access('translate node entities')) {
+      // Copy fields original transtation into current language.
+      draft_moderation_translations_update_from_original($draft, $entity_type = 'node', $langcode);
+      // Save the translation.
+      node_save($draft);
+      drupal_set_message(t('%title (@language) has been updated from origin.', array('%title' => $entity->title, '@language' => $lang_name)));
+    }
+    else {
+      drupal_set_message(t('%title (@language) has not been updated (Access denied).', array('%title' => $entity->title, '@language' => $lang_name)));
+    }
+  }
+  else {
+    if (user_access('translate node entities')) {
+      // Copy fields original transtation into current language.
+      draft_moderation_translations_update_from_original($entity, $entity_type = 'node', $langcode);
+      // Save the translation.
+      node_save($entity);
+      drupal_set_message(t('%title (@language) has been updated from origin.', array('%title' => $entity->title, '@language' => $lang_name)));
+    }
+    else {
+      drupal_set_message(t('%title (@language) has not been updated (Access denied).', array('%title' => $entity->title, '@language' => $lang_name)));
+    }
+  }
+}
+
+/**
+ * Get the source (parent langcode) of the $language.
+ */
+function draft_moderation_get_source_langcode($langcode, $original_langcode = '') {
+  $languages = language_list();
+  if (!isset($languages[$langcode])) {
+    return $original_langcode;
+  }
+  $language = $languages[$langcode];
+
+  if (empty($language->source) || empty($languages[$language->source])) {
+    return $original_langcode;
+  }
+
+  return $language->source;
+}
+
+/**
+ * Returns a code of the language which was the source of the passed lang code.
+ */
+function _get_source_langcode($langcode) {
+  $languages = language_list();
+  $language = isset($languages[$langcode]) ? $languages[$langcode] : '';
+  if ($language) {
+    while (isset($language->source) && !empty($language->source) && isset($languages[$language->source])) {
+      $language = $languages[$language->source];
+    }
+    return $language->language;
+  }
+  return '';
+}
+
+/**
+ * Return array of languages as tree.
+ */
+function draft_moderation_languages_tree() {
+  $languages = language_list();
+  $tree = &drupal_static(__FUNCTION__);
+  if (!isset($tree)) {
+    $tree = array();
+    foreach ($languages as $langcode => $language) {
+      $source_code = _get_source_langcode($langcode);
+      if ($source_code && isset($languages[$source_code])) {
+        if (!isset($tree[$source_code])) {
+          $tree[$source_code] = array();
+        }
+        if ($source_code != $langcode) {
+          $tree[$source_code][$langcode] = $langcode;
+        }
+      }
+    }
+  }
+  return $tree;
+}
+
+/**
+ * Helper function returns allowed languages.
+ */
+function _draft_moderation_get_user_languages($user) {
+  $user_domains = domain_get_user_domains($user);
+  if (!empty($user_domains)) {
+    $domain_locale_domains = domain_locale_list();
+    return array_intersect_key($domain_locale_domains, $user_domains);
+  }
+  return array();
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function draft_moderation_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'draft_moderation') . '/views',
+  );
+}
+
+/**
+ * Returns human-readable name of the specified workflow $state.
+ */
+function _draft_moderation_workflow_states($state = NULL) {
+  $states = array(
+    DRAFT_MODERATION_WORKFLOW_IN_PROGRESS => t('In progress', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    DRAFT_MODERATION_WORKFLOW_TO_VALIDATE => t('To validate', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    DRAFT_MODERATION_WORKFLOW_TO_VALIDATE_TC => t('To validate TC', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    /* DRAFT_MODERATION_WORKFLOW_REFUSED  => t('Refused', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)), */
+    DRAFT_MODERATION_WORKFLOW_VALIDATED   => t('Validated', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+  );
+
+  if (!is_null($state)) {
+    return isset($states[$state]) ? $states[$state] : '';
+  }
+  return $states;
+}
+
+/**
+ * Check Translation access.
+ */
+function _draft_moderation_check_access($mode, $translation) {
+  if (!user_access('bypass workflow states') && $mode == DRAFT_MODERATION_WORKFLOW) {
+    if (user_access('moderate translations')) {
+      return in_array($translation['workflow'], array(
+        DRAFT_MODERATION_WORKFLOW_VALIDATED,
+        DRAFT_MODERATION_WORKFLOW_TO_VALIDATE,
+      ));
+    }
+    else {
+      return $translation['workflow'] != DRAFT_MODERATION_WORKFLOW_TO_VALIDATE;
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function draft_moderation_node_delete($node) {
+  $deleted = &drupal_static(__FUNCTION__, array());
+  $deleted[] = $node->nid;
+  if (draft_moderation_supported_type($node->type)) {
+    if (!empty($node->edition_id) && !in_array($node->edition_id, $deleted)) {
+      node_delete($node->edition_id);
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function draft_moderation_entity_info_alter(&$entity_info) {
+  if (module_exists('entity_translation')) {
+    $entity_info['node']['translation']['entity_translation']['class'] = 'DraftModerationNodeHandler';
+  }
+  if (module_exists('commerce_product')) {
+    $entity_info['commerce_product']['translation']['entity_translation']['class'] = 'DraftModerationProductHandler';
+  }
+}
+
+/**
+ * Implements hook_references_dialog_widgets().
+ */
+function draft_moderation_references_dialog_widgets() {
+  return array(
+    'entityreference_autocomplete' => array(
+      'operations' => array(
+        'edit_translation' => array(
+          'function' => 'draft_moderation_entityreference_edit_link',
+          'title' => t('Edit translation dialog'),
+        ),
+      ),
+    ),
+
+    'checkbox' => array(
+      'element_type' => 'checkbox',
+      'format' => '$label [nid: $entity_id]',
+      'views_query' => 'references_dialog_node_reference_views_query',
+      'operations' => array(
+        'edit_translation' => array(
+          'function' => 'draft_moderation_entityreference_edit_link',
+          'title' => t('Edit translation dialog'),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Edit translation link callback for entity references.
+ */
+function draft_moderation_entityreference_edit_link($element, $widget_settings, $field, $instance) {
+  global $language;
+
+  $field_value = NULL;
+  if (isset($element['#return_value'])) {
+    $field_value = $element['#return_value'];
+  }
+  elseif (isset($element['#default_value'])) {
+    $field_value = $element['#default_value'];
+  }
+  if ($field_value) {
+    $entity_type = $field['settings']['target_type'];
+
+    // Take "label (entity id)', match the id from parenthesis.
+    if (preg_match("/.+\((\d+)\)/", $field_value, $matches)) {
+      $value = $matches[1];
+    }
+    if (isset($value)) {
+      $entity = current(entity_load($entity_type, array($value)));
+      list($entity_id, $revision_id, $bundle) = entity_extract_ids($entity_type, $entity);
+      if (entity_translation_enabled_bundle($entity_type, $bundle)) {
+        $mode = FALSE;
+        if ($mode = draft_moderation_supported_type($bundle, $entity_type)) {
+          if (!$entity->is_draft) {
+            $entity = current(entity_load($entity_type, array($entity->edition_id)));
+          }
+        }
+        // $langcode = $element['#language'];
+        // Use current language instead.
+        // Cause Element language may reffer to source language
+        // due to `strict translations`.
+        $langcode = $language->language;
+        $handler = entity_translation_get_handler($entity_type, $entity);
+        $translations = $handler->getTranslations();
+        $source = $translations->original;
+        $edit_path = $handler->getEditPath($langcode);
+        $add_path = "{$handler->getEditPath()}/add/$source/$langcode";
+
+        if ($edit_path) {
+          $add_links = EntityTranslationDefaultHandler::languageSwitchLinks($add_path);
+          $edit_links = EntityTranslationDefaultHandler::languageSwitchLinks($edit_path);
+          if ($handler->getAccess('update')) {
+            // @deprectated: remove following 2 lines.
+            // $languages = entity_translation_languages();
+            // $language = $languages[$langcode];
+            if (isset($translations->data[$langcode])) {
+              $translation = $translations->data[$langcode];
+              if ($handler->getTranslationAccess($langcode) && (!$mode || ($mode && _draft_moderation_check_access($mode, $translation)))) {
+                $link = isset($edit_links->links[$langcode]['href']) ? $edit_links->links[$langcode] : array('href' => $edit_path, 'language' => $language);
+                $link['title'] = t('Edit translation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+                return array($link);
+              }
+            }
+            elseif ($source != $langcode) {
+              $link = isset($add_links->links[$langcode]['href']) ? $add_links->links[$langcode] : array('href' => $add_path, 'language' => $language);
+              $link['title'] = t('Add translation', array(), array('context' => DRAFT_MODERATION_T_CONTEXT));
+              return array($link);
+            }
+          }
+        }
+      }
+    }
+  }
+  return array();
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function draft_moderation_entity_update($entity, $entity_type) {
+  if (function_exists('references_dialog_in_dialog') && references_dialog_in_dialog() && references_dialog_close_on_submit()) {
+    if (isset($entity->is_draft) && $entity->is_draft) {
+      $production = entity_load_single($entity_type, $entity->edition_id);
+      references_dialog_close_on_redirect($production, $entity_type);
+    }
+  }
+}
+
+/**
+ * Implements hook_field_attach_insert().
+ *
+ * @TODO: check the function.
+ */
+function draft_moderation_field_attach_insert($entity_type, $entity) {
+  if (isset($entity->save_translations)) {
+    $handler = entity_translation_get_handler($entity_type, $entity);
+    $handler->saveTranslations();
+  }
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function draft_moderation_entity_insert($entity, $entity_type) {
+  draft_moderation_entity_update($entity, $entity_type);
+}
+
+/**
+ * Menu callback -- ask for confirmation of node publication.
+ */
+function draft_moderation_node_publish_confirm($form, &$form_state, $node, $langcode = '') {
+  $form['#node'] = $node;
+  $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
+  $form['language'] = array('#type' => 'value', '#value' => $langcode);
+  return confirm_form($form,
+    t('Are you sure you want to publish %title?', array('%title' => $node->title), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    'node/' . $node->nid,
+    t('%title will be published', array('%title' => $node->title), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    t('Publish', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    t('Cancel', array(), array('context' => DRAFT_MODERATION_T_CONTEXT))
+  );
+}
+
+/**
+ * Execute node publication.
+ */
+function draft_moderation_node_publish_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    $node = node_load($form_state['values']['nid'], NULL, TRUE);
+    $langcode = $form_state['values']['language'];
+
+    if (draft_moderation_supported_type($node->type) && !empty($langcode)) {
+      $entity_type = 'node';
+      if ($node->is_draft) {
+        $draft = $node;
+        $production = entity_load_single($entity_type, $draft->edition_id);
+      }
+      else {
+        $production = $node;
+        $draft = entity_load_single($entity_type, $production->edition_id);
+      }
+      draft_moderation_publish($draft, $production, $langcode);
+      drupal_set_message(t('%title has been published.', array('%title' => $node->title)));
+    }
+    else {
+      if (!isset($node->original)) {
+        $node->original = clone $node;
+      }
+      drupal_set_message(t('%title has been published.', array('%title' => $node->title)));
+      $node->status = 1;
+      node_save($node);
+    }
+  }
+}
+
+/**
+ * Access callback for draft publish operation.
+ *
+ * @param string $op
+ *   Operation.
+ * @param object $node
+ *   Node object.
+ * @param string $langcode
+ *   Language code.
+ *
+ * @Important: param $node - must be DRAFT node.
+ */
+function draft_moderation_publish_access($op, $node, $langcode) {
+  global $user;
+
+  if (!node_access($op, $node)) {
+    return FALSE;
+  }
+
+  $user_languages = _draft_moderation_get_user_languages($user);
+
+  $handler = entity_translation_get_handler('node', $node);
+
+  if ($moderation_mode = draft_moderation_supported_type($node->type, 'node')) {
+    $translations = $handler->getTranslations();
+    if (isset($translations->data[$langcode])) {
+      $translation = $translations->data[$langcode];
+      if (user_access('bypass workflow states') ||
+        ($moderation_mode && (user_access('publish to production edition') || user_access("publish {$node->type} to production edition"))
+          && ($moderation_mode == DRAFT_MODERATION_ENABLED)
+          || ($moderation_mode == DRAFT_MODERATION_WORKFLOW
+            && (user_access('moderate translations') && user_access('publish to production edition')
+              && in_array($translation['workflow'], array(DRAFT_MODERATION_WORKFLOW_TO_VALIDATE, DRAFT_MODERATION_WORKFLOW_VALIDATED)))))) {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+  }
+
+  if (isset($node->domains) && isset($node->domain_site) && !$node->domain_site) {
+    if (is_array($node->domains)) {
+      $user_languages = array_intersect_key($user_languages, $node->domains);
+    }
+    else {
+      // If entity is not assigned to any domain.
+      return FALSE;
+    }
+  }
+
+  foreach ($user_languages as $domain_id => $languages) {
+    if (isset($languages[$langcode])) {
+      return $handler->getTranslationAccess($langcode);
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback for draft unpublish operation.
+ *
+ * @Important: param $node - must be PRODUCTION node.
+ */
+function draft_moderation_unpublish_access($op, $node, $langcode) {
+  global $user;
+
+  if (!node_access('view', $node)) {
+    return FALSE;
+  }
+
+  $user_languages = _draft_moderation_get_user_languages($user);
+  $handler = entity_translation_get_handler('node', $node);
+  if ($moderation_mode = draft_moderation_supported_type($node->type, 'node')) {
+    $translations = $handler->getTranslations();
+    if (isset($translations->data[$langcode]) && !$node->is_draft) {
+      $translation = $translations->data[$langcode];
+      // If the translation is not published
+      // then there is nothing to unpublish.
+      if (empty($node->status) || empty($translation['status'])) {
+        return FALSE;
+      }
+
+      if (user_access('bypass workflow states') ||
+        ($moderation_mode && (user_access('publish to production edition')
+            || user_access("publish {$node->type} to production edition")
+            || user_access('unpublish production editions')))) {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    $translations = $handler->getTranslations();
+    if (isset($translations->data[$langcode]) && !$node->is_draft) {
+      $translation = $translations->data[$langcode];
+      if (!$translation['status']) {
+        return FALSE;
+      }
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  if (isset($node->domains) && isset($node->domain_site) && !$node->domain_site) {
+    if (is_array($node->domains)) {
+      $user_languages = array_intersect_key($user_languages, $node->domains);
+    }
+    else {
+      // If entity is not assigned to any domain.
+      return FALSE;
+    }
+  }
+
+  foreach ($user_languages as $domain_id => $languages) {
+    if (isset($languages[$langcode])) {
+      return $handler->getTranslationAccess($langcode);
+    }
+  }
+  return FALSE;
+}
+
+
+/**
+ * Menu callback -- ask for confirmation of node depublication.
+ */
+function draft_moderation_node_unpublish_confirm($form, &$form_state, $node, $langcode = '') {
+  $form['#node'] = $node;
+  $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
+  $form['language'] = array('#type' => 'value', '#value' => $langcode);
+  return confirm_form($form,
+    t('Are you sure you want to unpublish %title?', array('%title' => $node->title), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    'node/' . $node->nid,
+    t('%title will be unpublished', array('%title' => $node->title), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    t('Unpublish', array(), array('context' => DRAFT_MODERATION_T_CONTEXT)),
+    t('Cancel', array(), array('context' => DRAFT_MODERATION_T_CONTEXT))
+  );
+}
+
+/**
+ * Execute node depublication.
+ */
+function draft_moderation_node_unpublish_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    $node = node_load($form_state['values']['nid'], NULL, TRUE);
+    $langcode = $form_state['values']['language'];
+    $entity_type = 'node';
+    $handler = entity_translation_get_handler($entity_type, $node);
+    $translations = $handler->getTranslations();
+    $source = $translations->original;
+
+    // Unpublish both: Production and Draft.
+    _draft_moderation_unpublish_node($node, $langcode, $source);
+    if (draft_moderation_supported_type($node->type) && !empty($langcode)) {
+      if ($node->edition_id) {
+        $edition = entity_load_single($entity_type, $node->edition_id);
+        if ($edition) {
+          _draft_moderation_unpublish_node($edition, $langcode, $source);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function draft_moderation_admin_paths() {
+  $paths = array();
+  $paths['node/*/publish'] = TRUE;
+  $paths['node/*/publish/*'] = TRUE;
+  $paths['node/*/unpublish'] = TRUE;
+  $paths['node/*/unpublish/*'] = TRUE;
+  return $paths;
+}
+
+/**
+ * Solr filter drafts.
+ */
+function draft_moderation_apachesolr_index_documents_alter(array &$documents, $entity, $entity_type, $env_id) {
+  switch ($entity->type) {
+    case 'pos':
+      // @TODO.
+      if ($entity->field_geocoding_status['und'][0]['value'] != LOCATOR_STATUS_GEOCODED) {
+        $documents = array();
+      }
+      break;
+
+    case 'product':
+    case 'news':
+      if ($entity->field_draft['und'][0]['value']) {
+        $documents = array();
+      }
+      break;
+
+  }
+}
+
+/**
+ * Helper to Execute node depublication.
+ */
+function _draft_moderation_unpublish_node($node, $langcode, $source = '') {
+  if ($node) {
+    if ($source == $langcode) {
+      // Unpublish the node.
+      $node->status = 0;
+
+      // Remove any other translations.
+      if (isset($node->translations->data[$source]) && draft_moderation_supported_type($node->type)) {
+        $handler = entity_translation_get_handler($entity_type = 'node', $node, TRUE);
+        $translations = $handler->getTranslations();
+        foreach ($translations->data as $lang => $value) {
+          if ($lang != $source) {
+            $handler->removeTranslation($lang);
+          }
+        }
+      }
+
+      $wrapper = entity_metadata_wrapper('node', $node);
+      $wrapper->save();
+      drupal_set_message(t('@node_title has been unpublished', array('@node_title' => $node->title), array('context' => DRAFT_MODERATION_T_CONTEXT)), 'warning');
+    }
+    elseif ($handler = entity_translation_get_handler('node', $node)) {
+      $translations = $handler->getTranslations();
+      if (isset($translations->data[$langcode]) && $translations->data[$langcode]['status']) {
+        $translations->data[$langcode]['status'] = 0;
+        // Important to handle correctly
+        // which translation is unpublished.
+        $handler->setFormLanguage($langcode);
+
+        $handler->setTranslation($translations->data[$langcode]);
+        $handler->saveTranslations();
+
+        // Update and invoke node_save.
+        $node->translations = $translations;
+        node_save($node);
+      }
+    }
+  }
+}

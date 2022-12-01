@@ -1,0 +1,21 @@
+.b-category-description {
+  text-align: center;
+  padding: 58px 0 8px;
+
+  .container {
+    width: 660px;
+
+    @include media("<tablet") {
+      width: auto;
+    }
+  }
+
+  @include media("<tablet") {
+    padding: 39px 0 0;
+  }
+
+  p {
+    padding: 0 0 24px;
+    color: $grey;
+  }
+}

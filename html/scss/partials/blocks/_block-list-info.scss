@@ -1,0 +1,90 @@
+.b-list-info {
+  padding: 32px 0 36px;
+
+  @include media("<desktop") {
+    padding: 20px 0 0;
+  }
+
+  @include media("<tablet") {
+    padding: 20px 0 23px;
+  }
+
+  .item {
+    padding: 30px 0;
+
+    @include media("<desktop") {
+      padding: 30px 0 17px;
+    }
+
+    @include media("<tablet") {
+      padding: 26px 0 17px
+    }
+  }
+
+  .container {
+    @include media("<tablet") {
+      padding: 0 35px;
+    }
+  }
+
+  .w-table {
+    margin: 43px 0 77px;
+
+    table td {
+      vertical-align: middle;
+    }
+
+    @include media("<desktop") {
+      margin: 59px 0 66px;
+    }
+
+    @include media("<tablet") {
+      margin: 29px -35px 59px;
+    }
+  }
+
+  .title {
+    width: 382px;
+    margin: 0 30px 0 0;
+    float: left;
+
+    @include media("<desktop") {
+      width: auto;
+      float: none;
+      margin: 0;
+    }
+
+    h3 {
+      color: $blue2;
+      font-size: 24px;
+      line-height: 36px;
+
+      @include media("<desktop") {
+        margin: 0 0 6px;
+      }
+
+      @include media("<tablet") {
+        line-height: 30px;
+        margin: 0 0 26px;
+      }
+    }
+  }
+
+  .b-main-info {
+    overflow: hidden;
+    margin: 7px 0 0 0;
+
+    @include media("<desktop") {
+      overflow: visible;
+      margin: 0;
+    }
+  }
+
+  p {
+    padding: 0 0 23px;
+  }
+
+  .pic {
+    margin: 3px 0 32px;
+  }
+}

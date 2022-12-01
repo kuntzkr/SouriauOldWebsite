@@ -1,0 +1,130 @@
+.b-interest {
+  display: block;
+  overflow: hidden;
+  margin: 0;
+
+  .b-item {
+    float: left;
+    width: 50%;
+    background: #003865;
+    height: 225px;
+    text-decoration: none;
+
+    @include media("<desktop") {
+      width: 100%;
+      height: 140px;
+    }
+  }
+
+  .b-icon {
+    float: right;
+    display: table;
+    margin: 0 0 0 20px;
+    height: 100%;
+
+    @include media("<tablet") {
+      display: none;
+    }
+  }
+
+  .sub-title {
+    color: #FFF;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    display: block;
+    margin: 0 0 15px;
+
+    @include media("<desktop") {
+      margin: 0 0 2px;
+    }
+
+    @include media("<tablet") {
+      margin: 1px 0 5px;
+    }
+  }
+
+  h4 {
+    color: #FFF;
+    font-size: 32px;
+    line-height: 36px;
+    margin: 0 0 19px;
+
+    @include media("<desktop") {
+      margin: 0 0 2px;
+    }
+
+    @include media("<tablet") {
+      font-size: 24px;
+      margin: 0;
+    }
+  }
+
+  .ico-model {
+    fill: #f6f6f6;
+    width: 111px;
+    height: 128px;
+    display: block;
+    margin: 0 0 9px;
+
+    @include media("<desktop") {
+      width: 74px;
+      height: 85px;
+      margin: 0;
+    }
+  }
+
+  .ico-support {
+    fill: #f6f6f6;
+    display: block;
+    width: 119px;
+    height: 119px;
+    margin: 0 0 9px;
+
+    @include media("<desktop") {
+      width: 78px;
+      height: 78px;
+      margin: 0;
+    }
+  }
+
+  .inside-container {
+    padding: 20px 13% 20px 21.5%;
+    height: 100%;
+
+    @include media("<desktop") {
+      padding: 20px 6% 20px 4.2%;
+    }
+
+    @include media("<tablet") {
+      padding: 20px 6% 20px 10%;
+    }
+  }
+
+  .b-text {
+    height: 100%;
+    overflow: hidden;
+    display: table;
+  }
+
+  .b-aling {
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  .b-right {
+    background: #003865;
+
+    .inside-container {
+      padding: 20px 7% 20px 15%;
+
+      @include media("<desktop") {
+        padding: 20px 6% 20px 4.2%;
+      }
+
+      @include media("<tablet") {
+        padding: 20px 6% 20px 10%;
+      }
+    }
+  }
+}

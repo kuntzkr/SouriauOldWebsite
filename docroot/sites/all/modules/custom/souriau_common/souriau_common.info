@@ -1,0 +1,24 @@
+name = Souriau Common
+description = Common tools and plugins for SOURIAU.
+core = 7.x
+package = SOURIAU
+
+version = "7.x-0.01"
+
+dependencies[] = taxonomy
+; Views Handlers.
+files[] = views/handlers/souriau_common_views_handler_field_translation_edit_link.inc
+files[] = views/handlers/souriau_common_views_handler_field_translation_link.inc
+files[] = views/handlers/souriau_common_views_handler_field_language_link.inc
+files[] = views/handlers/souriau_common_views_handler_field_link_clone.inc
+files[] = views/handlers/souriau_common_views_handler_argument_current_language.inc
+files[] = views/handlers/souriau_common_views_handler_project_part_number_sku.inc
+; Search API Hendlers.
+files[] = includes/callback_souriau_language_control.inc
+files[] = includes/SearchApiSouriauExludeUnpublishSKU.inc
+files[] = includes/SouriauFacetapiWidgetLinks.inc
+files[] = includes/SouriauFacetapiWidgetDropdownList.inc
+files[] = includes/SouriauFacetapiWidgetCheckboxes.inc
+files[] = includes/SouriauFacetapiWidgetNumberCompare.inc
+files[] = includes/SouriauFacetapiWidgetBoolean.inc
+files[] = includes/SouriauFacetapiWidgetRadios.inc

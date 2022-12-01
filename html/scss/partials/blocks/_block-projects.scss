@@ -1,0 +1,206 @@
+.b-projects {
+  padding: 0 0 116px;
+
+  @include media("<desktop") {
+    padding: 0 0 92px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 58px;
+  }
+
+  h1 {
+    margin: 0 0 44px;
+
+    @include media("<desktop") {
+      margin: 0 0 26px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 13px;
+    }
+  }
+
+  .link-export {
+    margin: 0 0 20px;
+  }
+}
+
+.w-new-project {
+  padding: 0 290px;
+  position: relative;
+  text-align: center;
+
+  @include media("<desktop") {
+    padding: 18px 0 49px;
+    width: 100%;
+    display: table;
+  }
+
+  @include media("<tablet") {
+    padding: 6px 0 22px;
+  }
+
+  .w-btn {
+    position: absolute;
+    right: 3px;
+    top: 10px;
+    max-width: 270px;
+
+    @include media("<desktop") {
+      position: static;
+      display: table-footer-group;
+    }
+
+    @include media("<tablet") {
+      .btn {
+        padding-top: 15px;
+        padding-bottom: 15px;
+      }
+    }
+  }
+}
+
+.b-project-item {
+  display: block;
+  min-height: 194px;
+  background: $white;
+  box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+  margin: 0 0 10px;
+  padding: 35px 35px 20px;
+  @include box-sizing(border-box);
+
+  @include media("<desktop") {
+    min-height: 166px;
+    padding: 27px 20px 20px;
+    margin: 0 0 14px;
+  }
+
+  @include media("<tablet") {
+    min-height: 1px;
+    width: 100%;
+    display: table;
+    padding: 30px 17px 42px;
+  }
+
+  .pic {
+    margin: 0 48px 0 0px;
+    text-align: center;
+    width: 155px;
+    float: left;
+
+    @include media("<desktop") {
+      width: 120px;
+      margin-right: 44px;
+
+    }
+
+    @include media("<tablet") {
+      display: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+      margin: 0 auto;
+    }
+  }
+
+  .w-btn {
+    float: right;
+    max-width: 280px;
+    margin: 43px 15px 45px 35px;
+
+    @include media("<desktop") {
+      margin: 36px 5px 30px 20px;
+    }
+
+    @include media("<tablet") {
+      float: none;
+      max-width: inherit;
+      display: table-footer-group;
+      text-align: center;
+      margin: 0;
+    }
+  }
+
+  .b-info {
+    overflow: hidden;
+    padding: 11px 0;
+
+    @include media("<desktop") {
+      padding: 0 0 30px;
+    }
+  }
+
+  h3 {
+    color: $blue2;
+    font-size: 30px;
+    line-height: 36px;
+    position: relative;
+    padding: 0 0 11px;
+    margin: 0 0 12px;
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+
+    &:before {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 60px;
+      height: 1px;
+      opacity: 0.4;
+      border: 1px solid $blue4;
+      content: "";
+
+      @include media("<tablet") {
+        display: none;
+      }
+    }
+  }
+
+  p {
+    padding: 0;
+  }
+}
+
+.b-project-description {
+  text-align: center;
+
+  textarea {
+    text-align: center;
+  }
+
+  @include media("<desktop") {
+    padding: 18px 0 0;
+  }
+
+  @include media("<tablet") {
+    padding: 6px 0 0;
+  }
+
+  h1 {
+    margin: 0 0 14px;
+
+    @include media("<desktop") {
+      margin: 0 0 6px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 7px;
+    }
+  }
+
+  .b-text {
+    padding: 0 0 28px;
+    color: #4a5763;
+    font-size: 14px;
+    line-height: 24px;
+
+    @include media("<desktop") {
+      padding: 0 0 28px;
+    }
+  }
+}

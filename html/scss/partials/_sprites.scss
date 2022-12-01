@@ -1,0 +1,298 @@
+// SCSS variables are information about icon's compiled state, stored under its original file name
+//
+// .icon-home {
+//   width: $icon-home-width;
+// }
+//
+// The large array-like variables contain all information about a single icon
+// $icon-home: x y offset_x offset_y width height total_width total_height image_path;
+//
+// At the bottom of this section, we provide information about the spritesheet itself
+// $spritesheet: width height image $spritesheet-sprites;
+$arrow-right-name: 'arrow-right';
+$arrow-right-x: 0px;
+$arrow-right-y: 22px;
+$arrow-right-offset-x: 0px;
+$arrow-right-offset-y: -22px;
+$arrow-right-width: 20px;
+$arrow-right-height: 16px;
+$arrow-right-total-width: 65px;
+$arrow-right-total-height: 52px;
+$arrow-right-image: '../images/spritesheet.png';
+$arrow-right: (0px, 22px, 0px, -22px, 20px, 16px, 65px, 52px, '../images/spritesheet.png', 'arrow-right', );
+$check-icon-name: 'check-icon';
+$check-icon-x: 0px;
+$check-icon-y: 40px;
+$check-icon-offset-x: 0px;
+$check-icon-offset-y: -40px;
+$check-icon-width: 14px;
+$check-icon-height: 12px;
+$check-icon-total-width: 65px;
+$check-icon-total-height: 52px;
+$check-icon-image: '../images/spritesheet.png';
+$check-icon: (0px, 40px, 0px, -40px, 14px, 12px, 65px, 52px, '../images/spritesheet.png', 'check-icon', );
+$star-empty-small-name: 'star-empty-small';
+$star-empty-small-x: 44px;
+$star-empty-small-y: 17px;
+$star-empty-small-offset-x: -44px;
+$star-empty-small-offset-y: -17px;
+$star-empty-small-width: 16px;
+$star-empty-small-height: 16px;
+$star-empty-small-total-width: 65px;
+$star-empty-small-total-height: 52px;
+$star-empty-small-image: '../images/spritesheet.png';
+$star-empty-small: (44px, 17px, -44px, -17px, 16px, 16px, 65px, 52px, '../images/spritesheet.png', 'star-empty-small', );
+$star-empty-name: 'star-empty';
+$star-empty-x: 0px;
+$star-empty-y: 0px;
+$star-empty-offset-x: 0px;
+$star-empty-offset-y: 0px;
+$star-empty-width: 20px;
+$star-empty-height: 20px;
+$star-empty-total-width: 65px;
+$star-empty-total-height: 52px;
+$star-empty-image: '../images/spritesheet.png';
+$star-empty: (0px, 0px, 0px, 0px, 20px, 20px, 65px, 52px, '../images/spritesheet.png', 'star-empty', );
+$star-full-small-name: 'star-full-small';
+$star-full-small-x: 22px;
+$star-full-small-y: 22px;
+$star-full-small-offset-x: -22px;
+$star-full-small-offset-y: -22px;
+$star-full-small-width: 16px;
+$star-full-small-height: 16px;
+$star-full-small-total-width: 65px;
+$star-full-small-total-height: 52px;
+$star-full-small-image: '../images/spritesheet.png';
+$star-full-small: (22px, 22px, -22px, -22px, 16px, 16px, 65px, 52px, '../images/spritesheet.png', 'star-full-small', );
+$star-full-name: 'star-full';
+$star-full-x: 22px;
+$star-full-y: 0px;
+$star-full-offset-x: -22px;
+$star-full-offset-y: 0px;
+$star-full-width: 20px;
+$star-full-height: 20px;
+$star-full-total-width: 65px;
+$star-full-total-height: 52px;
+$star-full-image: '../images/spritesheet.png';
+$star-full: (22px, 0px, -22px, 0px, 20px, 20px, 65px, 52px, '../images/spritesheet.png', 'star-full', );
+$youtube-icon-name: 'youtube-icon';
+$youtube-icon-x: 44px;
+$youtube-icon-y: 0px;
+$youtube-icon-offset-x: -44px;
+$youtube-icon-offset-y: 0px;
+$youtube-icon-width: 21px;
+$youtube-icon-height: 15px;
+$youtube-icon-total-width: 65px;
+$youtube-icon-total-height: 52px;
+$youtube-icon-image: '../images/spritesheet.png';
+$youtube-icon: (44px, 0px, -44px, 0px, 21px, 15px, 65px, 52px, '../images/spritesheet.png', 'youtube-icon', );
+$arrow-right-2x-name: 'arrow-right@2x';
+$arrow-right-2x-x: 0px;
+$arrow-right-2x-y: 44px;
+$arrow-right-2x-offset-x: 0px;
+$arrow-right-2x-offset-y: -44px;
+$arrow-right-2x-width: 40px;
+$arrow-right-2x-height: 32px;
+$arrow-right-2x-total-width: 130px;
+$arrow-right-2x-total-height: 104px;
+$arrow-right-2x-image: '../images/spritesheet@2x.png';
+$arrow-right-2x: (0px, 44px, 0px, -44px, 40px, 32px, 130px, 104px, '../images/spritesheet@2x.png', 'arrow-right@2x', );
+$check-icon-2x-name: 'check-icon@2x';
+$check-icon-2x-x: 0px;
+$check-icon-2x-y: 80px;
+$check-icon-2x-offset-x: 0px;
+$check-icon-2x-offset-y: -80px;
+$check-icon-2x-width: 28px;
+$check-icon-2x-height: 24px;
+$check-icon-2x-total-width: 130px;
+$check-icon-2x-total-height: 104px;
+$check-icon-2x-image: '../images/spritesheet@2x.png';
+$check-icon-2x: (0px, 80px, 0px, -80px, 28px, 24px, 130px, 104px, '../images/spritesheet@2x.png', 'check-icon@2x', );
+$star-empty-small-2x-name: 'star-empty-small@2x';
+$star-empty-small-2x-x: 88px;
+$star-empty-small-2x-y: 34px;
+$star-empty-small-2x-offset-x: -88px;
+$star-empty-small-2x-offset-y: -34px;
+$star-empty-small-2x-width: 32px;
+$star-empty-small-2x-height: 32px;
+$star-empty-small-2x-total-width: 130px;
+$star-empty-small-2x-total-height: 104px;
+$star-empty-small-2x-image: '../images/spritesheet@2x.png';
+$star-empty-small-2x: (88px, 34px, -88px, -34px, 32px, 32px, 130px, 104px, '../images/spritesheet@2x.png', 'star-empty-small@2x', );
+$star-empty-2x-name: 'star-empty@2x';
+$star-empty-2x-x: 0px;
+$star-empty-2x-y: 0px;
+$star-empty-2x-offset-x: 0px;
+$star-empty-2x-offset-y: 0px;
+$star-empty-2x-width: 40px;
+$star-empty-2x-height: 40px;
+$star-empty-2x-total-width: 130px;
+$star-empty-2x-total-height: 104px;
+$star-empty-2x-image: '../images/spritesheet@2x.png';
+$star-empty-2x: (0px, 0px, 0px, 0px, 40px, 40px, 130px, 104px, '../images/spritesheet@2x.png', 'star-empty@2x', );
+$star-full-small-2x-name: 'star-full-small@2x';
+$star-full-small-2x-x: 44px;
+$star-full-small-2x-y: 44px;
+$star-full-small-2x-offset-x: -44px;
+$star-full-small-2x-offset-y: -44px;
+$star-full-small-2x-width: 32px;
+$star-full-small-2x-height: 32px;
+$star-full-small-2x-total-width: 130px;
+$star-full-small-2x-total-height: 104px;
+$star-full-small-2x-image: '../images/spritesheet@2x.png';
+$star-full-small-2x: (44px, 44px, -44px, -44px, 32px, 32px, 130px, 104px, '../images/spritesheet@2x.png', 'star-full-small@2x', );
+$star-full-2x-name: 'star-full@2x';
+$star-full-2x-x: 44px;
+$star-full-2x-y: 0px;
+$star-full-2x-offset-x: -44px;
+$star-full-2x-offset-y: 0px;
+$star-full-2x-width: 40px;
+$star-full-2x-height: 40px;
+$star-full-2x-total-width: 130px;
+$star-full-2x-total-height: 104px;
+$star-full-2x-image: '../images/spritesheet@2x.png';
+$star-full-2x: (44px, 0px, -44px, 0px, 40px, 40px, 130px, 104px, '../images/spritesheet@2x.png', 'star-full@2x', );
+$youtube-icon-2x-name: 'youtube-icon@2x';
+$youtube-icon-2x-x: 88px;
+$youtube-icon-2x-y: 0px;
+$youtube-icon-2x-offset-x: -88px;
+$youtube-icon-2x-offset-y: 0px;
+$youtube-icon-2x-width: 42px;
+$youtube-icon-2x-height: 30px;
+$youtube-icon-2x-total-width: 130px;
+$youtube-icon-2x-total-height: 104px;
+$youtube-icon-2x-image: '../images/spritesheet@2x.png';
+$youtube-icon-2x: (88px, 0px, -88px, 0px, 42px, 30px, 130px, 104px, '../images/spritesheet@2x.png', 'youtube-icon@2x', );
+$spritesheet-width: 65px;
+$spritesheet-height: 52px;
+$spritesheet-image: '../images/spritesheet.png';
+$spritesheet-sprites: ($arrow-right, $check-icon, $star-empty-small, $star-empty, $star-full-small, $star-full, $youtube-icon, );
+$spritesheet: (65px, 52px, '../images/spritesheet.png', $spritesheet-sprites, );
+$retina-spritesheet-width: 130px;
+$retina-spritesheet-height: 104px;
+$retina-spritesheet-image: '../images/spritesheet@2x.png';
+$retina-spritesheet-sprites: ($arrow-right-2x, $check-icon-2x, $star-empty-small-2x, $star-empty-2x, $star-full-small-2x, $star-full-2x, $youtube-icon-2x, );
+$retina-spritesheet: (130px, 104px, '../images/spritesheet@2x.png', $retina-spritesheet-sprites, );
+
+// These "retina group" variables are mappings for the naming and pairing of normal and retina sprites.
+//
+// The list formatted variables are intended for mixins like `retina-sprite` and `retina-sprites`.
+$arrow-right-group-name: 'arrow-right';
+$arrow-right-group: ('arrow-right', $arrow-right, $arrow-right-2x, );
+$check-icon-group-name: 'check-icon';
+$check-icon-group: ('check-icon', $check-icon, $check-icon-2x, );
+$star-empty-small-group-name: 'star-empty-small';
+$star-empty-small-group: ('star-empty-small', $star-empty-small, $star-empty-small-2x, );
+$star-empty-group-name: 'star-empty';
+$star-empty-group: ('star-empty', $star-empty, $star-empty-2x, );
+$star-full-small-group-name: 'star-full-small';
+$star-full-small-group: ('star-full-small', $star-full-small, $star-full-small-2x, );
+$star-full-group-name: 'star-full';
+$star-full-group: ('star-full', $star-full, $star-full-2x, );
+$youtube-icon-group-name: 'youtube-icon';
+$youtube-icon-group: ('youtube-icon', $youtube-icon, $youtube-icon-2x, );
+$retina-groups: ($arrow-right-group, $check-icon-group, $star-empty-small-group, $star-empty-group, $star-full-small-group, $star-full-group, $youtube-icon-group, );
+
+// The provided mixins are intended to be used with the array-like variables
+//
+// .icon-home {
+//   @include sprite-width($icon-home);
+// }
+//
+// .icon-email {
+//   @include sprite($icon-email);
+// }
+//
+// Example usage in HTML:
+//
+// `display: block` sprite:
+// <div class="icon-home"></div>
+//
+// To change `display` (e.g. `display: inline-block;`), we suggest using a common CSS class:
+//
+// // CSS
+// .icon {
+//   display: inline-block;
+// }
+//
+// // HTML
+// <i class="icon icon-home"></i>
+@mixin sprite-width($sprite) {
+  width: nth($sprite, 5);
+}
+
+@mixin sprite-height($sprite) {
+  height: nth($sprite, 6);
+}
+
+@mixin sprite-position($sprite) {
+  $sprite-offset-x: nth($sprite, 3);
+  $sprite-offset-y: nth($sprite, 4);
+  background-position: $sprite-offset-x  $sprite-offset-y;
+}
+
+@mixin sprite-image($sprite) {
+  $sprite-image: nth($sprite, 9);
+  background-image: url(#{$sprite-image});
+}
+
+@mixin sprite($sprite) {
+  @include sprite-image($sprite);
+  @include sprite-position($sprite);
+  @include sprite-width($sprite);
+  @include sprite-height($sprite);
+}
+
+// The `retina-sprite` mixin sets up rules and a media query for a sprite/retina sprite.
+//   It should be used with a "retina group" variable.
+//
+// The media query is from CSS Tricks: https://css-tricks.com/snippets/css/retina-display-media-query/
+//
+// $icon-home-group: ('icon-home', $icon-home, $icon-home-2x, );
+//
+// .icon-home {
+//   @include retina-sprite($icon-home-group);
+// }
+@mixin sprite-background-size($sprite) {
+  $sprite-total-width: nth($sprite, 7);
+  $sprite-total-height: nth($sprite, 8);
+  background-size: $sprite-total-width $sprite-total-height;
+}
+
+@mixin retina-sprite($retina-group) {
+  $normal-sprite: nth($retina-group, 2);
+  $retina-sprite: nth($retina-group, 3);
+  @include sprite($normal-sprite);
+
+  @media (-webkit-min-device-pixel-ratio: 2),
+         (min-resolution: 192dpi) {
+    @include sprite-image($retina-sprite);
+    @include sprite-background-size($normal-sprite);
+  }
+}
+
+// The `sprites` mixin generates identical output to the CSS template
+//   but can be overridden inside of SCSS
+//
+// @include sprites($spritesheet-sprites);
+@mixin sprites($sprites) {
+  @each $sprite in $sprites {
+    $sprite-name: nth($sprite, 10);
+    .#{$sprite-name} {
+      @include sprite($sprite);
+    }
+  }
+}
+
+// The `retina-sprites` mixin generates a CSS rule and media query for retina groups
+//   This yields the same output as CSS retina template but can be overridden in SCSS
+//
+// @include retina-sprites($retina-groups);
+@mixin retina-sprites($retina-groups) {
+  @each $retina-group in $retina-groups {
+    $sprite-name: nth($retina-group, 1);
+    .#{$sprite-name} {
+      @include retina-sprite($retina-group);
+    }
+  }
+}

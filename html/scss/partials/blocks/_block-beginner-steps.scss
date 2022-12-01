@@ -1,0 +1,126 @@
+.b-beginner-steps {
+  overflow: hidden;
+  @include transition(height 0.4s ease-in-out);
+
+  .w-steps {
+    display: block;
+    overflow: hidden;
+    @include transition(margin 0.4s ease-in-out);
+  }
+
+  .b-beginner-app {
+    min-height: 639px;
+    height: auto;
+  }
+
+  .b-banner {
+    &:before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      content: "";
+      background-color: rgba(30, 30, 30, 0.5);
+    }
+  }
+
+  h3 {
+    color: $white;
+    font-family: $avenir-next-regular;
+    font-size: 32px;
+    line-height: 42px;
+    margin: 0 0 54px;
+
+    @include media("<desktop") {
+      margin: 0 0 51px;
+    }
+
+    @include media("<tablet") {
+      font-size: 20px;
+      line-height: 23px;
+      margin: 0 0 25px;
+    }
+  }
+
+  .links {
+    display: inline-block;
+    width: 720px;
+
+    @include media("<tablet") {
+      width: 250px;
+    }
+
+    a {
+      width: 220px;
+      min-height: 39px;
+      border: 1px solid $white;
+      border-radius: 3px;
+      color: white;
+      font-family: $avenir-next-bold;
+      font-size: 14px;
+      letter-spacing: 0.64px;
+      line-height: 19px;
+      text-decoration: none;
+      text-transform: underline;
+      display: inline-block;
+      margin: 0 8px 21px;
+      @include transition(all 0.2s ease-in-out);
+      padding: 9px 5px;
+      vertical-align: top;
+      word-wrap: break-word;
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        border-color: $orange;
+        background: $orange;
+      }
+    }
+  }
+
+  .back-to-app {
+    display: inline-block;
+    opacity: 0.78;
+    color: $white;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    text-decoration: none;
+    @include transition(color 0.2s ease-in-out);
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      color: $orange;
+    }
+  }
+
+  .b-select-app, .b-select-category {
+    position: relative;
+    z-index: 1;
+    padding: 72px 0;
+    text-align: center;
+
+    @include media("<desktop") {
+      padding: 82px 0;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 66px;
+    }
+  }
+
+  .b-select-category {
+    .links {
+      width: 500px;
+
+      @include media("<tablet") {
+        width: 250px;
+      }
+    }
+
+    .w-btn {
+      padding: 28px 0 0;
+    }
+  }
+}

@@ -1,0 +1,224 @@
+.b-news {
+  h2 {
+    color: $white;
+    font-size: 50px;
+    line-height: 54px;
+    margin: 0 0 10px;
+
+    @include media("<desktop") {
+      line-height: 51px;
+      margin: 0;
+    }
+
+    @include media("<tablet") {
+      font-size: 30px;
+      line-height: 46px;
+    }
+  }
+
+  h3 {
+    color: #003865;
+    font-size: 32px;
+    line-height: 36px;
+    margin: 0 0 10px;
+
+    @include media("<desktop") {
+      font-size: 24px;
+      line-height: 36px;
+      margin: 0;
+    }
+
+    @include media("<tablet") {
+      font-size: 20px;
+      line-height: 30px;
+      margin: 0 0 2px;
+    }
+  }
+
+  .b-info {
+    background: $blue4;
+    padding: 42px 0 34px;
+
+    @include media("<desktop") {
+      padding: 34px 5px 13px;
+    }
+
+    @include media("<tablet") {
+      padding: 40px 15px 20px;
+    }
+
+    .text {
+      overflow: hidden;
+    }
+
+    p {
+      color: $white;
+      padding: 0 0 20px;
+
+      @include media("<tablet") {
+        line-height: 18px;
+      }
+    }
+
+    .view-more {
+      float: right;
+      margin: 32px 0px 0 40px;
+      text-decoration: none;
+
+      @include media("<desktop") {
+        margin: 28px 5px 0 40px;
+      }
+
+      @include media("<tablet") {
+        display: none;
+      }
+    }
+  }
+
+  .w-btn {
+    text-align: center;
+    display: none;
+
+    @include media("<tablet") {
+      display: block;
+    }
+
+    .view-more {
+      margin: 29px 0px 35px;
+    }
+  }
+
+  .item {
+    text-align: left;
+    position: relative;
+    display: block;
+    border-bottom: 1px solid $grey2;
+    text-decoration: none;
+
+    &:last-child {
+      border-bottom: none;
+
+      @include media("<tablet") {
+        border-bottom: 1px solid $grey2;
+      }
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      text-decoration: none;
+
+      .b-duplicate {
+        visibility: visible;
+      }
+
+      .b-duplicate, .b-shift {
+        transform: translateX(0%);
+        -moz-transform: translateX(0%);
+        -ms-transform: translateX(0%);
+        -webkit-transform: translateX(0%);
+      }
+    }
+  }
+
+  .b-main, .b-duplicate {
+    padding: 47px 0 34px;
+
+    @include media("<desktop") {
+      padding: 41px 5px 30px;
+    }
+
+    @include media("<tablet") {
+      padding: 23px 5px 13px 15px;
+    }
+  }
+
+  .b-duplicate {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: #003865;
+    overflow: hidden;
+    visibility: hidden;
+    transform: translateX(-100%);
+    -moz-transform: translateX(-100%);
+    -ms-transform: translateX(-100%);
+    -webkit-transform: translateX(-100%);
+    @include transition(transform 0.3s ease-in-out);
+
+    @include media("<desktop") {
+      display: none;
+    }
+
+    h3, .publicate-date, .b-tag {
+      color: #FFF;
+    }
+
+    .b-tag .ico {
+      fill: $white;
+    }
+  }
+
+  .b-shift {
+    transform: translateX(100%);
+    -moz-transform: translateX(100%);
+    -ms-transform: translateX(100%);
+    -webkit-transform: translateX(100%);
+    @include transition(transform 0.3s ease-in-out);
+  }
+
+  &.v2 {
+    h2 {
+      font-size: 32px;
+      line-height: 42px;
+
+      @include media("<tablet") {
+        font-size: 30px;
+        line-height: 54px;
+      }
+    }
+
+    .b-info {
+      padding: 54px 0 44px;
+
+      @include media("<desktop") {
+        padding: 40px 5px 42px;
+      }
+
+      @include media("<tablet") {
+        padding: 19px 15px 18px;
+      }
+
+      .view-more {
+        margin-top: 2px;
+      }
+    }
+  }
+
+  &.b-list-news {
+    .item {
+      border-color: #dbdbdb;
+
+      &:last-child {
+        border-bottom: 1px solid #dbdbdb;
+      }
+    }
+    .w-btn {
+      display: block;
+      border-top: none;
+
+      .view-more {
+        margin: 46px 0px 53px;
+
+        @include media("<desktop") {
+          margin: 37px 0px 45px;
+        }
+      }
+    }
+
+    .b-tag {
+      opacity: 0.7;
+    }
+  }
+}

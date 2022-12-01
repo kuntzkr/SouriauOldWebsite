@@ -1,0 +1,30 @@
+.b-order-lines {
+  padding: 0 0 50px;
+
+  .col1 {
+    width: 23.5%;
+  }
+
+  .col2 {
+    width: 25.5%;
+  }
+
+  .col3 {
+    width: 25.5%;
+  }
+
+  .b-open {
+    float: right;
+    margin: 0 22px;
+  }
+
+  .accordion-block {
+    td div {
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      line-height: 18px;
+      padding: 0 0 8px;
+    }
+  }
+}

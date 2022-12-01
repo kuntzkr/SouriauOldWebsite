@@ -1,0 +1,36 @@
+.b-create-account {
+  padding: 78px 0 84px;
+
+  @include media("<desktop") {
+    padding: 60px 0 20px;
+  }
+
+  @include media("<tablet") {
+    padding: 40px 0 20px;
+  }
+
+  .b-text {
+    padding: 43px 0 33px;
+
+    @include media("<desktop") {
+      padding-bottom: 41px;
+    }
+
+    @include media("<tablet") {
+      padding: 22px 14px 29px;
+    }
+  }
+
+  .b-wrapper {
+    width: 525px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    text-align: center;
+  }
+
+  .b-allow {
+    padding: 7px 0 33px;
+  }
+}

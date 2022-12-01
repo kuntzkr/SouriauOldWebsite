@@ -1,0 +1,162 @@
+.b-brand {
+  @include media("<tablet") {
+    display: none;
+  }
+
+  .b-item {
+    display: block;
+    background: #003865;
+    padding: 57px 0 52px;
+
+    @include media("<desktop") {
+      padding: 40px 0 34px;
+    }
+
+    p {
+      color: #FFF;
+    }
+
+    h4 {
+      color: #FFF;
+      position: relative;
+      padding: 0 0 20px;
+
+      @include media("<desktop") {
+        padding: 0 0 23px;
+      }
+
+      &:before {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 59px;
+        height: 1px;
+        background: #FFF;
+        content: "";
+        opacity: 0.4;
+      }
+    }
+
+    .b-title {
+      float: left;
+      width: 40%;
+      margin: 0 22px 0 0;
+
+      @include media("<desktop") {
+        margin: 0 21px 0 15px;
+        width: 29%;
+      }
+
+    }
+
+    .b-text {
+      margin: 1px 32px 0 0;
+      overflow: hidden;
+
+      @include media("<desktop") {
+
+        margin: 12px 40px 0 0;
+      }
+    }
+
+    a {
+      color: inherit;
+    }
+  }
+
+  .b-sunbank {
+    background: #1e4192;
+  }
+
+  .b-presentation {
+    height: 437px;
+
+    @include media("<desktop") {
+      height: 498px;
+    }
+  }
+}
+
+.b-presentation {
+  position: relative;
+  width: 100%;
+  height: 450px;
+  overflow: hidden;
+
+  @include media("<desktop") {
+    height: 498px;
+  }
+
+  .pic {
+    width: 100%;
+    height: 100%;
+    position: relative;
+
+    &:before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      content: "";
+      background-color: rgba(30, 30, 30, 0.5);
+      z-index: 1;
+    }
+
+    img {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      -moz-transform: translate(-50%, -50%);
+      -ms-transform: translate(-50%, -50%);
+      -webkit-transform: translate(-50%, -50%);
+      min-width: 100.5%;
+      min-height: 100.5%;
+      left: 50%;
+      max-width: inherit;
+      z-index: 0;
+    }
+  }
+
+  .text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 10px;
+    bottom: 10px;
+    text-align: center;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .b-align {
+    display: table;
+    width: 100%;
+    height: 100%;
+    padding: 7px 20%;
+
+    .b-align {
+      padding: 0;
+      display: table-cell;
+      vertical-align: middle;
+    }
+
+    @include media("<desktop") {
+      padding: 7px 17%;
+    }
+  }
+
+  p {
+    color: $white;
+    font-family: $avenir-next-regular;
+    font-size: 32px;
+    line-height: 42px;
+    padding: 0;
+
+    @include media("<desktop") {
+      .one-line {
+        display: block;
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Download center feature.
+ */
+
+include_once 'souriau_download_center.features.inc';

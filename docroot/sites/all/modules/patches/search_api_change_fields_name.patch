@@ -1,0 +1,26 @@
+diff --git a/includes/index_entity.inc b/includes/index_entity.inc
+index 95848f1..0ebd1c3 100644
+--- a/includes/index_entity.inc
++++ b/includes/index_entity.inc
+@@ -852,8 +852,8 @@ class SearchApiIndex extends Entity {
+               if (!empty($fields[$key])) {
+                 // This field is already known in the index configuration.
+                 $flat[$key] = $fields[$key] + array(
+-                  'name' => $prefix_name . $info['label'],
+-                  'description' => empty($info['description']) ? NULL : $info['description'],
++                  'name' =>  $info['label'],
++                  'description' => $prefix_name . empty($info['description']) ? NULL : $info['description'],
+                   'boost' => '1.0',
+                   'indexed' => TRUE,
+                 );
+@@ -868,8 +868,8 @@ class SearchApiIndex extends Entity {
+               }
+               else {
+                 $flat[$key] = array(
+-                  'name'    => $prefix_name . $info['label'],
+-                  'description' => empty($info['description']) ? NULL : $info['description'],
++                  'name'    =>  $info['label'],
++                  'description' => $prefix_name . empty($info['description']) ? NULL : $info['description'],
+                   'type'    => $info['type'],
+                   'boost' => '1.0',
+                   'indexed' => FALSE,

@@ -1,0 +1,46 @@
+.b-register-course {
+  margin: 27px auto 35px;
+  width: 465px;
+  @include box-sizing(border-box);
+  padding: 59px 40px 18px;
+  border: 1px solid #e5e5e5;
+
+  @include media("<desktop") {
+    width: 459px;
+    margin: 65px auto 72px;
+    padding: 48px 38px 18px;
+  }
+
+  @include media("<tablet") {
+    width: auto;
+    margin: 48px -5px 0;
+    padding: 30px 19px 18px;
+  }
+
+  h2 {
+    text-align: center;
+    position: relative;
+    padding: 0 0 29px;
+    margin: 0 0 38px;
+
+    @include media("<tablet") {
+      line-height: 36px;
+      padding: 0 0 35px;
+      margin: 0 0 37px;
+    }
+
+    &:before {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 90px;
+      height: 3px;
+      background: $orange;
+      content: "";
+      transform: translateX(-50%);
+      -moz-transform: translateX(-50%);
+      -ms-transform: translateX(-50%);
+      -webkit-transform: translateX(-50%);
+    }
+  }
+}

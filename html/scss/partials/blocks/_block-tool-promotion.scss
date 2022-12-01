@@ -1,0 +1,88 @@
+.b-tool-promotion {
+  background: $orange;
+  padding: 35px 0px 35px;
+
+  @include media("<desktop") {
+    padding: 35px 0px 29px;
+  }
+
+  @include media("<tablet") {
+    text-align: center;
+    padding: 33px 0px 43px;
+  }
+
+  .container {
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+    }
+  }
+
+  p {
+    color: $white;
+  }
+
+  .b-icon {
+    float: left;
+    margin: 0 42px 0 0;
+
+    @include media("<desktop") {
+      margin: 0 26px 0 12px;
+    }
+
+    @include media("<tablet") {
+      display: block;
+      float: none;
+      margin: 0 0 9px;
+    }
+  }
+
+  .ico {
+    width: 87px;
+    height: 87px;
+    fill: $white;
+    display: inline-block;
+  }
+
+  .w-btn {
+    float: right;
+    margin: 27px 30px 0 15%;
+
+    @include media("<desktop") {
+      margin: 27px 0px 0 10%;
+    }
+
+    @include media("<tablet") {
+      float: none;
+      display: table-footer-group;
+    }
+  }
+
+  .view-more {
+    min-width: 1px;
+    padding-left: 39px;
+    padding-right: 39px;
+    @include transition(all 0.4s ease-in-out);
+    text-decoration: none;
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      color: $orange;
+      background: $white;
+    }
+  }
+
+  .b-tool-info {
+    overflow: hidden;
+    padding: 22px 0 0;
+
+    @include media("<desktop") {
+      padding: 8px 0 0;
+    }
+
+    @include media("<tablet") {
+      padding: 8px 10px 6px;
+    }
+  }
+
+}

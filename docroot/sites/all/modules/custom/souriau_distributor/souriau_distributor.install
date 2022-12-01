@@ -1,0 +1,74 @@
+<?php
+/**
+ * @file
+ * Souriau_site install hooks.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function souriau_distributor_schema() {
+  $schema['distributor_stock'] = [
+    'description' => 'Distributor stock information',
+    'fields' => array(
+      'did' => array(
+        'description' => 'The primary identifier of stock information for a Part Number',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'part_number' => array(
+        'description' => 'id of product',
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'distributor_id' => array(
+        'description' => 'Id of distributor',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'distributor_name' => array(
+        'description' => 'Name of distributor',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'quantity' => array(
+        'description' => 'Quantity of product',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => '0',
+      ),
+      'country' => array(
+        'description' => 'Country of distributor',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+    ),
+    'indexes' => array(
+      'part_number' => array('part_number', 'distributor_id'),
+    ),
+    'unique keys' => array(
+      'did' => array('did'),
+    ),
+    'foreign keys' => array(
+      'distributor_id' => array(
+        'table' => 'eck_distributor',
+        'columns' => array('distributor_id' => 'id'),
+      ),
+      'part_number' => array(
+        'table' => 'commerce_product',
+        'columns' => array('part_number' => 'product_id'),
+      ),
+    ),
+    'primary key' => array('did'),
+  ];
+  return $schema;
+}

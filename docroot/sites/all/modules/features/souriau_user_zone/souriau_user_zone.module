@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau User zone feature.
+ */
+
+include_once 'souriau_user_zone.features.inc';

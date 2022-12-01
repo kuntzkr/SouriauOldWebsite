@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Views Node Queries feature.
+ */
+
+include_once 'souriau_views_node_queries.features.inc';

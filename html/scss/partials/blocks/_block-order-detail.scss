@@ -1,0 +1,120 @@
+.b-order-detail {
+  padding: 26px 0 60px;
+
+  @include media("<desktop") {
+    padding: 22px 0 30px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 30px;
+  }
+
+  h1 {
+    @include media("<tablet") {
+      line-height: 54px;
+      margin: -6px 0 0;
+
+      span {
+        display: block;
+      }
+    }
+  }
+
+  .b-order-info {
+    @extend .clearfix;
+    padding: 132px 0 64px;
+
+    @include media("<desktop") {
+      padding: 129px 0 66px;
+    }
+
+    @include media("<tablet") {
+      padding: 72px 0 94px;
+    }
+  }
+
+  .b-shipping {
+    padding: 0 0 55px 32px;
+    border-left: 1px solid #f2f2f2;
+    width: 350px;
+
+    @include media("<desktop") {
+      width: 275px;
+      padding: 0 0 55px 34px;
+    }
+
+    @include media("<tablet") {
+      width: auto;
+      float: none;
+      margin: 0 0 18px;
+    }
+
+    h2 {
+      line-height: 36px;
+      margin: 0 0 16px;
+
+      @include media("<desktop") {
+        margin: 0 0 14px;
+      }
+    }
+
+    .name {
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    p {
+      padding: 0;
+    }
+  }
+
+  .b-info {
+    max-width: 500px;
+    color: $grey;
+    font-size: 14px;
+    line-height: 24px;
+    padding: 7px 0 0;
+    word-wrap: break-word;
+
+    @include media("<desktop") {
+      max-width: 380px;
+    }
+
+    @include media("<tablet") {
+      float: none;
+      max-width: inherit;
+    }
+
+    .b-row {
+      @extend .clearfix;
+
+      @include media("<tablet") {
+        padding: 0 0 2px;
+      }
+    }
+
+    .title {
+      width: 180px;
+      float: left;
+      margin-right: 52px;
+      font-weight: bold;
+
+      @include media("<tablet") {
+        float: none;
+        width: 100%;
+        margin: 0 0 2px;
+      }
+    }
+
+    .description {
+      margin-left: 232px;
+
+      @include media("<tablet") {
+        margin-left: 0;
+      }
+    }
+  }
+}
+
+
+

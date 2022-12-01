@@ -1,0 +1,13 @@
+name = Souriau Distributors
+description = Provides Distributor settings
+core = 7.x
+package = SOURIAU
+php = 5.2.4
+version = 7.x-1.0
+
+dependencies[] = souriau_entity_distributor
+
+files[] = souriau_distributor.install
+files[] = /class/souriau_distributor.class.inc
+files[] = /class/souriau_distributor_ftps.class.inc
+scripts[] = /js/distributor_request.js

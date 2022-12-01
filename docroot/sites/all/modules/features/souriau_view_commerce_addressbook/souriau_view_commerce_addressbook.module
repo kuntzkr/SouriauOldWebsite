@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Commerce Addressbook feature.
+ */
+
+include_once 'souriau_view_commerce_addressbook.features.inc';

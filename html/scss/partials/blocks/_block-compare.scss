@@ -1,0 +1,211 @@
+.b-compare {
+  margin: -8px 0 0;
+
+  @include media("<desktop") {
+    margin: -10px 0 0;
+  }
+
+  @include media("<tablet") {
+    margin: 0;
+    overflow: auto;
+    box-shadow:  0px -2px 5px 0px rgba(169, 169, 169, 0.3);
+  }
+
+  .container {
+    @include media("<desktop") {
+      width: auto;
+      padding: 0 27px;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  .b-info-message {
+    padding: 40px 0;
+  }
+
+  .fixed {
+    width: 100%;
+    background: $white;
+    z-index: 3;
+    box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+
+    @include media("<tablet") {
+      box-shadow: none;
+    }
+  }
+
+  .fix_compare {
+    position: fixed;
+    top: 0;
+
+    @include media("<tablet") {
+      position: static;
+    }
+  }
+
+  .hide_el {
+    .b-part-numb, .separator, .b-add-info {
+      display: none;
+
+      @include media("<tablet") {
+        display: block;
+      }
+    }
+  }
+
+  .compare_scroller {
+    overflow: auto;
+    border-right: 1px solid #f0f0f0;
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
+
+    @include media("<tablet") {
+      overflow: hidden;
+      max-width: inherit;
+    }
+  }
+
+  table {
+    border: none;
+    margin: 0;
+
+    tr td {
+      padding: 0;
+      border: none;
+      border-left: 1px solid #f0f0f0;
+    }
+
+    tr:nth-child(even) td {
+      background: #F2F3F5;
+    }
+
+    .padder {
+      padding: 18px;
+    }
+  }
+
+  .b-compare-left {
+    float: left;
+    width: 228px;
+
+    @include media("<tablet") {
+      overflow: hidden;
+    }
+
+    h2 {
+      margin: 37px 0 20px;
+
+      @include media("<tablet") {
+        padding: 0 18px;
+      }
+    }
+
+    table {
+      border: none;
+
+      tr td {
+        border: none;
+      }
+    }
+  }
+
+  .b-compare-right {
+    margin: 0 -12px 0 228px;
+    position: relative;
+    z-index: 1;
+    border-left: 1px solid #f0f0f0;
+
+    @include media("<desktop") {
+      margin-right: -27px;
+
+      @include media("<tablet") {
+        margin-right: 0;
+      }
+    }
+
+    table {
+      margin-left: -1px;
+    }
+  }
+
+  .b-compare-first {
+    position: relative;
+    z-index: 2;
+
+    table {
+      .padder {
+        padding: 0;
+      }
+    }
+  }
+
+  .b-compare-second {
+    margin: 0;
+
+    @include media("<tablet") {
+      margin: 0 !important;
+    }
+
+    .compare_scroller {
+      overflow: hidden;
+
+      @include media("<tablet") {
+        border-top: 1px solid #f0f0f0;
+      }
+    }
+
+    tr:first-child {
+      td {
+        padding: 5px 0 0;
+      }
+    }
+
+    .b-compare-left {
+      @include media("<tablet") {
+        border-top: 1px solid #f0f0f0;
+      }
+
+      table tr:nth-child(even) td{
+        position: relative;
+
+        &:before {
+          position: absolute;
+          background: #F2F3F5;
+          content: "";
+          top: 0;
+          bottom: 0;
+          right: 100%;
+          width: 1000px;
+        }
+
+        &:after {
+          position: absolute;
+          background: #F2F3F5;
+          content: "";
+          top: 0;
+          bottom: 0;
+          left: 100%;
+          width: 3000px;
+        }
+      }
+    }
+
+    .b-compare-right {
+      table {
+        @include media("<tablet") {
+          box-shadow: inset 2px 2px 6px 0px rgba(169, 169, 169, 0.1);
+        }
+      }
+
+      .padder {
+        width: 240px;
+        text-align: center;
+      }
+    }
+  }
+
+}

@@ -1,0 +1,9 @@
+# Sharing is caring.
+
+# Should you identify a vulnerability or threat that may impact our systems, please share it with us!
+
+Contact: mailto:IT-security@souriau.com
+
+Preferred-Languages: en, fr
+
+Canonical: https://www.souriau.com/.well-known/security.txt

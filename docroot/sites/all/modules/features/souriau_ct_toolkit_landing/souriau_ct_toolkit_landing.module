@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Toolkit Landing feature.
+ */
+
+include_once 'souriau_ct_toolkit_landing.features.inc';

@@ -1,0 +1,340 @@
+vcl 4.0;
+
+backend default {
+    .host = "192.168.22.135";
+    .port = "80";
+}
+
+acl internal {
+  "127.0.0.1";
+  "localhost";
+}
+
+import std;
+
+/** ============ VCL_RECV ============== */
+sub vcl_recv {
+
+    /** Bypass slice hosts to prevent them from caching. */
+    if (req.http.host ~ "html" ) {
+        if (!req.http.X-Forwarded-For) {
+            set req.http.X-Forwarded-For = client.ip;
+        }
+        return (pipe);
+    }
+
+    /** Set correct file encoding. */
+    if (req.http.Accept-Encoding) {
+        if (req.url ~ "(?i)\.(jpeg|jpg|png|gif|ico|swf|eot|woff|ttf|otf|htc|webm|mp3|m4a|mp4|m4v|mov|mpeg|mpg|avi|divx|ogg|ogv|wma|pdf|tar|gz|g?zip|rar|bz2|doc|docx|xls|xlsx|ppt|pptx)(\?.*)?$" ) {
+            unset req.http.Accept-Encoding;
+        }
+        elsif(req.http.User-Agent ~ "MSIE 6") {
+            set req.http.Accept-Encoding = "gzip;q=0";
+        }
+        elsif (req.http.Accept-Encoding ~ "gzip") {
+            set req.http.Accept-Encoding = "gzip";
+        }
+        elsif (req.http.Accept-Encoding ~ "deflate") {
+            set req.http.Accept-Encoding = "deflate";
+        }
+        else {
+            unset req.http.Accept-Encoding;
+        }
+    }
+
+    /** Make backend aware of varnish. */
+    set req.http.X-ESI = "4.02";
+
+    /** This is maximum allowed graced, actual grace set in vcl_fetch. IS THIS STILL NEEDED? */
+    /** set req.grace = 2h;*/
+
+    /** Default routine */
+    if (req.restarts == 0) {
+        if (req.http.x-forwarded-for) {
+            set req.http.X-Forwarded-For =
+            req.http.X-Forwarded-For + ", " + client.ip;
+        }
+        else {
+            set req.http.X-Forwarded-For = client.ip;
+        }
+    }
+
+    /** Filter unknown request methods. */
+    if (!(req.method ~ "GET|HEAD|PUT|POST|TRACE|OPTIONS|DELETE")) {
+        return (synth(400, "Bad request"));
+    }
+
+    /** Only GET(HEAD) requests can be cached. */
+    if (req.method != "GET" && req.method != "HEAD") {
+        return (pass);
+    }
+
+    /** Do not cache Authorization request. */
+    /** THIS SHOULD BE DONE USING VARNISH */
+    #if (req.http.Authorization) {
+    #   return (pass);
+    #}
+
+    /** Only internal connections can access install/update. */
+    if (req.url ~ "^/(cron|install|update)\.php") {
+        if (!client.ip ~ internal) {
+            return (synth(403, "Forbidden"));
+        }
+        return(pass);
+    }
+
+    /** Only internal connections can access include files. */
+    if (req.url ~ "(?i)\.(module|info|inc|bak|profile|engine|test|po|txt|theme|svn|git|tpl(\.php)?)(\?.*|)$"
+    && !req.url ~ "(?i)(robots|revision)\.txt"
+    ) {
+        if (!client.ip ~ internal) {
+            return (synth(403, "Forbidden"));
+        }
+    }
+
+    /** Unset cookies for resources. */
+    /** PRODUCTION UNCOMMENT 1 START */
+    if (req.url ~ "\.(jpeg|jpg|png|gif|ico|swf|js|css|txt|eot|woff|ttf|htc)(\?.*|)$") {
+        unset req.http.Cookie;
+        return(hash);
+    }
+    if (req.url ~ "\.(webm|mp3|m4a|mp4|m4v|mov|mpeg|mpg|avi|divx|ogg|ogv|wma|pdf|tar|gz|gzip|bz2)(\?.*|)$") {
+        unset req.http.Cookie;
+        return(pipe);
+    }
+    if (
+    req.url ~ "^/sites/.*/files/"
+    || req.url ~ "^/sites/all/themes/"
+    || req.url ~ "^/modules/.*\.(js|css)\?"
+    ) {
+        unset req.http.Cookie;
+    }
+    /** PRODUCTION UNCOMMENT 1 END */
+
+    return (hash);
+}
+
+/** ============ VCL_HASH ============== */
+sub vcl_hash {
+
+    /** Default hash */
+    hash_data(req.url);
+    if (req.http.host) {
+        hash_data(req.http.host);
+    } else {
+        hash_data(server.ip);
+    }
+
+    /** Place ajax into separate bin. */
+    if (req.http.X-Requested-With) {
+        hash_data(req.http.X-Requested-With);
+    }
+
+    /** Add protocol if available. */
+    if (req.http.X-Forwarded-Proto) {
+        hash_data(req.http.X-Forwarded-Proto);
+    }
+
+    /** Place variants into separate bin */
+    if (req.http.Cookie ~ "^.*?QTEVARIANT=([^;]*);*.*$") {
+        set req.http.X-VARIANT = regsub(req.http.Cookie, "^.*?QTEVARIANT=([^;]*);*.*$", "\1");
+        hash_data(req.http.X-VARIANT);
+    }
+
+    /** Process authenticated users */
+    if (req.http.Cookie ~ "^.*?SESS[^=]*=([^;]{5});*.*$") {
+
+        /** Extraxt full session value */
+        set req.http.X-SESS = regsub(req.http.Cookie, "^.*?SESS([^;]*);*.*$", "\1");
+
+        /** Extract bin headers */
+        if (req.http.Cookie ~ "^.*?QTEBIN=([^;]*);*.*$") {
+            /* Set default mode to per role */
+            set req.http.X-BIN  = "role:" + regsub(req.http.Cookie, "^.*?QTEBIN=([^;]*);*.*$", "\1");
+        }
+
+        /** DRUPAL_CACHE_PER_ROLE */
+        /** Do nothing this is default */
+        /** if (req.url ~ "^.*cachemode=1.*$") {
+        }*/
+
+        /** DRUPAL_CACHE_PER_PAGE */
+        if (req.url ~ "^.*cachemode=4.*$" && req.http.X-BIN) {
+            /** Set bin to constant */
+            set req.http.X-BIN = "page:" + regsub(req.http.X-BIN, "^.*-([^-]*)$", "\1");
+        }
+
+        /** DRUPAL_CACHE_PER_USER */
+        if (req.url ~ "^.*cachemode=2.*$" || !req.http.X-BIN) {
+            /** Set user session as bin */
+            set req.http.X-BIN  = "user:" + req.http.X-SESS;
+        }
+        set req.http.X-URL = req.url;
+    }
+    else {
+	      set req.http.X-BIN = "anonymous";
+    }
+
+    /** If Bin is set - add it to hash data for this page */
+    if (req.http.X-BIN) {
+        hash_data(req.http.X-BIN);
+    }
+
+    return (lookup);
+}
+
+/** ============ VCL_BACKEND_RESPONSE ============== */
+sub vcl_backend_response {
+
+    /** Compress response. */
+    if (bereq.http.Accept-Encoding) {
+        set beresp.do_gzip = true;
+    }
+
+    /** Print VCL version */
+    set beresp.http.X-ESI = bereq.http.X-ESI;
+
+    /** Enable ESI if requested on this page */
+    if (beresp.http.X-DOESI) {
+      set beresp.do_esi = true;
+    }
+
+    /** Unset cookies in resource responses. */
+    if (bereq.url ~ "(?i)\.(jpeg|jpg|png|gif|ico|swf|js|css|txt|eot|woff|ttf|htc|mp3|m4a|mp4|m4v|mov|mpeg|mpg|avi|divx|ogg|ogv|wma|pdf|tar|gz|gzip|bz2)(\?.*|)$") {
+        unset beresp.http.set-cookie;
+        return(deliver);
+    }
+
+    /** Set desired TTL and Grace */
+    set beresp.ttl = std.duration(beresp.http.X-TTL + "s", 0s);
+    set beresp.grace = std.duration(beresp.http.X-GRACE + "s", 0s);
+
+    /** Check for no cache conditions. */
+    if (beresp.http.Set-Cookie) {
+        set beresp.http.X-Cacheable = "NO:Cookie in the response";
+        set beresp.ttl = 0s;
+    }
+    elsif (beresp.ttl <= 0s) {
+        set beresp.http.X-Cacheable = "NO:Not Cacheable";
+    }
+    elsif ( beresp.http.Cache-Control ~ "private") {
+        set beresp.http.X-Cacheable = "NO:Cache-Control=private";
+        set beresp.uncacheable = true;
+        return (deliver);
+        // v3.x return(hit_for_pass);
+    }
+    else {
+        set beresp.http.X-Cacheable = "YES";
+    }
+
+    /** Debug actual TTL */
+    set beresp.http.X-TTL2 = beresp.ttl;
+
+    return (deliver);
+}
+
+/** ============ VCL_DELIVER ============== */
+sub vcl_deliver {
+
+    /** Replace cdn-no-store with no-store*/
+    if (resp.http.Cache-Control ~ "cdn-no-store") {
+        set resp.http.Cache-Control = regsub(resp.http.Cache-Control, "cdn-no-store", "no-store");
+    }
+
+    /** Debug */
+    if (obj.hits > 0) {
+        set resp.http.X-Cache = "HIT";
+        set resp.http.X-Cache-Hits = obj.hits;
+    }
+    else {
+        set resp.http.X-Cache = "MISS";
+        set resp.http.X-Cache-Hits = 0;
+    }
+
+    /** Move age header to save it from aggressive servers. */
+    if (resp.http.Age) {
+        set resp.http.X-Cache-Age = resp.http.Age;
+        unset resp.http.Age;
+    }
+
+    /** Print out used bin and variant. */
+    if (req.http.X-BIN) {
+        set resp.http.X-BIN = req.http.X-BIN;
+    }
+    if (req.http.X-VARIANT) {
+        set resp.http.X-VARIANT = req.http.X-VARIANT;
+    }
+
+    /** Print TTL of the object. */
+    if (req.http.X-Cache-TTL) {
+        set resp.http.X-Cache-TTL = req.http.X-Cache-TTL;
+        unset req.http.X-Cache-TTL;
+    }
+
+    /** Print request variation. */
+    if (req.http.X-Requested-With) {
+        set resp.http.X-Requested-With = req.http.X-Requested-With;
+    }
+
+    /** Print protocol variation. */
+    if (req.http.X-Forwarded-Proto) {
+        set resp.http.X-Forwarded-Proto = req.http.X-Forwarded-Proto;
+    }
+
+    /** Unset unused headers */
+    unset resp.http.Server;
+    unset resp.http.X-Powered-By;
+    unset resp.http.Expires;
+    unset resp.http.Last-Modified;
+    unset resp.http.Content-Language;
+    unset resp.http.Link;
+    unset resp.http.X-Generator;
+    unset resp.http.Vary;
+    unset resp.http.Via;
+    unset resp.http.Connection;
+    unset resp.http.Date;
+    unset resp.http.X-Varnish;
+
+    /** Unset tags header if not in debug */
+    if (!resp.http.X-CACHE-DEBUG) {
+      #unset resp.http.X-BIN;
+      #unset resp.http.X-VARIANT;
+      #unset resp.http.X-Requested-With;
+      #unset resp.http.X-Forwarded-Proto;
+      unset resp.http.X-TAG;
+      unset resp.http.X-TTL2;
+      unset resp.http.X-RNDPAGE;
+      unset resp.http.X-RNDGOTO;
+      unset resp.http.X-Cache-TTL;
+    }
+
+    return (deliver);
+}
+
+/** ============ VCL_HIT ============== */
+sub vcl_hit {
+    /** Debug */
+    set req.http.X-Cache-TTL = obj.ttl;
+    return (deliver);
+}
+/** ============ VCL_MISS ============== */
+sub vcl_miss {
+    // IS THIS REALY NEEDED?
+    // v3.x unset bereq.http.accept-encoding;
+    return (fetch);
+}
+
+/** ============ VCL_PASS ============== */
+sub vcl_pass {
+    if (!req.http.X-Forwarded-For) {
+        set req.http.X-Forwarded-For = client.ip;
+    }
+    // IS THIS REALY NEEDED?
+    // v3.x unset bereq.http.accept-encoding;
+    return (fetch);
+}
+
+/** ============ VCL_PIPE ============== */
+sub vcl_pipe {
+    set bereq.http.connection = "close";
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Page Node View feature.
+ */
+
+include_once 'souriau_page_node_view.features.inc';

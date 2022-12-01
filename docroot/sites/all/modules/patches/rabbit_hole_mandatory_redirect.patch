@@ -1,0 +1,144 @@
+diff --git a/rabbit_hole.install b/rabbit_hole.install
+index 8a936bf..79c73e3 100644
+--- a/rabbit_hole.install
++++ b/rabbit_hole.install
+@@ -115,3 +115,21 @@ function rabbit_hole_update_7003() {
+     }
+   }
+ }
++
++/**
++ * Expand Node fields according to Patch.
++ */
++function rabbit_hole_update_7004() {
++  $fields['rabbit_hole_redirect_type'] = array(
++    'name' => 'rh_redirect_type',
++    'spec' => array(
++      'description' => 'Expand entity fields for use mandatory redirect.',
++      'type' => 'int',
++      'default' => 0,
++    ),
++  );
++  // Add field.
++  foreach ($fields as $name => $changes) {
++    db_add_field('node', $changes['name'], $changes['spec']);
++  }
++}
+diff --git a/rabbit_hole.module b/rabbit_hole.module
+index 567d6c5..99f40a0 100644
+--- a/rabbit_hole.module
++++ b/rabbit_hole.module
+@@ -15,6 +15,7 @@ define('RABBIT_HOLE_ACCESS_DENIED', 1);
+ define('RABBIT_HOLE_PAGE_NOT_FOUND', 2);
+ define('RABBIT_HOLE_PAGE_REDIRECT', 3);
+ define('RABBIT_HOLE_PAGE_REDIRECT_DEFAULT', '');
++define('RABBIT_HOLE_PAGE_REDIRECT_TYPE_DEFAULT', 0);
+ define('RABBIT_HOLE_PAGE_REDIRECT_RESPONSE_DEFAULT', 301);
+ 
+ /**
+@@ -206,6 +207,13 @@ function rabbit_hole_form(&$attach, $entity_type, $bundle, $module, $entity = NU
+     '#type' => 'value',
+     '#value' => $redirect_setting_name,
+   );
++  $redirect_type_name = isset($entity) ? 'rh_redirect_type' : 'rh_' . $entity_type . '_redirect_type';
++  $form['rabbit_hole']['redirect'][$redirect_type_name] = array(
++    '#type' => 'checkbox',
++    '#title' => 'Mandatory redirect',
++    '#default_value' => isset($entity) ? rabbit_hole_get_redirect_type_entity($entity_type, $entity) : (!empty($bundle) ? rabbit_hole_get_redirect_type_bundle($entity_type, $bundle) : RABBIT_HOLE_PAGE_REDIRECT_DEFAULT),
++    '#description' => 'Any way redirect to page, using header();'
++  );
+   $form['rabbit_hole']['redirect'][$redirect_setting_name] = array(
+     '#type' => rabbit_hole_access_php($module) ? 'textarea' : 'textfield',
+     '#title' => t('Redirect path'),
+@@ -311,12 +319,14 @@ function rabbit_hole_execute($entity_type, $entity) {
+       if (rabbit_hole_get_action_entity($entity_type, $entity) != RABBIT_HOLE_USE_DEFAULT) {
+         // Get the redirect path and response from the entity.
+         $redirect = rabbit_hole_get_redirect_entity($entity_type, $entity);
++        $redirect_type = rabbit_hole_get_redirect_type_entity($entity_type, $entity);
+         $redirect_response = rabbit_hole_get_redirect_response_entity($entity_type, $entity);
+       }
+       else {
+         // Get the redirect path and response from the bundle.
+         $bundle = rabbit_hole_entity_get_bundle($entity_type, $entity);
+         $redirect = rabbit_hole_get_redirect_bundle($entity_type, $bundle);
++        $redirect_type = rabbit_hole_get_redirect_type_bundle($entity_type, $bundle);
+         $redirect_response = rabbit_hole_get_redirect_response_bundle($entity_type, $bundle);
+       }
+ 
+@@ -352,6 +362,12 @@ function rabbit_hole_execute($entity_type, $entity) {
+       // Parse the supplied redirect path in order to get the details.
+       $redirect_data = drupal_parse_url($redirect);
+ 
++      // Perform Mandatory Redirect.
++      if ($redirect_type) {
++        header('Location: ' . $redirect_data['path'], TRUE, $redirect_response);
++        drupal_exit($redirect_data['path']);
++      }
++
+       // Perform the redirect.
+       drupal_goto($redirect_data['path'], $redirect_data, $redirect_response);
+ 
+@@ -513,6 +529,21 @@ function rabbit_hole_get_redirect_bundle($entity_type, $bundle) {
+ }
+ 
+ /**
++ * Gets the redirect path for a bundle.
++ *
++ * @param string $entity_type
++ *   The entity type of the bundle.
++ * @param string $bundle
++ *   The bundle that we're checking.
++ *
++ * @return string
++ *   The redirect path set for the bundle.
++ */
++function rabbit_hole_get_redirect_type_bundle($entity_type, $bundle) {
++  return variable_get('rh_' . $entity_type . '_redirect_type_' . $bundle, RABBIT_HOLE_PAGE_REDIRECT_TYPE_DEFAULT);
++}
++
++/**
+  * Gets the redirect response for a bundle.
+  *
+  * @param string $entity_type
+@@ -589,6 +620,21 @@ function rabbit_hole_get_redirect_response_entity($entity_type, $entity) {
+ }
+ 
+ /**
++ * Gets the redirect type for an entity.
++ *
++ * @param string $entity_type
++ *   The entity type of the bundle.
++ * @param object $entity
++ *   The entity that we're checking.
++ *
++ * @return string
++ *   The redirect path set for the entity.
++ */
++function rabbit_hole_get_redirect_type_entity($entity_type, $entity) {
++  return isset($entity->rh_redirect_type) ? $entity->rh_redirect_type : RABBIT_HOLE_PAGE_REDIRECT_TYPE_DEFAULT;
++}
++
++/**
+  * Deletes variables associated with an entity type and bundle.
+  *
+  * This should be executed when a module in uninstalled or a bundle is deleted.
+@@ -597,6 +643,7 @@ function rabbit_hole_delete_variables($entity_type, $bundle) {
+   variable_del('rh_' . $entity_type . '_action_' . $bundle);
+   variable_del('rh_' . $entity_type . '_redirect_' . $bundle);
+   variable_del('rh_' . $entity_type . '_redirect_response_' . $bundle);
++  variable_del('rh_' . $entity_type . '_redirect_type_' . $bundle);
+ }
+ 
+ /**
+@@ -719,6 +766,11 @@ function rabbit_hole_schema_fields() {
+       'type' => 'int',
+       'default' => NULL,
+     ),
++    'rh_redirect_type' => array(
++      'description' => 'Specifies the type of redirect.',
++      'type' => 'int',
++      'default' => NULL,
++    ),
+   );
+ 
+   return $fields;

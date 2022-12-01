@@ -1,0 +1,274 @@
+{
+  "name": "adyax/souriau",
+  "description": "Souriau website",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.drupal.org/7"
+    }
+  ],
+  "require": {
+    "composer/installers": "^1.0.20",
+    "cweagans/composer-patches": "~1.0",
+    "drupal-composer/preserve-paths": "0.1.*",
+    "drupal/drupal": "7.82.0",
+    "drupal/devel": "^1.7",
+    "drupal/ctools": "^1.19",
+    "drupal/views": "^3.24",
+    "drupal/features": "^2.13",
+    "drupal/commerce": "^1.15",
+    "drupal/admin_menu": "3.x-dev",
+    "drupal/paragraphs": "1.x-dev",
+    "drupal/entity_translation": "^1.1",
+    "drupal/addressfield": "^1.3",
+    "drupal/commerce_devel": "1.x-dev",
+    "drupal/commerce_features": "^1.4",
+    "drupal/pathauto": "1.3.0",
+    "drupal/search_api_et": "2.x-dev",
+    "drupal/search_api_et_solr": "1.x-dev",
+    "drupal/variable": "2.5.0",
+    "drupal/facetapi": "1.x-dev",
+    "drupal/config_pages": "1.x-dev",
+    "drupal/panels": "3.x-dev",
+    "drupal/panels_everywhere": "1.x-dev",
+    "drupal/mailchimp": "5.6.0",
+    "drupal/module_filter": "2.x-dev",
+    "drupal/jquery_update": "3.x-dev",
+    "drupal/metatag": "^1.27",
+    "drupal/title": "^1.0@beta",
+    "drupal/diff": "3.x-dev",
+    "drupal/job_scheduler": "2.x-dev",
+    "drupal/feeds": "2.x-dev",
+    "drupal/feeds_tamper": "1.x-dev",
+    "drupal/commerce_feeds": "1.x-dev",
+    "drupal/field_validation": "2.x-dev",
+    "drupal/feeds_et": "1.x-dev",
+    "drupal/entityreference": "1.5.0",
+    "drupal/memcache": "1.x-dev",
+    "drupal/cer": "3.x-dev",
+    "drupal/domain": "3.x-dev",
+    "drupal/field_group": "1.x-dev",
+    "drupal/file_entity": "^2.30",
+    "drupal/media": "^2.27",
+    "drupal/media_library": "1.1.0",
+    "drupal/domain_locale": "1.x-dev",
+    "drupal/views_bulk_operations": "3.x-dev",
+    "drupal/fapi_validation": "2.x-dev",
+    "drupal/node_clone": "1.x-dev",
+    "drupal/transliteration": "3.x-dev",
+    "drupal/xmlsitemap": "^2.6",
+    "drupal/domain_ctools": "1.3.0",
+    "drupal/globalredirect": "^1.6",
+    "drupal/rabbit_hole": "2.x-dev",
+    "drupal/file_admin": "1.x-dev",
+    "drupal/ckeditor": "^1.19",
+    "drupal/environment_indicator": "2.x-dev",
+    "drupal/domain_menu_access": "^1.3",
+    "drupal/i18n": "^1.31",
+    "drupal/link": "^1.9",
+    "drupal/strongarm": "2.x-dev",
+    "drupal/auto_entitylabel": "1.4.0",
+    "drupal/email_registration": "1.x-dev",
+    "drupal/commerce_shipping": "2.x-dev",
+    "drupal/addressfield_phone": "1.x-dev",
+    "drupal/webform": "4.x-dev",
+    "drupal/eck": "2.x-dev",
+    "drupal/email": "1.x-dev",
+    "drupal/sharethis": "2.x-dev",
+    "drupal/media_feeds": "2.0.0-alpha1",
+    "drupal/maxlength": "3.x-dev",
+    "drupal/user_registrationpassword": "1.x-dev",
+    "drupal/password_policy": "^1.16",
+    "drupal/honeypot": "^1.26",
+    "drupal/commerce_order_types": "1.x-dev",
+    "drupal/entityreference_autocomplete": "1.x-dev",
+    "drupal/views_data_export": "3.2.0",
+    "drupal/commerce_addressbook": "2.x-dev",
+    "drupal/youtube": "^1.8",
+    "drupal/securepages": "1.0.0-beta2",
+    "drupal/file_entity_usage": "1.x-dev",
+    "drupal/mail_edit": "1.x-dev",
+    "drupal/mailsystem": "3.x-dev",
+    "drupal/mimemail": "1.x-dev",
+    "drupal/emogrifier": "2.x-dev",
+    "drupal/search_api": "^1.27",
+    "drupal/search_api_solr": "^1.15",
+    "drupal/private_files_download_permission": "2.7.0",
+    "drupal/webform_multiple_file": "1.x-dev",
+    "drupal/flag": "3.9.0",
+    "drupal/views_load_more": "1.5.0",
+    "drupal/webform_prefill": "^1.2",
+    "drupal/filefield_paths": "1.0.0",
+    "drupal/date": "^2.11",
+    "drupal/webform_scheduler": "1.0.0-beta9",
+    "drupal/commerce_cart_expiration": "1.4.0",
+    "drupal/views_selective_filters": "^1.6",
+    "drupal/addtoany": "^4.16",
+    "drupal/views_flag_refresh": "1.3.0",
+    "drupal/jquery_colorpicker": "1.3.0",
+    "drupal/eu_cookie_compliance": "^1.31",
+    "drupal/google_analytics": "^2.6",
+    "drupal/views_litepager": "3.0.0",
+    "drupal/seckit": "^1.11",
+    "drupal/username_enumeration_prevention": "^1.3",
+    "drupal/acquia_connector": "^3.7",
+    "drupal/search_api_acquia": "^2.6",
+    "drupal/page_memory_limit": "^1",
+    "drupal/expire": "2.0.0-rc4",
+    "drupal/acquia_purge": "1.3.0",
+    "drupal/redirect": "1.x-dev",
+    "drupal/votingapi": "^2.15",
+    "drupal/advpoll": "3.0.0",
+    "drupal/google_tag": "^2.1",
+    "drupal/commerce_google_tag_manager": "1.1.0",
+    "drupal/path_redirect_import": "1.0.0-rc4",
+    "drupal/cache_control": "2.x-dev",
+    "drupal/elysia_cron": "^2.8",
+    "drupal/queue_ui": "2.x-dev",
+    "drupal/acquia_search_multi_subs": "1.8.0",
+    "drupal/publish_button": "1.1.0",
+    "drupal/solr_devel": "1.x-dev",
+    "drupal/media_ckeditor": "^2.14",
+    "drupal/webform_localization": "^4.14",
+    "drupal/token": "^1.8",
+    "drupal/rules": "^2.12",
+    "drupal/commerce_custom_order_status": "^1.1",
+    "drupal/node_revision_delete": "^3.2",
+    "drupal/safe_cache_form_clear": "1.2.0",
+    "drupal/advagg": "^2.35",
+    "drupal/role_help": "^1.0",
+    "drupal/entity": "^1.9",
+    "drupal/elements": "^1.5",
+    "drupal/webform_validation": "^1.17",
+    "drupal/l10n_update": "^2.4",
+    "drupal/mailjet": "^2.22",
+    "drupal/libraries": "^2.5",
+    "drupal/smtp": "1.7.0",
+    "phpseclib/phpseclib": "^3.0"
+  },
+  "require-dev": {
+      "squizlabs/php_codesniffer": "2.*",
+      "drupal/coder": "8.2.*",
+    "neronmoon/scriptsdev": "^0.1.0"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable" : true,
+  "scripts": {
+      "post-install-cmd": [
+        "cp -R ./core_patches/* ./docroot",
+        "cp dev/robots.txt ./docroot/",
+        "cp dev/google6cc4277693acab0c.html ./docroot/",
+        "cp dev/088a370aa369dd97af14452c3d3527f8.txt ./docroot/",
+        "cp dev/robots-central.txt ./docroot/",
+        "cp dev/.htaccess ./docroot/",
+        "cp ./environments/env.settings.php ./docroot/sites/default/",
+        "cp -R dev/.well-known ./docroot",
+        "bash environments/mailchimp_lib.sh"
+      ]
+  },
+  "config": {
+    "vendor-dir": "vendor"
+  },
+  "extra": {
+    "scripts-dev": {
+      "post-install-cmd": [
+        "bash dev/setup.sh"
+      ],
+      "platform": {
+        "php": "7.3"
+      }
+    },
+    "installer-paths": {
+      "docroot": ["type:drupal-core"],
+      "docroot/sites/all/modules/contrib/{$name}": ["type:drupal-module"],
+      "docroot/profiles/contrib/{$name}": ["type:drupal-profile"],
+      "docroot/sites/all/themes/contrib/{$name}": ["type:drupal-theme"],
+      "drush/contrib/{$name}": ["type:drupal-drush"]
+    },
+    "preserve-paths": [
+      "docroot/sites/all/modules/contrib",
+      "docroot/sites/all/modules/custom",
+      "docroot/sites/all/modules/patches",
+      "docroot/sites/all/modules/features",
+      "docroot/sites/all/themes/contrib",
+      "docroot/sites/all/themes/custom",
+      "docroot/sites/all/libraries",
+      "docroot/sites/all/drush",
+      "docroot/sites/default/settings.php",
+      "docroot/sites/default/files",
+      "docroot/sites/default/private"
+    ],
+    "patches": {
+      "drupal/entity_translation": {
+        "Better locale integration": "docroot/sites/all/modules/patches/entity_translations_v2.patch",
+        "Disable translation unavailable message": "https://www.drupal.org/files/issues/disable-translation-not-available-message.patch"
+      },
+      "drupal/file_admin": {
+        "Separate permission `publish files`": "docroot/sites/all/modules/patches/file_admin.publish-files-permission.patch"
+      },
+      "drupal/commerce": {
+        "Added additional check for commerce_product title callback" : "docroot/sites/all/modules/patches/title_callback.product.commerce.patch"
+      },
+      "drupal/domain_locale": {
+        "Hide disabled languages" : "docroot/sites/all/modules/patches/domain_locale.disabled-languages.patch",
+        "Prevent sending langcode as object into query" : "docroot/sites/all/modules/patches/domain_locale.langcode-object.patch"
+      },
+      "drupal/memcache": {
+        "Fix order": "docroot/sites/all/modules/patches/memcache-fix_order_pecl_memcache-2415109-7.patch"
+      },
+      "drupal/addressfield": {
+        "display fields if no country, country value -none-, custom trigger" : "docroot/sites/all/modules/patches/addressfield_v5.patch",
+        "UK Counties list": "https://www.drupal.org/files/issues/addressfield-uk_counties-1630834-4.patch",
+        "CN administrative area numeric to iso" : "docroot/sites/all/modules/patches/addressfield-cn-administrative-area-iso.patch"
+      },
+      "drupal/commerce_features": {
+        "Exportable Commerce Order types": "docroot/sites/all/modules/patches/commerce_features.remove_support_of_commerce_order_types.patch"
+      },
+      "drupal/password_policy": {
+        "Check password with origin password": "docroot/sites/all/modules/patches/password_policy.patch"
+      },
+      "drupal/feeds_tamper": {
+        "Empty multi values fields patch for explode plugin of feeds_tamper": "docroot/sites/all/modules/patches/feeds_tamper_explode_multivalues_empty.patch"
+      },
+      "drupal/securepages": {
+        "No active batch fix": "https://www.drupal.org/files/issues/securepages-no_active_batch_error-1627326-26.patch",
+        "Domain conf variable support": "docroot/sites/all/modules/patches/securepages_domain_conf_variable_support.patch",
+        "Possibility to change HTTP response code of the URL redirect": "https://www.drupal.org/files/issues/securepages-select-http-code_2.patch"
+      },
+      "drupal/media_feeds": {
+        "Only variables should be passed by reference in MediaFeedsLibraryProvider constructor fix": "docroot/sites/all/modules/patches/media_feeds.only-var-should-pass-by-reference.patch",
+        "When column is blank, delete the media from mapping field": "docroot/sites/all/modules/patches/media_feeds.file-delete-on-empty-cases.patch"
+      },
+      "drupal/webform_multiple_file": {
+        "Fix dependency": "docroot/sites/all/modules/patches/webform_multiple_file.fixdependency.patch"
+      },
+      "drupal/rabbit_hole": {
+        "Expand functionality for mandatory redirect": "docroot/sites/all/modules/patches/rabbit_hole_mandatory_redirect.patch"
+      },
+      "drupal/search_api": {
+        "Remove fields prefix": "docroot/sites/all/modules/patches/search_api_change_fields_name.patch"
+      },
+      "drupal/advpoll": {
+        "Update poll results if poll options are modified": "docroot/sites/all/modules/patches/advpoll_modify_result_if_options_modified.patch"
+      },
+      "drupal/publish_button": {
+        "Display link instead button  on the View Page": "docroot/sites/all/modules/patches/publish-button-7-1-1-remove-nake-link.patch"
+      },
+      "drupal/views": {
+        "Warning: Invalid argument supplied for foreach() in views_join->build_join()": "https://www.drupal.org/files/issues/views-invalid_argument-2866370-14.patch"
+      },
+      "drupal/solr_devel": {
+        "Ability to proxy any request to Drupal": "https://www.drupal.org/files/issues/ability_to_proxy_any-2840059-4.patch"
+      },
+      "drupal/commerce_feeds": {
+        "Incompatibility with feeds FeedsProcessor::entityValidate": "https://www.drupal.org/files/issues/2019-05-15/FeedsProcessor-entityValidate-3050702-1.patch"
+      },
+      "drupal/views_selective_filters": {
+        "Address Field country not working with human readable names": "docroot/sites/all/modules/patches/views_selective_filters-select_list_key_fix-2504309-6-v2.patch"
+      },
+      "drupal/search_api_et": {
+        "Index language UND fix": "docroot/sites/all/modules/patches/search_api_et.opt-index.und-lang_v2.patch"
+      }
+    }
+  }
+}

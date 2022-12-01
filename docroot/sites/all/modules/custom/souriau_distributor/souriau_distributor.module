@@ -1,0 +1,524 @@
+<?php
+
+/**
+ * @file
+ * Souriau Distributor.
+ */
+
+define('DISTRIBUTOR_STOCK_FOLDER', 'private://Inventory-ftp/');
+
+/**
+ * Implements hook_permission().
+ */
+function souriau_distributor_permission() {
+  return [
+    'distributors settings' => [
+      'title' => t('Distributor Settings', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+      'description' => t('Permissions for administer Distributors', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_distributor_menu() {
+  $items['admin/dashboard/distributors/default'] = [
+    'title' => 'Defaults',
+    'description' => 'Default Distributors',
+    'menu_name' => 'menu-admin-menu',
+    'tab_parent' => 'admin/dashboard/distributors',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => ['distributors settings'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_distributor_form'],
+    'file' => 'souriau_distributor.forms.inc',
+  ];
+  $items['souriau/ajax/distributors/%/%ctools_js'] = [
+    'title' => 'Distributors Callback',
+    'page callback' => 'souriau_distributor_callback',
+    'page arguments' => array(3, 4),
+    'file' => '/includes/souriau_distributor_callback.inc',
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'access callback' => TRUE,
+  ];
+  $items['admin/dashboard/distributors/import'] = [
+    'title' => 'Import',
+    'description' => 'Import Distributors',
+    'menu_name' => 'menu-admin-menu',
+    'tab_parent' => 'admin/dashboard/distributors',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => ['distributors settings'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_distributor_upload_form'],
+    'file' => 'souriau_distributor.forms.inc',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_cronapi().
+ */
+function souriau_distributor_cronapi($op, $job = NULL) {
+  $items['souriau_distributor_split_stock_file'] = [
+    'description' => 'Download and split the stock file.',
+    // Daily 06:30.
+    'rule' => '30 06 * * *',
+  ];
+
+  $items['souriau_distributor_inventory_data_load'] = [
+    'description' => 'Add to queue for updating stock table.',
+    // Daily 06:45.
+    'rule' => '45 06 * * *',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function souriau_distributor_cron_queue_info() {
+  return [
+    'souriau_distributor_stock' => [
+      'worker callback' => 'souriau_distributor_stock_queue_worker',
+      'skip on cron' => FALSE,
+      // Max time 10 minutes for job.
+      'time' => 60 * 10,
+    ],
+  ];
+}
+
+/**
+ * Queue callback function for stock update.
+ */
+function souriau_distributor_stock_queue_worker($data) {
+  extract($data);
+  if ($split_counter == 'X') {
+    // Prepare all reports.
+    return souriau_distributor_prepare_reports();
+  }
+
+  if ($split_counter == 'Y') {
+    // Upload all reports to FTP.
+    return souriau_distributor_upload_reports();
+  }
+
+  $distributor_name = $distributor_wrapper->field_distributor_name->value();
+  $distributor_country_iso = $distributor_wrapper->field_postal_address->country->value();
+  $countries = _addressfield_country_options_list();
+  $distributor_country = $countries[$distributor_country_iso];
+  $distributor_code = $distributor_wrapper->field_distributor_code->value();
+  $file = DISTRIBUTOR_STOCK_FOLDER . $file_name;
+
+  // Loop through each lines.
+  if (($handle = fopen($file, "r")) !== FALSE) {
+    $line = 0;
+    $csv = [];
+    $failed_file = DISTRIBUTOR_STOCK_FOLDER . 'Failed/' . date('Ymd') . '_' . $distributor_code . '_NOK.csv';
+    $done_file = DISTRIBUTOR_STOCK_FOLDER . 'Done/' . date('Ymd') . '_' . $distributor_code . '_OK.csv';
+    $report_file = DISTRIBUTOR_STOCK_FOLDER . 'Reports/' . date('Ymd') . '_' . $distributor_code . '.txt';
+
+    $error_fp = fopen($failed_file, 'a');
+    $done_fp = fopen($done_file, 'a');
+    $report_fp = fopen($report_file, "a");
+
+    $report = '';
+    while (($result = fgetcsv($handle, 500, ';')) !== FALSE) {
+      $line++;
+      if ($line == 1) {
+        continue;
+      }
+      $actual_line = (($split_counter - 1) * 5000) + $line;
+      // Ignore blank lines, null values and invalid columns.
+      if (array(NULL) === $result) {
+        fputcsv($error_fp, $result, ';');
+        $report .= "Row n#$actual_line: Blank row" . PHP_EOL;
+      }
+      elseif (empty($result[0]) || empty($result[1])) {
+        fputcsv($error_fp, $result, ';');
+        $report .= "Row n#$actual_line: Blank PN or Quantity" . PHP_EOL;
+      }
+      elseif (((int) $result[1]) <= 0) {
+        fputcsv($error_fp, $result, ';');
+        $report .= "Row n#$actual_line: Incorrect Quantity {$result[1]}" . PHP_EOL;
+        fputcsv($error_fp, $result, ';');
+      }
+      elseif (commerce_product_load_by_sku($result[0]) === FALSE) {
+        $report .= "Row n#$actual_line: Partnumber Unknown {$result[0]}" . PHP_EOL;
+        fputcsv($error_fp, $result, ';');
+      }
+      else {
+        // part_number, distributor_id, distributor_name, quantity, country.
+        $csv[] = [
+          'part_number' => $result[0],
+          'distributor_id' => $distributor_wrapper->field_distributor_code->value(),
+          'distributor_name' => $distributor_name . ' ' . $distributor_country_iso,
+          'quantity' => $result[1],
+          'country' => strtoupper($distributor_country)
+        ];
+
+        // Write success lines.
+        fputcsv($done_fp, $result, ';');
+        // Insert to table.
+        souriau_distributor_update_table($result, $distributor_wrapper);
+      }
+    }
+
+    fwrite($report_fp, $report);
+    fclose($error_fp);
+    fclose($done_fp);
+    fclose($handle);
+    fclose($report_fp);
+
+    // Update stock to 0 for old stocks.
+    souriau_distributor_stock_reset();
+
+    if (file_exists(DISTRIBUTOR_STOCK_FOLDER . $file_name)) {
+      unlink(DISTRIBUTOR_STOCK_FOLDER . $file_name);
+    }
+  }
+}
+
+/**
+ * Prepare the final reports locally.
+ */
+function souriau_distributor_prepare_reports() {
+  $directory = new DirectoryIterator(DISTRIBUTOR_STOCK_FOLDER . 'Reports');
+  foreach ($directory as $fileinfo) {
+    if (!$fileinfo->isDot() && !$fileinfo->isDir()) {
+      // Create final report.
+      $distributor_code = souriau_distributor_get_distributor_code_components($fileinfo);
+      $ok_file = DISTRIBUTOR_STOCK_FOLDER . 'Done/' . date('Ymd') . '_' . $distributor_code . '_OK.csv';
+      $nok_file = DISTRIBUTOR_STOCK_FOLDER . 'Failed/' . date('Ymd') . '_' . $distributor_code . '_NOK.csv';
+      $ok = souriau_distributor_get_number_of_lines($ok_file);
+      $nok = souriau_distributor_get_number_of_lines($nok_file);
+
+      $report = file_get_contents(DISTRIBUTOR_STOCK_FOLDER . 'Reports/' . $fileinfo->getFilename());
+      $final_report = 'Report Date: ' . date('Y-m-d H:i') . PHP_EOL .
+      'Distributor Status: OK' . PHP_EOL .
+      'Number of successful rows: ' . $ok . PHP_EOL .
+      'Number of failed rows: ' . $nok . PHP_EOL . PHP_EOL . $report;
+
+      file_put_contents(DISTRIBUTOR_STOCK_FOLDER . 'Reports/' . $fileinfo->getFilename(), $final_report);
+    }
+  }
+}
+
+/**
+ * Upload reports to FTP.
+ */
+function souriau_distributor_upload_reports() {
+  $souriau_common_settings = variable_get('souriau_site_settings_variables');
+  $distributor_inventory_settings = $souriau_common_settings['distributor_inventory'];
+  $ftps = new Ftps(
+    $distributor_inventory_settings['ftp'],
+    $distributor_inventory_settings['ftp_user'],
+    $distributor_inventory_settings['ftp_password'],
+    $distributor_inventory_settings['ftp_port']
+  );
+  foreach (['Reports', 'Done', 'Failed'] as $dir) {
+    $directory = new DirectoryIterator(DISTRIBUTOR_STOCK_FOLDER . $dir);
+    foreach ($directory as $fileinfo) {
+      if (!$fileinfo->isDot() && !$fileinfo->isDir()) {
+        $ftps->upload(DISTRIBUTOR_STOCK_FOLDER . $dir . '/' . $fileinfo->getFilename());
+      }
+    }
+  }
+  $ftps->closeHandle();
+}
+
+/**
+ * Returns distributor code and split counter from file name.
+ */
+function souriau_distributor_get_distributor_code_components($fileinfo) {
+  $code = substr($fileinfo->getFilename(), strrpos($fileinfo->getFilename(), '_') + 1);
+  $code = str_replace('.' . $fileinfo->getExtension(), '', $code);
+  return strstr($code, '-') ? explode('-', $code) : $code;
+}
+
+/**
+ * Returns number of lines in the csv file.
+ */
+function souriau_distributor_get_number_of_lines($file) {
+  $linecount = 0;
+  if (!file_exists($file) || empty(file_get_contents($file))) {
+    return $linecount;
+  }
+  $handle = fopen($file, "r");
+  while (!feof($handle)) {
+    $line = fgets($handle);
+    $linecount++;
+  }
+  fclose($handle);
+  return $linecount;
+}
+
+/**
+ * Hook queue callback.
+ */
+function souriau_distributor_inventory_data_load() {
+  if (!file_exists(DISTRIBUTOR_STOCK_FOLDER)) {
+    mkdir(DISTRIBUTOR_STOCK_FOLDER);
+    mkdir(DISTRIBUTOR_STOCK_FOLDER . 'Failed/');
+    mkdir(DISTRIBUTOR_STOCK_FOLDER . 'Done/');
+    mkdir(DISTRIBUTOR_STOCK_FOLDER . 'Reports/');
+  }
+  $souriau_common_settings = variable_get('souriau_site_settings_variables');
+  $distributor_inventory_settings = $souriau_common_settings['distributor_inventory'];
+  $ftps = new Ftps(
+    $distributor_inventory_settings['ftp'],
+    $distributor_inventory_settings['ftp_user'],
+    $distributor_inventory_settings['ftp_password'],
+    $distributor_inventory_settings['ftp_port']
+  );
+  foreach ($ftps->ftpGetFileNames('/') as $csv) {
+    $ftps->download($csv, DISTRIBUTOR_STOCK_FOLDER);
+  }
+  $ftps->closeHandle();
+  souriau_distributor_parse_csv();
+}
+
+/**
+ * CSV parser.
+ */
+function souriau_distributor_parse_csv() {
+  $dir = new DirectoryIterator(DISTRIBUTOR_STOCK_FOLDER);
+  foreach ($dir as $fileinfo) {
+    if (!$fileinfo->isDot() && !$fileinfo->isDir()) {
+      if (date('Ymd') != substr($fileinfo->getFilename(), 0, 8)) {
+        continue;
+      }
+      $components = souriau_distributor_get_distributor_code_components($fileinfo);
+      $distributor_code = $components[0];
+      $split_counter = $components[1];
+
+      $distributor = souriau_distributor_get_distributor_by_distributor_code($distributor_code);
+      if ($distributor === FALSE) {
+        // Invalid distributor code error.
+        unlink(DISTRIBUTOR_STOCK_FOLDER . $fileinfo->getFilename());
+        continue;
+      }
+      $distributor_wrapper = entity_metadata_wrapper('distributor', $distributor);
+
+      // Moved to queue.
+      $stock = souriau_distributor_generate_report($split_counter, $distributor_wrapper, $fileinfo->getFilename());
+    }
+  }
+  DrupalQueue::get('souriau_distributor_stock')->createItem([
+    'split_counter' => 'X',
+  ]);
+  DrupalQueue::get('souriau_distributor_stock')->createItem([
+    'split_counter' => 'Y',
+  ]);
+}
+
+/**
+ * Stock update function.
+ */
+function souriau_distributor_generate_report($split_counter, $distributor_wrapper, $file_name) {
+  DrupalQueue::get('souriau_distributor_stock')->createItem([
+    'split_counter' => $split_counter,
+    'file_name' => $file_name,
+    'distributor_wrapper' => $distributor_wrapper
+  ]);
+}
+
+/**
+ * Db operations to update the stock.
+ */
+function souriau_distributor_update_table($result, $distributor_wrapper) {
+  db_set_active('stock_management');
+  $distributor_name = $distributor_wrapper->field_distributor_name->value();
+  $distributor_code = $distributor_wrapper->field_distributor_code->value();
+  $distributor_country_iso = $distributor_wrapper->field_postal_address->country->value();
+  $countries = _addressfield_country_options_list();
+  $distributor_country = $countries[$distributor_country_iso];
+  // Delete the PN entry from table.
+  db_delete('stock')
+    ->condition('part_number', $result[0])
+    ->condition('distributor_id', $distributor_code)
+    ->execute();
+
+  // Insert new entry to table.
+  $sid = db_insert('stock')
+    ->fields([
+      'part_number' => $result[0],
+      'distributor_id' => $distributor_code,
+      'distributor_name' => $distributor_name . ' ' . $distributor_country_iso,
+      'quantity' => $result[1],
+      'country' => strtoupper($distributor_country),
+      'product_external_url' => (isset($result[2]) && !empry(trim($result[2]))) ? $result[2] : NULL,
+    ])
+    ->execute();
+  db_set_active();
+
+  return $sid;
+}
+
+/**
+ * Db operation to update the stock to zero for all rows which are not updated in today's cron.
+ */
+function souriau_distributor_stock_reset() {
+  db_set_active('stock_management');
+  $num_updated = db_update('stock')
+    ->fields([
+      'quantity' => 0,
+    ])
+    ->condition('stock_date', date('Y-m-d') . '%', 'NOT LIKE')
+    ->execute();
+  db_set_active();
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function souriau_distributor_form_alter(&$form, $form_state, $form_id) {
+  if ('views-exposed-form-distributors-default' == $form['#id']) {
+    $form['#action'] = url($_GET['q']);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function souriau_distributor_form_eck__entity__form_add_distributor_distributor_alter(&$form, &$form_state, $form_id) {
+  array_unshift($form['#validate'], 'souriau_distributor_form_eck__entity__form_add_distributor_distributor_validate');
+  $form['title']['#required'] = FALSE;
+  $form['title']['#type'] = 'hidden';
+}
+
+/**
+ * Form Validation, Create title for autocomplete.
+ */
+function souriau_distributor_form_eck__entity__form_add_distributor_distributor_validate(&$form, &$form_state) {
+  $distributor_code = '';
+  if (!empty($form_state['values']['field_distributor_code']['und'][0]['value'])) {
+    $distributor_code = ' (Code: ' . $form_state['values']['field_distributor_code']['und'][0]['value'] . ')';
+  }
+
+  // From original lang.
+  $distributor_name = $form_state['values']['field_distributor_name'][LANGUAGE_NONE][0]['value'];
+  $form_state['values']['title'] = $distributor_name . $distributor_code;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function souriau_distributor_theme($existing, $type, $theme, $path) {
+  $theme_path = drupal_get_path('theme', 'souriau');
+  return [
+    'distributor_popup' => [
+      'template'  => 'souriau-distributor-distributor-popup',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks'
+    ]
+  ];
+}
+
+/**
+ * Custom function for loading Distributor by Distributor code.
+ */
+function souriau_distributor_get_distributor_by_distributor_code($code) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'distributor')
+    ->entityCondition('bundle', 'distributor')
+    ->fieldCondition('field_distributor_code', 'value', $code, '=')
+    ->range(0, 1);
+  $result = $query->execute();
+
+  if (empty($result)) {
+    return FALSE;
+  }
+  $distributor = array_shift($result['distributor']);
+  $entity = entity_load_single('distributor', $distributor->id);
+
+  return $entity;
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function souriau_distributor_entity_info_alter(&$entity_info) {
+  $entity_info['distributor']['entity class'] = 'Distributor';
+}
+
+/**
+ * Download the full stock file with all distributor details.
+ */
+function souriau_distributor_download_full_stock() {
+  $souriau_common_settings = variable_get('souriau_site_settings_variables');
+  $distributor_inventory_settings = $souriau_common_settings['distributor_inventory'];
+  $ftps = new Ftps(
+    $distributor_inventory_settings['ftp'],
+    $distributor_inventory_settings['ftp_user'],
+    $distributor_inventory_settings['ftp_password'],
+    $distributor_inventory_settings['ftp_port']
+  );
+  foreach ($ftps->ftpGetFileNames('/_Pricelist/') as $csv) {
+    $ftps->download('/_Pricelist/' . $csv, DISTRIBUTOR_STOCK_FOLDER . '_Pricelist/');
+  }
+  $ftps->closeHandle();
+
+  return $csv;
+}
+
+/**
+ * Split the file distributor wise.
+ */
+function souriau_distributor_split_stock_file() {
+  // Old reports cleanup.
+  foreach (['Reports', 'Done', 'Failed'] as $key => $dir) {
+    $directory = new DirectoryIterator(DISTRIBUTOR_STOCK_FOLDER . $dir);
+    foreach ($directory as $fileinfo) {
+      if (!$fileinfo->isDot() && !$fileinfo->isDir()) {
+        unlink(DISTRIBUTOR_STOCK_FOLDER . $dir . '/' . $fileinfo->getFilename());
+      }
+    }
+  }
+
+  // Download the file from server.
+  $distributor_file = souriau_distributor_download_full_stock();
+  $distributor_file = DISTRIBUTOR_STOCK_FOLDER . '_Pricelist/' . $distributor_file;
+  $header = ['Part Number', 'Quantity on Hand'];
+  if (($handle = fopen($distributor_file, "r")) !== FALSE) {
+    // Skip first row.
+    fgetcsv($handle, 10000, ";");
+    $today = date('Ymd');
+    $prev_distributor_code = NULL;
+    $split_counter = 1;
+    $line_counter = 0;
+    while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
+      $cell = [];
+      $distributor_code = trim($data[0]);
+      $distributor_name = str_replace('/', '', trim($data[1]));
+      if ($line_counter == 5000 || ($prev_distributor_code != $distributor_code)) {
+        if ($prev_distributor_code != $distributor_code) {
+          $split_counter = 1;
+        }
+        else {
+          $split_counter++;
+        }
+        $line_counter = 0;
+      }
+      $file_name = "{$today}_{$distributor_name}_{$distributor_code}-{$split_counter}.csv";
+
+      $fp = fopen(DISTRIBUTOR_STOCK_FOLDER . $file_name, 'a');
+      if ($prev_distributor_code != $distributor_code || $line_counter == 0) {
+        if ($prev_distributor_code != $distributor_code) {
+          $split_counter = 1;
+        }
+        fputcsv($fp, $header, ';');
+      }
+      $cell[] = trim($data[3]);
+      $cell[] = trim($data[4]);
+      $prev_distributor_code = $distributor_code;
+      fputcsv($fp, $cell, ';');
+      fclose($fp);
+      $line_counter++;
+    }
+  }
+  unlink($distributor_file);
+}

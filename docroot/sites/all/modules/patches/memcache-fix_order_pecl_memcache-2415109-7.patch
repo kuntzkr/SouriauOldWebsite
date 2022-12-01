@@ -1,0 +1,15 @@
+diff --git a/dmemcache.inc b/dmemcache.inc
+index 8fa07bc..928ffd0 100644
+--- a/dmemcache.inc
++++ b/dmemcache.inc
+@@ -381,6 +381,10 @@ function dmemcache_get_multi($keys, $bin = 'cache', $mc = NULL) {
+ 
+       $results = @$mc->get($full_keys);
+ 
++      // Order isn't guaranteed, so ensure the return order matches that requested.
++      $keys = array_fill_keys($full_keys, null);
++      $results = array_merge($keys, $results);
++
+       if (!empty($php_errormsg)) {
+         register_shutdown_function('watchdog', 'memcache', 'Exception caught in dmemcache_get_multi: !msg', array('!msg' => $php_errormsg), WATCHDOG_WARNING);
+         $php_errormsg = '';

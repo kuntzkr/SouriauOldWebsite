@@ -1,0 +1,3134 @@
+<?php
+
+/**
+ * @file
+ * Souriau_common.module.
+ */
+
+require_once 'souriau_common.mail.inc';
+require_once 'souriau_commom.consts.inc';
+require_once 'souriau_common.inc';
+require_once 'includes/souriau_common.confirm.inc';
+require_once 'souriau_common.form.inc';
+use Pelago\Emogrifier;
+
+/**
+ * Implements hook_init().
+ */
+function souriau_common_init() {
+  global $_addtoany_init, $_addtoany_targets, $cookie_domain;
+  $_addtoany_init = TRUE;
+  $_addtoany_targets = [];
+  if (path_is_admin(current_path()) || ('system/ajax' == current_path())) {
+    // @Important, nothing to do here if it's ajax request or admin page.
+    // Nothing to do here.
+    return;
+  }
+
+  // Required inclusions for ctools-modal.
+  ctools_include('ajax');
+  ctools_include('modal');
+  ctools_modal_add_js();
+  ctools_add_js('souriau_common_modal', 'souriau_common');
+
+  // Add ctools-modal style settings.
+  $modal_style = array(
+    'souriau-modal-style' => array(
+      'modalSize' => array(
+        'type' => 'dynamic',
+        'width' => 'auto',
+        'height' => 'auto',
+        'addWidth' => 0,
+        'addHeight' => 0,
+        'contentRight' => 113,
+        'contentBottom' => 44,
+      ),
+      'modalOptions' => array(
+        'opacity' => .5,
+        'background-color' => '#000',
+      ),
+      // 'animation' => 'slideDown',
+      // 'animationSpeed' => 'slow',.
+      'modalTheme' => 'souriau_common_popup',
+    ),
+  );
+  drupal_add_js($modal_style, 'setting');
+  drupal_add_js(['souriau_common' => ['cookie_domain' => $cookie_domain]], 'setting');
+  drupal_add_js(['souriau_common' => ['search_offline_params' => variable_get('site_search')]], 'setting');
+  drupal_add_js('//app.mailjet.com/statics/js/iframeResizer.min.js', ['type' => 'external', 'scope' => 'footer']);
+  drupal_add_js('//cdn.jsdelivr.net/bluebird/latest/bluebird.min.js', ['type' => 'external', 'scope' => 'footer']);
+  if (user_is_anonymous() && !drupal_match_path(current_path(), 'souriau/ajax/*')) {
+    drupal_add_js('//js.maxmind.com/js/apis/geoip2/v2.1/geoip2.js', 'external');
+    drupal_add_js('//www.PrivacyPolicies.com/cookie-consent/releases/3.0.0/cookie-consent.js', 'external');
+    drupal_add_js(['souriau_common' => ['domains' => souriau_common_get_all_domains(), 'cookie_domain' => $cookie_domain]], 'setting');
+    drupal_add_js(drupal_get_path('module', 'souriau_common') . '/js/souriau_geoip_detect.js', ['scope' => 'footer']);
+  }
+}
+
+/**
+ * Callback for setting domain urls for GroIP.
+ */
+function souriau_common_get_all_domains() {
+  $return = [];
+  foreach (domain_domains() as $domain) {
+    if ($domain['domain_id'] == SOURIAU_COMMON_DOMAIN_CENTRAL) {
+      continue;
+    }
+    $domain_countries = domain_conf_variable_get($domain['domain_id'], 'geo_countries');
+    if (empty($domain_countries)) {
+      continue;
+    }
+
+    foreach ($domain_countries as $country_iso) {
+      $key = ($domain['domain_id'] == SOURIAU_COMMON_DOMAIN_INTERNATIONAL) ? 'default' : $country_iso;
+      if (!isset($return[$key])) {
+        $return[$key] = [
+          'path' => $domain['path'],
+        ];
+      }
+    }
+  }
+
+  $current_domain = domain_get_domain();
+  $return['current'] = [
+    'countries' => domain_conf_variable_get($current_domain['domain_id'], 'geo_countries'),
+    'path' => $current_domain['path'],
+  ];
+  $dest = drupal_get_destination();
+  $return['destination'] = $dest['destination'];
+  return $return;
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_common_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' || $module == 'ctools' || $module == 'entityreference' || $module == 'addressfield') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function souriau_common_views_api() {
+  return [
+    'api' => 3,
+    'path' => drupal_get_path('module', 'souriau_common') . '/views',
+  ];
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function souriau_common_element_info_alter(&$type) {
+
+  foreach ($type['password_confirm']['#process'] as $index => $processor) {
+    if ($processor === 'user_form_process_password_confirm') {
+      unset($type['password_confirm']['#process'][$index]);
+    }
+  }
+  // Hide N/A option on Radios field widget.
+  $type['radios']['#process'][] = '_souriau_common_radios_remove_na_option';
+  // @see https://www.drupal.org/node/2594955#comment-10951475
+  $type['managed_file']['#after_build'][] = 'souriau_common_file_managed_fix_duplicate_id';
+  array_unshift($type['managed_file']['#element_validate'], 'souriau_common_file_managed_ipaper_fake_file');
+}
+
+/**
+ * Implements hook_permission().
+ */
+function souriau_common_permission() {
+  return [
+    'access commerce_product clone' => [
+      'title' => t('Clone SKU'),
+    ],
+    'access Dashboard' => [
+      'title' => t('Dashboard Page'),
+    ],
+    'administer souriau main_menu' => [
+      'title' => t('Administer Souriau Main Menu'),
+    ],
+    'administer souriau site settings' => [
+      'title' => t('Administer Souriau Site Settings'),
+    ],
+    'bypass_myprojects_access' => [
+      'title' => t('Bypass My Projects Access'),
+    ],
+    'edit all meta fields' => [
+      'title' => t('Edit all node meta fields'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_common_menu() {
+  $items = [];
+  $items['admin/commerce/products/%commerce_product/clone'] = [
+    'title' => 'Clone',
+    'access arguments' => ['access commerce_product clone'],
+    'page callback' => 'souriau_common_pages_sku_clone',
+    'page arguments' => [3],
+    'file' => 'souriau_common.pages.inc',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+  ];
+  $items['admin/dashboard'] = [
+    'title' => 'Dashboard',
+    'weight' => -50,
+    'access arguments' => ['access Dashboard'],
+    'page callback' => 'souriau_common_pages_default_dashboard',
+    'file' => 'souriau_common.pages.inc',
+    'type' => MENU_NORMAL_ITEM,
+  ];
+  $items['admin/souriau/facets_configs'] = [
+    'title' => 'Facets',
+    'access arguments' => ['administer facets'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_facets_admin_form'],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/souriau/attributes_config'] = [
+    'title' => 'SKU attributes',
+    'access arguments' => ['administer facets'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_sku_attributes_admin_form'],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/souriau/dc_config'] = [
+    'title' => 'DC Config',
+    'access arguments' => ['administer facets'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_dc_application_admin_form'],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/souriau/dc_config/applications'] = [
+    'title' => 'Applications',
+    'access arguments' => ['administer facets'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_dc_application_admin_form'],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/souriau/dc_config/product-range'] = [
+    'title' => 'Product Range',
+    'access arguments' => ['administer facets'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_dc_application_admin_form'],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['souriau/ajax/autocomplete/%/%/%'] = [
+    'page callback' => 'souriau_common_autocomplete_callback',
+    'page arguments' => [3, 4, 5],
+    'access arguments' => ['access content'],
+    'file' => 'souriau_common.pages.inc',
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/souriau/souriau_main_menu'] = [
+    'title' => 'Site Menu',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'menu-admin-menu',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_main_menu_form'],
+    'access arguments' => ['administer souriau main_menu'],
+    'file' => 'includes/souriau_common.forms.inc',
+  ];
+
+  // Site Configuration.
+  $items['admin/souriau-site-settings'] = [
+    'title' => 'Souriau site settings',
+    'description' => 'Souriau site settings',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => ['administer souriau site settings'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_form_site_settings'],
+    'file' => 'includes/souriau_common.forms.inc',
+  ];
+  $items['admin/souriau-site-settings/setting'] = [
+    'title' => 'Souriau site settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  ];
+  $items['admin/souriau-site-settings/static-variables'] = [
+    'title' => 'Global configuration',
+    'description' => '',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => ['administer souriau site settings'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_form_site_settings_variables'],
+    'file' => 'includes/souriau_common.forms.inc',
+  ];
+
+  $items['node/%node/facets'] = [
+    'title' => 'Facets',
+    'access callback' => 'souriau_common_facets_access_callback',
+    'access arguments' => [1],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_facets_admin_form', 1],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_LOCAL_TASK,
+    'theme callback' => 'variable_get',
+    'theme arguments' => ['admin_theme'],
+  ];
+
+  $items['taxonomy/term/%taxonomy_term/facets'] = [
+    'title' => 'Facets',
+    'access callback' => 'souriau_common_taxonomy_facets_access_callback',
+    'access arguments' => [2],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_facets_admin_form', 2],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_LOCAL_TASK,
+    'theme callback' => 'variable_get',
+    'theme arguments' => ['admin_theme'],
+  ];
+
+  $items['taxonomy/term/%taxonomy_term/dc_facets'] = [
+    'title' => 'Facets',
+    'access callback' => 'souriau_common_dc_product_facets_access_callback',
+    'access arguments' => [2],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_common_dc_facets_admin_form', 2],
+    'file' => 'includes/souriau_common.forms.inc',
+    'type' => MENU_LOCAL_TASK,
+    'theme callback' => 'variable_get',
+    'theme arguments' => ['admin_theme'],
+  ];
+
+  $items['file/%file/replace'] = [
+    'title' => 'Replace with ipaper',
+    'access callback' => 'souriau_common_file_replace_access_callback',
+    'access arguments' => [1],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['file_entity_add_upload', 1],
+    'file' => 'file_entity.pages.inc',
+    'file path' => drupal_get_path('module', 'file_entity'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE,
+    'theme callback' => 'variable_get',
+    'theme arguments' => ['admin_theme'],
+  ];
+
+  $items['sitemap-image.xml'] = [
+    'title' => 'Image sitemap',
+    'page callback' => 'souriau_common_image_sitemap',
+    'access callback' => TRUE,
+  ];
+
+  $items['sample-order'] = [
+    'title' => 'Sample Order',
+    'page callback' => 'souriau_common_sample_order_url_redirect',
+    'access callback' => TRUE,
+  ];
+
+  $items['souriau/ajax/cookie-alert'] = [
+    'title' => 'Cookies Acceptance Message',
+    'page callback' => 'souriau_common_cookie_alert_popup_page',
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+  ];
+
+  $items['souriau_common/%ctools_js'] = [
+    'page callback' => 'souirau_common_jobclick_popup_callback',
+    'page arguments' => [1],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['souriau/ajax/website/feedback/%ctools_js'] = [
+    'page callback' => 'souirau_common_website_feedback_callback',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['admin/dashboard/log-monitor'] = [
+    'title' => 'Log Monitor',
+    'page callback' => 'souirau_common_log_monitor_callback',
+    'access arguments' => ['administer site configuration'],
+    'type' => MENU_NORMAL_ITEM,
+  ];
+
+  // Add menu callbacks for User's Projects.
+  _souriau_common_projects_menu($items);
+
+  return $items;
+}
+
+/**
+ * Call back for log monitor.
+ */
+function souirau_common_log_monitor_callback() {
+  $output = [];
+  foreach (['watchdog' => 'watchdog_path', 'access' => 'access_log_path'] as $key => $log_path) {
+    $path = variable_get($log_path);
+    $extra = ($key == 'watchdog') ? "grep search_api_solr $path |" : '';
+    $path_second = ($key == 'watchdog') ? '' : $path;
+    $command = print_r(shell_exec("$extra grep -o \"[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\" $path_second | sort | uniq -c | sort -nr | head -n 20"), TRUE);
+    if (empty($command)) {
+      continue;
+    }
+    $output["{$key}_heading"] = [
+      '#type' => 'markup',
+      '#markup' => "<h1>N IP ($key top 20)</h1>",
+    ];
+    $output["{$key}_result"] = [
+      '#type' => 'markup',
+      '#markup' => '<pre>' . $command . '</pre>',
+    ];
+  }
+
+  return $output;
+}
+
+/**
+ * Call back for Website feedback form.
+ */
+function souirau_common_website_feedback_callback($ajax = NULL, $part_number = NULL) {
+  if ($ajax !== 'ajax') {
+    return drupal_get_form('souriau_common_website_feedback_form');
+  }
+
+  ctools_include('ajax');
+  ctools_include('modal');
+
+  $form_state = array(
+    'ajax' => TRUE,
+    'part_number' => $part_number,
+  );
+
+  // Use ctools to generate ajax instructions for the browser to create
+  // a form in a modal popup.
+  $commands = ctools_modal_form_wrapper('souriau_common_website_feedback_form', $form_state);
+  $commands[] = ajax_command_invoke('#modalContent', 'addClass', ['projects-popup']);
+
+  // If the form has been submitted, there may be additional instructions
+  // such as dismissing the modal popup.
+  if (!empty($form_state['ajax_commands'])) {
+    $commands = $form_state['ajax_commands'];
+  }
+
+  // Return the ajax instructions to the browser via ajax_render().
+  print ajax_render($commands);
+  drupal_exit();
+}
+
+/**
+ * Website feedback form builder.
+ */
+function souriau_common_website_feedback_form($form, $form_state) {
+  if (!isset($form_state['ajax'])) {
+    $form['wrapper_top'] = [
+      '#markup' => '<div class="b-projects">
+      <div class="container">
+      <div class="b-add-project">',
+    ];
+  }
+
+  $form['project_title'] = [
+    '#markup' => '<div class="popup-title"><h2 id="modal-title" class="modal-title">'
+    . t('Website Feedback Collection', [], ['context' => SOURIAU_COMMON_T_USER]) .
+    '</h2></div>',
+  ];
+
+  $form['description'] = [
+    '#markup' => '<div class="b-text">' . t('If you wish to receive a response to your feedback, please fill in name and email details.', [], ['context' => SOURIAU_COMMON_T_USER])
+    . '</div>'
+  ];
+
+  $form['name'] = [
+    '#type' => 'textfield',
+    '#title' => t('Name', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  $form['email'] = [
+    '#type' => 'textfield',
+    '#title' => t('Email Address', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  $form['feedback'] = [
+    '#type' => 'textarea',
+    '#attributes' => ['class' => ['form-area']],
+    '#title' => t('Feedback', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#resizable' => FALSE,
+    '#required' => TRUE,
+  ];
+
+  if (isset($form_state['ajax'])) {
+    $form['cancel'] = [
+      '#type' => 'submit',
+      '#prefix' => '<div class="form-block form-actions wide-btns">',
+      '#attributes' => [
+        'class' => ['btn', 'blue-btn', 'btn-cancel'],
+        'data-dismiss' => 'modal',
+      ],
+      '#value' => t('CANCEL', [], ['context' => SOURIAU_COMMON_T_USER]),
+    ];
+  }
+
+  $form['submit'] = [
+    '#type' => 'submit',
+    '#name' => 'submit',
+    '#prefix' => '<div class="w-btn-stretch">',
+    '#suffix' => '</div></div>',
+    '#attributes' => [
+      'class' => ['btn', 'orange-btn-hover', 'gtm_element'],
+      'data-gtm-category' => 'Button',
+      'data-gtm-action' => 'Website-feedback',
+      'data-gtm-label' => drupal_get_title(),
+    ],
+    '#value' => t('SUBMIT', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#submit' => ['souriau_common_website_feedback_form_submit'],
+  ];
+
+  if (isset($form_state['ajax'])) {
+    $form['cancel']['#attributes']['class'] = [
+      'btn',
+      'blue-btn',
+      'btn-cancel',
+      'ctools-close-modal',
+    ];
+  }
+
+  return $form;
+}
+
+/**
+ * Website feedback form submit handler.
+ */
+function souriau_common_website_feedback_form_submit(&$form, &$form_state) {
+  global $language;
+  $values = $form_state['values'];
+
+  $redirect_url = base_path();
+  $to = variable_get('website_feedback_recipient', 'webmaster-ect@souriau.com');
+  $mail_params = [
+    '@name' => $values['name'],
+    '@email' => $values['email'],
+    '@feedback' => $values['feedback'],
+  ];
+  if (!empty($to)) {
+    drupal_mail('souriau_common', 'website_feedback_mail', trim($to), $language, $mail_params);
+  }
+
+  // If not ajax, then redirect user to project page.
+  if (!isset($form_state['ajax'])) {
+    $form_state['redirect'] = $redirect_url;
+  }
+  else {
+    // Tell the browser to close the modal.
+    $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+  }
+}
+
+/**
+ * Add menu callbacks for User's Projects.
+ */
+function _souriau_common_projects_menu(&$items) {
+  $items['user/projects/%/delete/%ctools_js'] = [
+    'page callback' => 'souriau_common_popup_project_delete_callback',
+    'page arguments' => [2, 4],
+    'access callback' => 'souriau_common_popup_project_delete_access',
+    'access arguments' => [2],
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['user/projects/%/delete/%/%ctools_js'] = [
+    'page callback' => 'souriau_common_popup_project_item_delete_callback',
+    'page arguments' => [2, 4, 5],
+    'access callback' => 'souriau_common_popup_project_delete_access',
+    'access arguments' => [2],
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['souriau/ajax/user/%/projects/%/inline-edit'] = [
+    'title' => 'Project Edit Ajax Callback',
+    'page callback' => 'souriau_common_project_inline_edit_callback',
+    'page arguments' => [5],
+    'access callback' => 'souriau_common_popup_project_delete_access',
+    'access arguments' => [5],
+    'delivery callback' => 'ajax_deliver',
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['souriau/ajax/project/create/%ctools_js'] = [
+    'page callback' => 'souirau_common_project_popup_callback',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['user/project/create'] = [
+    'title' => 'Create a new project',
+    'page callback' => 'souirau_common_project_popup_callback',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['souriau/ajax/projects/add/%/%ctools_js'] = [
+    'page callback' => 'souriau_common_popup_add_to_project_callback',
+    'page arguments' => [4, 5],
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/souriau_common.myproject.inc',
+  ];
+
+  $items['souriau/ajax/application_domain/%node/applications'] = [
+    'page callback' => 'souriau_common_applications_callback',
+    'page arguments' => [3],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+  ];
+
+  return $items;
+}
+
+/**
+ * Custom access checking file usage menu.
+ */
+function souriau_common_file_replace_access_callback($file) {
+  if ($file->type != 'document' || !user_access('view any unpublished files')) {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/**
+ * Custom access checking for node facets menu.
+ */
+function souriau_common_facets_access_callback($node) {
+  return $node && ($node->type == 'category' || $node->type == 'subcategory') && user_access('administer facets');
+}
+
+/**
+ * Custom access checking for taxonomy facets menu.
+ */
+function souriau_common_taxonomy_facets_access_callback($taxonomy_term) {
+  return $taxonomy_term && $taxonomy_term->vocabulary_machine_name == 'product_series' && user_access('administer facets');
+}
+
+/**
+ * Custom access checking for taxonomy facets menu.
+ */
+function souriau_common_dc_product_facets_access_callback($taxonomy_term) {
+  return $taxonomy_term && $taxonomy_term->vocabulary_machine_name == 'dc_product_tree' && user_access('administer facets');
+}
+
+/**
+ * Ajax allback for applications loading.
+ */
+function souriau_common_applications_callback($node) {
+  global $language;
+  $application_domain = entity_metadata_wrapper('node', $node);
+  $data = [];
+
+  $applications = views_get_view_result('souriau_query_get_application_per_domain', 'default', $node->nid);
+  foreach ($applications as $application) {
+    if (!isset($data['applications'][$application->node_field_data_field_application_nid])) {
+      $entity = $application->_field_data['node_field_data_field_application_nid']['entity'];
+      $data['applications'][$application->node_field_data_field_application_nid] = [
+        'nid' => $application->node_field_data_field_application_nid,
+        'title' => souriau_common_get_field_value('node', $entity, 'title_field', $language->language),
+        'node' => $entity,
+      ];
+    }
+  }
+  uasort($data['applications'], 'drupal_sort_title');
+  $guidance_image = $application_domain->field_beginner_guide_background->value();
+
+  try {
+    $image = [
+      '#type' => 'figure_pic',
+      '#image' => $guidance_image,
+      '#attributes' => [
+        'title' => $application_domain->field_beginner_guide_background->file->value()->title,
+        'alt' => $application_domain->field_beginner_guide_background->file->value()->alt,
+      ],
+    ];
+  }
+  catch (Exception $e) {
+    watchdog_exception('guidance_image', $e);
+  }
+  $data['guidance_image'] = drupal_render($image);
+
+  $breadcrumbs = [
+    souriau_common_microdata_link(t('HOME', [], ['context' => SOURIAU_COMMON_T_OTHER]), '<front>'),
+    souriau_common_microdata_tag(t('GET STARTED', [], ['context' => SOURIAU_COMMON_T_OTHER])),
+  ];
+  $data['breadcrumbs'] = souriau_common_breadcrumbs(['breadcrumb' => $breadcrumbs], 'b-white');
+
+  print theme('beginner_guide_applications', ['_html' => $data]);
+  drupal_exit();
+}
+
+/**
+ * Helper function for generating application search links.
+ */
+function souriau_common_get_application_search_link($node) {
+  if (is_numeric($node)) {
+    $node = node_load($node);
+  }
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+
+  $search_context = souriau_common_get_search_context($node, $node_wrapper);
+  $search_context += ['active_tab' => 'part-number'];
+
+  $search_url_parts = ['search'];
+  if (isset($search_context['keyword'])) {
+    $search_url_parts[] = $search_context['keyword'];
+    unset($search_context['keyword']);
+  }
+  $search_url = implode('/', $search_url_parts);
+
+  return url($search_url, ['query' => $search_context]);
+}
+
+/**
+ * Test popup page.
+ */
+function souirau_common_popup_test_page() {
+  return ctools_modal_text_button('Modal', 'mymodule/nojs', '', 'ctools-modal-souriau-modal-style');
+}
+
+/**
+ * Test popup callback.
+ */
+function souirau_common_popup_callback($ajax) {
+  $title = '';
+  $output = '
+    <div class="popup-title">
+      <h2 id="modal-title" class="modal-title">Your request has been sent.</h2>
+    </div>
+    <div class="b-text">
+      <p>We will get back to you quickly with answers to your questions</p>
+    </div>
+    <div class="w-btn text-center">
+      <a class="btn orange-btn-hover" href="#" aria-label="Ok" data-dismiss="modal">OK</a>
+    </div>';
+  $commands = array();
+  // If the form has not yet been rendered, render it.
+  $commands[] = ctools_modal_command_display('', $output);
+  $commands[] = ajax_command_invoke('#modalContent', 'addClass', ['inform-popup']);
+  print ajax_render($commands);
+}
+
+/**
+ * Access callback for user/projects/%/%ctools_js.
+ */
+function souriau_common_popup_project_delete_access($project_id) {
+  // If the project belongs to current user, then it can be deleted.
+  global $user;
+  $project_ids = [$project_id];
+  $projects = entity_load('project', $project_ids);
+  $entity = reset($projects);
+  $langcode = entity_language($entity->type, $entity);
+  $wrapper = entity_metadata_wrapper($entity->type, $entity)->language($langcode);
+  $entity_user = $wrapper->uid->value();
+  if ($entity_user->uid == $user->uid) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_action_info().
+ */
+function souriau_common_action_info() {
+  $actions['souriau_common_commerce_product_clone'] = [
+    'type' => 'commerce_product',
+    'label' => t('Clone Items'),
+    'configurable' => FALSE,
+    'triggers' => ['any'],
+    'behavior' => ['changes_property'],
+    'vbo_configurable' => FALSE,
+    'pass rows' => TRUE,
+  ];
+
+  return $actions;
+}
+
+/**
+ * Implements hook_action_info_alter().
+ */
+function souriau_common_action_info_alter(&$actions) {
+  // Prevent additional entity_save by default behavior.
+  $actions['file_admin_publish_action']['behavior'] = [NULL];
+  $actions['file_admin_unpublish_action']['behavior'] = [NULL];
+}
+
+/**
+ * Callback for Clone items bulk operation.
+ *
+ * @see souriau_common_action_info()
+ */
+function souriau_common_commerce_product_clone($entity, $context) {
+
+  module_load_include('inc', 'souriau_common', 'souriau_common.pages');
+
+  $entity = souriau_common_pages_prepare_commerce_product($entity);
+
+  $entity->sku .= '_clone';
+  $entity->title .= '_clone';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_commerce_product_ui_product_form_alter(&$form, &$form_state, $form_id) {
+
+  // Custom validate callback for country fields.
+  $form['#validate'][] = 'souriau_common_sku_country_validate';
+
+  $query = !empty($_GET['destination']) ? $_GET['destination'] : 'admin/dashboard/sku';
+  $url = explode('?', $query);
+  if (isset($url[1])) {
+    $params = drupal_get_query_array($url[1]);
+  }
+  else {
+    $params = '';
+  }
+
+  if (!empty($form['#entity']->product_id)) {
+    $form['actions']['submit']['#suffix'] = l(t('Cancel'), $url[0], ['query' => $params]);
+  }
+
+  if (isset($form['#entity']->clone_from_id)) {
+    unset($form['actions']['save_continue']);
+    $form['actions']['submit']['#suffix'] = l(t('Cancel'), $url[0], ['query' => $params]);
+  }
+}
+
+/**
+ * Custom validation for country fields.
+ */
+function souriau_common_sku_country_validate($form, &$form_state) {
+
+  $country_iso_list = array_keys(country_get_list());
+  $fields_to_validate = ['field_view_exception', 'field_samples_exception'];
+
+  foreach ($fields_to_validate as $field_to_validate) {
+    foreach ($form_state['values'][$field_to_validate][LANGUAGE_NONE] as $delta => $exception_field) {
+      if (!empty($exception_field['value']) && !in_array($exception_field['value'], $country_iso_list)) {
+        $error_message = t(
+              '%field_name field can contain only country\'s codes (upper case)',
+              ['%field_name' => $form_state['field'][$field_to_validate][LANGUAGE_NONE]['instance']['label']],
+              ['context' => SOURIAU_COMMON_T_OTHER]
+          );
+        form_set_error($field_to_validate . '][' . LANGUAGE_NONE . '][' . $delta, $error_message);
+      }
+    }
+  }
+}
+
+/**
+ * Remove N/A from radio buttons.
+ */
+function _souriau_common_radios_remove_na_option($element) {
+
+  unset($element['#options']['_none']);
+  unset($element['_none']);
+  return $element;
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function souriau_common_form_productrange_node_form_alter(&$form, &$form_state, $form_id) {
+
+  // Validate that "Product Range Code P" is unique.
+  $form['field_pr_code_p'][LANGUAGE_NONE][0]['value']['#element_validate'] = ['_souriau_common_element_code_p_validate'];
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function souriau_common_form_application_node_form_alter(&$form, &$form_state, $form_id) {
+
+  // Validate that "Product Range Code P" is unique.
+  $form['field_machine_name'][LANGUAGE_NONE][0]['value']['#element_validate'] = ['_souriau_common_element_code_p_validate'];
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function souriau_common_form_product_node_form_alter(&$form, &$form_state, $form_id) {
+
+  // Validate that "code_p" is unique.
+  $form['field_code_p'][LANGUAGE_NONE][0]['value']['#element_validate'] = ['_souriau_common_element_code_p_validate'];
+
+  // Show warning for admins if Product is not available in the current domain
+  // due to it's region settings.
+  if (isset($form['nid']['#value']) && !souriau_common_product_is_availible_in_domain($form_state['node'])) {
+    drupal_set_message(t('Product is not available on current domain region'), 'warning');
+  }
+}
+
+/**
+ * Implements hook_clone_node_alter().
+ *
+ * Decorator to prepare node for cloning.
+ */
+function souriau_common_clone_node_alter(&$node, $context) {
+
+  if ('product' != $node->type) {
+    return;
+  }
+
+  // Decorate Node of type Product (Part Number).
+  unset($node->field_3d_model);
+  unset($node->field_images);
+  unset($node->field_attachments);
+  unset($node->field_sku_products);
+  unset($node->field_draft);
+  unset($node->field_edition);
+  unset($node->edition_id);
+  unset($node->is_draft);
+  $node->status = 0;
+  $node->is_new = TRUE;
+  $node->field_code_p = NULL;
+  drupal_set_title($node->title_original);
+}
+
+/**
+ * Implements hook_pathauto_alias_alter().
+ *
+ * Adds `draft` prefix to alias of Draft nodes.
+ */
+function souriau_common_pathauto_alias_alter(&$alias, array &$context) {
+
+  // Perform actions only for node page.
+  if (isset($context['data']['node']) && !empty($alias)) {
+    $entity = $context['data']['node'];
+    if (draft_moderation_supported_type($entity->type) && isset($entity->is_draft) && $entity->is_draft) {
+      $alias = 'draft/' . $alias;
+    }
+  }
+}
+
+/**
+ * Implements hook_pathauto_pattern_alter().
+ */
+function souriau_common_pathauto_pattern_alter(&$pattern, array $context) {
+
+  if (!isset($context['type']) || $context['type'] != 'product') {
+    return;
+  }
+
+  $context['language'] = LANGUAGE_NONE;
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * Implemented to block view of nodes not available in the region.
+ */
+function souriau_common_node_access($node, $op, $account) {
+
+  if (is_string($node) || 'view' != $op || user_access('view unpublished domain content', $account)) {
+    // Nothing to do here.
+    return;
+  }
+
+  if ('product' == $node->type && $node->status) {
+    return souriau_common_product_is_availible_in_domain($node) ? NODE_ACCESS_ALLOW : NODE_ACCESS_DENY;
+  }
+
+  return NODE_ACCESS_IGNORE;
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function souriau_common_node_insert($node) {
+
+  souriau_common_node_update($node);
+
+  if ('webform' == $node->type) {
+    module_load_include('inc', 'souriau_common', 'souriau_common.pages');
+    _souriau_common_pages_webform_insert($node);
+  }
+
+  // Update Toolkit Landing page.
+  if ('tool' == $node->type) {
+    return souriau_common_entity_update_toolkitlanding($node, 'node');
+  }
+
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function souriau_common_node_update($node) {
+
+  // Rebuild site main menu.
+  $_domain = domain_get_domain();
+  $node_types = [
+    'productlanding',
+    'category',
+    'subcategory',
+    'capabilitieslanding',
+    'capabilitydomain',
+    'capability',
+    'applicationlanding',
+    'applicationdomain',
+    'application',
+  ];
+
+  if (($_domain['domain_id'] == SOURIAU_COMMON_DOMAIN_CENTRAL) && in_array($node->type, $node_types)) {
+    $settings = domain_conf_variable_get(SOURIAU_COMMON_DOMAIN_CENTRAL, 'souriau_common_main_menu_form_sync');
+    if (!empty($settings['sync_auto']) && empty($node->is_draft) && !empty($node->status) && empty($node->is_new)) {
+      module_load_include('inc', 'souriau_common', 'includes/souriau_common.forms');
+      $empty = [];
+      souriau_common_main_menu_form__sync_button__submit($empty, $empty);
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function souriau_common_entity_update($entity, $type) {
+
+  $allowed_types = ['node', 'project'];
+  if (!in_array($type, $allowed_types)) {
+    return;
+  }
+
+  if ($type == 'project') {
+    if ($entity->changed - $entity->original->changed >= 1209600) {
+      $account = user_load($entity->uid);
+      drupal_mail('souriau_common', 'project_remind', $account->mail, user_preferred_language($account), ['user' => $account]);
+    }
+    return;
+  }
+
+  // Workaround to mark files for indexing.
+  if (property_exists($entity, 'field_downloads')) {
+    // Index newly added files if any.
+    if (isset($entity->field_downloads[$entity->language])) {
+      foreach ($entity->field_downloads[$entity->language] as $file_new) {
+        $file_wrapper = entity_metadata_wrapper('file', $file_new['fid']);
+        if (!property_exists($file_wrapper, 'field_brand')) {
+          continue;
+        }
+        $file_wrapper->field_brand = $file_wrapper->field_brand->value();
+        $file_wrapper->save();
+      }
+    }
+    // Index existing files or removed files.
+    if (isset($entity->original->field_downloads[$entity->language])) {
+      foreach ($entity->original->field_downloads[$entity->language] as $file_old) {
+        $file_wrapper = entity_metadata_wrapper('file', $file_old['fid']);
+        if (!property_exists($file_wrapper, 'field_brand')) {
+          continue;
+        }
+        $file_wrapper->field_brand = $file_wrapper->field_brand->value();
+        $file_wrapper->save();
+      }
+    }
+  }
+  // Update Toolkit Landing page.
+  if (SOURIAU_COMMON_TOOL_CT == $entity->type) {
+    return souriau_common_entity_update_toolkitlanding($entity, $type);
+  }
+
+  // Check entity on attachment to hierarchy.
+  $entity_types = ['category', 'subcategory'];
+  if (in_array($entity->type, $entity_types)) {
+    return souriau_common_entity_update_hierarhy_alias($entity, $type);
+  }
+}
+
+/**
+ * Helper function for update toolkitlanding node.
+ */
+function souriau_common_entity_update_toolkitlanding($entity, $type) {
+
+  // Check draft.
+  if ($entity->is_draft) {
+    return;
+  }
+
+  // Check status.
+  if (!$entity->is_new) {
+    $original = $entity->original;
+    if ($original->status == $entity->status) {
+      return;
+    }
+  }
+
+  // Get published tools.
+  $tools = souriau_common_get_nids(SOURIAU_COMMON_TOOL_CT);
+  if (empty($tools) && $entity->status != 1) {
+    return;
+  }
+
+  // Add tool if entity is new.
+  if (!array_search($entity->nid, $tools) && $entity->status != 0) {
+    $tools[] = $entity->nid;
+  }
+
+  // Get Toolkit Landing.
+  $landing = souriau_common_get_nids(SOURIAU_COMMON_TOOLKIT_LANDING);
+  $landing = node_load(array_shift($landing));
+  $draft_landing = node_load($landing->edition_id);
+  if (empty($draft_landing)) {
+    return;
+  }
+
+  $field_values = field_get_items($type, $draft_landing, 'field_tools');
+  $referenced_tools = [];
+  $deleted = [];
+  if (!empty($field_values)) {
+    foreach ($field_values as $key => $value) {
+      $referenced_tools[] = $value['target_id'];
+
+      // Remove unpublish nodes.
+      if (array_diff($value, $tools)) {
+        $deleted[] = $value['target_id'];
+        unset($field_values[$key]);
+      }
+    }
+  }
+
+  // Remove from published node unpublished tools.
+  if (!empty($deleted)) {
+    $landing->field_tools[LANGUAGE_NONE] = $field_values;
+    node_save($landing);
+    $msg = t("From Toolkit landing (production node) was removed %count tool(s).", ['%count' => count($deleted)], ['context' => SOURIAU_COMMON_T_ADMIN]);
+    drupal_set_message($msg);
+  }
+
+  // Add new tool.
+  $for_insert = array_diff($tools, $referenced_tools);
+  if (!empty($for_insert)) {
+    foreach ($for_insert as $target_id) {
+      $field_values[] = ['target_id' => $target_id];
+    }
+  }
+
+  // Update ToolkitLanding.
+  $draft_landing->field_tools[LANGUAGE_NONE] = $field_values;
+  // Set status To validate.
+  $origin_langcode = $draft_landing->translations->original;
+  $draft_landing->translations->data[$origin_langcode]['workflow'] = DRAFT_MODERATION_WORKFLOW_TO_VALIDATE;
+  $draft_landing->translations->data[$origin_langcode]['status'] = 0;
+  node_save($draft_landing);
+
+  if (!empty($deleted) || !empty($for_insert)) {
+    $node_link = l(t('Node'), 'node/' . $draft_landing->nid . '/edit');
+    $msg = t("Toolkit landing node was updated (Draft Version). Please check it", [], ['context' => SOURIAU_COMMON_T_ADMIN]) . " ($node_link)";
+    drupal_set_message($msg);
+  }
+}
+
+/**
+ * Helper function for update alias for .
+ */
+function souriau_common_entity_update_hierarhy_alias($entity, $type) {
+
+  $language = entity_language('node', $entity);
+
+  $original = $entity->original;
+
+  // Update url alias of referenced entities on add or remove reference.
+  $fields = ['field_subcategory', 'field_product_range'];
+  foreach ($fields as $field_name) {
+
+    if (!isset($entity->$field_name)) {
+      continue;
+    }
+
+    $new = $old = [];
+    // Save values from new entity. All values after node update.
+    $items = field_get_items($type, $entity, $field_name, $language);
+    if ($items) {
+      foreach ($items as $value) {
+        $new[] = $value['target_id'];
+      }
+    }
+
+    // Save values from original entity. All values before node update.
+    if ($items = field_get_items($type, $original, $field_name, $language)) {
+      foreach ($items as $value) {
+        $old[] = $value['target_id'];
+      }
+    }
+
+    // Get removed values from entityreference field.
+    $removed = array_diff($old, $new);
+
+    // Get added values from entityreference field.
+    $added = array_diff($new, $old);
+
+    // All values.
+    $diffs = array_merge($added, $removed);
+
+    if (!empty($diffs)) {
+      module_load_include('inc', 'pathauto');
+      foreach ($diffs as $target_id) {
+        $node = node_load($target_id);
+        _souriau_common_update_node_alias($node, $language);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_file_download_access_alter().
+ *
+ * Special file access check.
+ */
+function souriau_common_file_download_access_alter(&$grants, $field_item, $entity_type, $entity) {
+
+  // @Note, By default all files that belongs to a published node are accessible,
+  // but this conflicts with required Media moderation workflow,
+  // thus we remove access granted by node module.
+  if (!empty($grants['node']) && !file_entity_access('download', (object) $field_item)) {
+    unset($grants['node']);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Alters User edit form.
+ */
+function souriau_common_form_user_profile_form_alter(&$form, &$form_state) {
+
+  // Hide all domain options.
+  $form['domain']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function souriau_common_entity_property_info_alter(&$info) {
+
+  foreach ($info['node']['bundles'] as &$bundle) {
+    $bundle['properties']['avaliable_translations'] = [
+      'type' => 'list<text>',
+      'label' => t('Avaliable translations'),
+      'sanitized' => TRUE,
+      'getter callback' => 'souriau_common_avaliable_translations_getter_callback',
+    ];
+    $bundle['properties']['translation_changed'] = [
+      'type' => 'integer',
+      'label' => t('Translation Changed'),
+      'description' => t('Timestamp when Node translation was changed.'),
+      'sanitized' => TRUE,
+      'getter callback' => 'souriau_common_translation_changed_getter_callback',
+    ];
+  }
+}
+
+/**
+ * Getter callback for avaliable translations.
+ */
+function souriau_common_avaliable_translations_getter_callback($entity) {
+
+  $translations = [];
+
+  // Check if Entity have published products.
+  if (!empty($entity)) {
+    $handler = entity_translation_get_handler('node', $entity);
+    $entity_translations = $handler->getTranslations();
+    if (!empty($entity_translations->data)) {
+      foreach ($entity_translations->data as $item) {
+        if ($item['status'] == 1) {
+          $translations[] = $item['language'];
+        }
+      }
+    }
+    elseif ($entity->status == 1) {
+      // If node has no translations it should be avaialbe in all languages.
+      $languages = language_list();
+      foreach ($languages as $language) {
+        $translations[] = $language->language;
+      }
+    }
+  }
+
+  return $translations;
+}
+
+/**
+ * Getter callback for avaliable translations.
+ */
+function souriau_common_translation_changed_getter_callback($entity) {
+
+  $changed = [];
+
+  if (!empty($entity)) {
+    $handler = entity_translation_get_handler('node', $entity);
+    $entity_translations = $handler->getTranslations();
+    if (!empty($entity_translations->data)) {
+      foreach ($entity_translations->data as $item) {
+        if ($item['status'] == 1) {
+          $changed[$item['language']] = $item['changed'];
+        }
+      }
+    }
+    elseif ($entity->status == 1) {
+      // If node has no translations we use entity->changed for all
+      // available in all languages.
+      $languages = language_list();
+      foreach ($languages as $language) {
+        $changed[$language->language] = $entity->changed;
+      }
+    }
+  }
+
+  return $changed;
+}
+
+/**
+ * Implements hook_views_plugins().
+ */
+function souriau_common_views_plugins() {
+
+  return [
+    'argument default' => [
+      'language' => [
+        'title' => t('Current language'),
+        'handler' => 'souriau_common_views_handler_argument_current_language',
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_search_api_alter_callback_info().
+ */
+function souriau_common_search_api_alter_callback_info() {
+
+  $callbacks['souriau_common_alter_language_control'] = [
+    'name' => t('Souriau Entity Translation control'),
+    'description' => t('Exclude unpublished Entity translations from the index.'),
+    'class' => 'SearchApiSouriauAlterLanguageControl',
+  ];
+  $callbacks['souriau_common_exclude_unpublish_sku'] = [
+    'name' => t('Souriau Entity control. Exclude unpublished sku.'),
+    'description' => t('Exclude Entity with unpublished referenced sku from the index.'),
+    'class' => 'SearchApiSouriauExludeUnpublishSKU',
+  ];
+
+  return $callbacks;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function souriau_common_theme($existing, $type, $theme, $path) {
+
+  $theme_path = drupal_get_path('theme', 'souriau');
+  $themes = [
+    'souriau_common_table_drag' => [
+      'render element' => 'element',
+      'file' => 'souriau_common.theme.inc',
+    ],
+    'souriau_common_main_menu_form' => [
+      'render element' => 'form',
+      'file' => 'souriau_common.theme.inc',
+    ],
+    'figure_pic' => [
+      'render element' => 'element',
+      'file' => 'souriau_common.theme.inc',
+    ],
+    'svg_icon' => [
+      'render element' => 'element',
+      'file' => 'souriau_common.theme.inc',
+    ],
+    'category_group' => [
+      'template'  => 'souriau-common-category-group',
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'block_interest' => [
+      'template'  => 'souriau-common-block-interest',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'paragraph_two_col_title_description' => [
+      'template'  => 'souriau-common-paragraph-two-col-title-description',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'homepage_slider' => [
+      'template'  => 'souriau-common-homepage-slider',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'generic_links' => [
+      'template'  => 'souriau-common-generic-links',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'homepage_promotion_messages' => [
+      'template'  => 'souriau-common-homepage-promotion-messages',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'paragraph_application_examples' => [
+      'template'  => 'souriau-common-paragraph-application-examples',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'find_part_number' => [
+      'render element' => 'element',
+      'file' => 'souriau_common.theme.inc',
+    ],
+    'header_menu_level_2' => [
+      'template'  => 'souriau-common-header-menu-level-2',
+      'variables' => ['variables' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'contact_page_address_block' => [
+      'template'  => 'souriau-common-contact-page-address-block',
+      'variables' => ['variables' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'beginner_guide_applications' => [
+      'template'  => 'souriau-common-beginner-guide-applications',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'empty_cart' => [
+      'template'  => 'souriau-common-empty-cart',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'empty_cart_page' => [
+      'template'  => 'souriau-common-empty-cart-page',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+    'paragraph_product_range_application' => [
+      'template'  => 'souriau-common-paragraph-product-range-application',
+      'variables' => ['params' => NULL],
+      'path' => $theme_path . '/templates/blocks',
+    ],
+  ];
+  return $themes;
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ */
+function souriau_common_theme_registry_alter(&$theme_registry) {
+
+  $path = drupal_get_path('module', 'souriau_common') . '/templates/cookie';
+  $theme_registry['eu_cookie_compliance_popup_info']['path'] = $path;
+  $theme_registry['eu_cookie_compliance_popup_agreed']['path'] = $path;
+}
+
+/**
+ * Implements hook_field_attach_load().
+ *
+ * Load and set additional addressfield field values
+ * from serialized data column.
+ */
+function souriau_common_field_attach_load($entity_type, $entities, $age, $options) {
+
+  $addressfields = souriau_common_addressfield_types();
+  foreach ($entities as $key => $entity) {
+    foreach ($addressfields as $addressfield) {
+      if (!isset($entity->{$addressfield})) {
+        continue;
+      }
+      $entities[$key] = _souriau_common_field_attach_load($entity, $addressfield, $key);
+    }
+  }
+}
+
+/**
+ * Returns an array of the field names of any addressfields.
+ */
+function souriau_common_addressfield_types() {
+
+  if (module_exists('addressfield_phone')) {
+    return addressfield_phone_addressfield_types();
+  }
+  else {
+    module_load_include('inc', 'souriau_common', 'souriau_common.addressfield');
+    return _souriau_common_addressfield_types();
+  }
+}
+
+/**
+ * Helper function for souriau_common_field_attach_load.
+ *
+ * @see souriau_common_field_attach_load()
+ */
+function _souriau_common_field_attach_load($entity, $addressfield) {
+
+  foreach ($entity->{$addressfield} as $lang_code => $fields) {
+    foreach ($fields as $delta => $fieldset) {
+      if (empty($entity->{$addressfield}[$lang_code][$delta]['data'])) {
+        return $entity;
+      }
+
+      // Unserialize data, else skip if string.
+      if (!($data = unserialize($entity->{$addressfield}[$lang_code][$delta]['data']))) {
+        return $entity;
+      }
+
+      foreach ($data as $field_key => $field_value) {
+        // Store unserialized data values in additional fields.
+        $entity->{$addressfield}[$lang_code][$delta][$field_key] = $field_value;
+      }
+
+    }
+  }
+  return $entity;
+}
+
+/**
+ * Implements hook_facetapi_widgets().
+ */
+function souriau_common_facetapi_widgets() {
+
+  return [
+    'souriau_common_links' => [
+      'handler' => [
+        'label' => t('Souriau links'),
+        'class' => 'SouriauFacetapiWidgetLinks',
+        'query types' => ['term'],
+      ],
+    ],
+    'souriau_common_dropdown_list' => [
+      'handler' => [
+        'label' => t('Souriau dropdown list'),
+        'class' => 'SouriauFacetapiWidgetDropdownList',
+        'query types' => ['term', 'string'],
+      ],
+    ],
+    'souriau_common_checkbox' => [
+      'handler' => [
+        'label' => t('Souriau checkboxes'),
+        'class' => 'SouriauFacetapiWidgetCheckboxes',
+        'query types' => ['term', 'string'],
+      ],
+    ],
+    'souriau_common_number_compare' => [
+      'handler' => [
+        'label' => t('Souriau number compare'),
+        'class' => 'SouriauFacetapiWidgetNumberCompare',
+        'query types' => ['term', 'integer', 'string'],
+      ],
+    ],
+    'souriau_common_boolean' => [
+      'handler' => [
+        'label' => t('Souriau boolean'),
+        'class' => 'SouriauFacetapiWidgetBoolean',
+        'query types' => ['term', 'integer', 'string'],
+      ],
+    ],
+    'souriau_common_radios' => [
+      'handler' => [
+        'label' => t('Souriau radios'),
+        'class' => 'SouriauFacetapiWidgetRadios',
+        'query types' => ['term', 'integer', 'string'],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_element_info().
+ */
+function souriau_common_element_info() {
+
+  module_load_include('inc', 'souriau_common', 'search_autocomplete.element');
+  $types = _souriau_common_element_search_autocomplete_info();
+  $types['figure_pic'] = [
+    '#theme' => 'figure_pic',
+  ];
+  $types['svg_icon'] = [
+    '#theme' => 'svg_icon',
+  ];
+  return $types;
+}
+
+/**
+ * Implements hook_form().
+ */
+function souriau_common_search_form($form, &$form_state) {
+
+  $form['search'] = [
+    '#title' => '',
+    '#type' => 'search_autocomplete',
+    '#index' => 'products_search_index',
+    '#fields' => [
+      'search_title',
+      'partial_title',
+      'field_sku_products:partial_sku',
+      'field_sku_products:field_sku_alternate_search_key',
+      'field_search_keywords:name',
+      'field_sku_products:title_field',
+      'product_series_text',
+    ],
+    '#autocomplete_ui_path' => 'souriau/ajax/autocomplete',
+  ];
+
+  $form['actions'] = [
+    '#type' => 'actions',
+    '#attributes' => [
+      'class' => ['hidden-xs'],
+    ],
+  ];
+
+  $form['actions']['loader'] = [
+    '#prefix' => '<div class="loader-image image invisible pull-left">',
+    '#suffix' => '</div>',
+    '#markup' => theme(
+        'image',
+        ['path' => drupal_get_path('theme', 'souriau') . '/html/images/ajax-loader-search.gif']
+    ),
+  ];
+
+  $form['actions']['submit'] = [
+    '#type' => 'submit',
+    '#submit' => ['souriau_common_search_form_submit'],
+    '#value' => t('ALL RESULTS', [], ['context' => SOURIAU_COMMON_T_HEADER]),
+    '#attributes' => [
+      'class' => ['btn', 'link-view-all-results'],
+    ],
+  ];
+
+  return $form;
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function souriau_common_entity_info_alter(&$entity_info) {
+
+  $entity_info['node']['view modes']['search_autocomplete'] = [
+    'label' => t('Search autocomplete'),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['search_results'] = [
+    'label' => t('Search results'),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['product_landing_page'] = [
+    'label' => t('Souriau: on product landing page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['category_page'] = [
+    'label' => t('Souriau: on Category Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['subcategory_page'] = [
+    'label' => t('Souriau: on Subcategory Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['product_range_page'] = [
+    'label' => t('Souriau: on Product Range Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['application_page'] = [
+    'label' => t('Souriau: on Application Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['applicationdomain_page'] = [
+    'label' => t('Souriau: on Application Domain Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['application_landing_page'] = [
+    'label' => t('Souriau: on Application Landing Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['news_pane_teaser'] = [
+    'label' => t('Souriau: News pane teaser', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['capability_landing_page'] = [
+    'label' => t('Souriau: on Capability Landing Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['capabilitydomain_page'] = [
+    'label' => t('Souriau: on Capability Domain Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['part_number'] = [
+    'label' => t('Souriau: on Part Number page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['commerce_product']['view modes']['part_number'] = [
+    'label' => t('Souriau: SKU on part number', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['cart_summary'] = [
+    'label' => t('Souriau: on cart summary Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['file']['view modes']['download_center'] = [
+    'label' => t('Souriau: Download center', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+
+  $entity_info['node']['view modes']['minicart_summary'] = [
+    'label' => t('Souriau: on minicart block', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+
+  $entity_info['node']['view modes']['news_landing_pane_teaser'] = [
+    'label' => t('Souriau: News Landing pane teaser', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['tool_page'] = [
+    'label' => t('Souriau: on Tool Page', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['homepage'] = [
+    'label' => t('Souriau: on Homepage', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['toolkitlanding'] = [
+    'label' => t('Souriau: on Toolkit Landing', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+  $entity_info['node']['view modes']['genericlanding'] = [
+    'label' => t('Souriau: on Generic Landing', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    'custom settings' => TRUE,
+  ];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_i18n_string_locale_translate_edit_form_alter(&$form, $form_state, $form_id) {
+
+  $_domain = domain_get_domain();
+  $_languages = domain_locale_list();
+  $domain_languages = array_keys($_languages[$_domain['domain_id']]);
+  foreach (element_children($form['translations']) as $key) {
+    if (!in_array($key, $domain_languages)) {
+      $form['translations'][$key]['#access'] = FALSE;
+    }
+  }
+
+  // Invalidate Header menu cache
+  // when menu item updated.
+  $i18n_string = isset($form['i18n_string']['#value']) ? $form['i18n_string']['#value'] : '';
+  if (!empty($i18n_string->textgroup) && $i18n_string->textgroup == 'menu') {
+    if (!empty($i18n_string->type) && $i18n_string->type == 'item') {
+      $mlid = $i18n_string->objectid;
+
+      $links = menu_load_links(SOURIAU_COMMON_VAR_HEADER_MENU);
+      foreach ($links as $link) {
+        if ($link['mlid'] == $mlid) {
+          $form['#submit'][] = 'menu_cache_clear_all';
+          break;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function souriau_common_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+
+  switch ($root_path) {
+    case 'admin/dashboard/contacts':
+      $item = menu_get_item('admin/structure/entity-type/contact/contact/add');
+      $item = souriau_common_add_destination_into_link($item);
+      if ($item['access']) {
+        $data['actions']['output'][] = [
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        ];
+      }
+      break;
+
+    case 'admin/dashboard/distributors':
+      $item = menu_get_item('admin/structure/entity-type/distributor/distributor/add');
+      $item = souriau_common_add_destination_into_link($item);
+      if ($item['access']) {
+        $data['actions']['output'][] = [
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        ];
+      }
+      break;
+
+    case 'admin/dashboard/site-images':
+    case 'admin/dashboard/files':
+      $item = menu_get_item('file/add');
+      $item = souriau_common_add_destination_into_link($item);
+      if ($item['access']) {
+        $data['actions']['output'][] = [
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        ];
+      }
+      break;
+
+    case 'admin/dashboard/advices':
+      $item = menu_get_item('admin/structure/entity-type/advice/advice/add');
+      $item = souriau_common_add_destination_into_link($item);
+      if ($item['access']) {
+        $data['actions']['output'][] = [
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        ];
+      }
+      break;
+  }
+}
+
+/**
+ * Add destination into Link.
+ */
+function souriau_common_add_destination_into_link($link) {
+
+  if (empty($link) || !isset($link['localized_options'])) {
+    return $link;
+  }
+  $link['localized_options'] += ['query' => []];
+  $link['localized_options']['query'] += drupal_get_destination();
+  return $link;
+}
+
+/**
+ * Implements hook_eck_entity_save_message_alter().
+ */
+function souriau_common_eck_entity_save_message_alter(&$msg, $args, $context) {
+
+  // Override the message only for distributor creation.
+  if (!in_array($context['entity']->type, ['distributor', 'advice'])) {
+    return;
+  }
+
+  $entity = $context['entity'];
+  $langcode = entity_language($entity->type, $entity);
+  $wrapper = entity_metadata_wrapper($entity->type, $entity)->language($langcode);
+  $msg = ($context['entity']->type == 'distributor') ?
+    t('Distributor @name saved', ['@name' => $wrapper->field_distributor_name->value()], ['context' => SOURIAU_COMMON_T_ADMIN]) :
+    t('Advice @name saved', ['@name' => $wrapper->title->value()], ['context' => SOURIAU_COMMON_T_ADMIN]);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_eck__entity__form_add_advice_advice_alter(&$form, &$form_state) {
+
+  $form['#submit'][] = 'souriau_common__entity__form_submit';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_eck__entity__form_add_distributor_distributor_alter(&$form, &$form_state) {
+
+  $form['#submit'][] = 'souriau_common__entity__form_submit';
+}
+
+/**
+ * Custom submit for distributor and advices form.
+ *
+ * Set redirect to distributors/advices dashboard page.
+ */
+function souriau_common__entity__form_submit(&$form, &$form_state) {
+
+  $view = ($form_state['values']['entity']->type == 'distributor') ?
+    views_get_view('dashboard_souriau_distributors') :
+    views_get_view('dashboard_advices');
+  $form_state['redirect'] = !empty($view) ? $view->display['page']->display_options['path'] : drupal_get_destination();
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_eck__entity__form_add_contact_contact_alter(&$form, &$form_state, $form_id) {
+
+  // Add title into group_general.
+  $form['#group_children']['title'] = 'group_general';
+  $form['field_postal_address'][LANGUAGE_NONE][0]['street_block']['thoroughfare']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['locality']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['postal_code']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['administrative_area']['#required'] = FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_eck__entity__form_edit_contact_contact_alter(&$form, &$form_state, $form_id) {
+
+  $form['field_postal_address'][LANGUAGE_NONE][0]['street_block']['thoroughfare']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['locality']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['postal_code']['#required'] = FALSE;
+  $form['field_postal_address'][LANGUAGE_NONE][0]['locality_block']['administrative_area']['#required'] = FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_webform_email_edit_form_alter(&$form, &$form_state, $form_id) {
+
+  $form['template']['template']['#description'] = theme('webform_token_help', ['groups' => ['submission']]);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function souriau_common_form_alter(&$form, &$form_state, $form_id) {
+
+  // Filter domain setting forms to current domain.
+  if (isset($form['domain_settings'])) {
+    $form['domain_settings']['domain_id']['#options'] = [
+      $form['domain_settings']['domain_id']['#default_value'] => $form['domain_settings']['domain_id']['#options'][$form['domain_settings']['domain_id']['#default_value']],
+    ];
+  }
+
+  if (strpos($form_id, 'webform_client_form') !== FALSE) {
+    if (isset($form['submitted']['phone_number'])) {
+      unset($form['submitted']['phone_number']['#attributes']['placeholder']);
+    }
+  }
+
+  if ($form['#id'] == 'views-exposed-form-souriau-query-training-center-training-center-resources-full') {
+    $form['field_resource_type_tid']['#options']['All'] = t('All', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_file_entity_edit_alter(&$form, &$form_state, $form_id) {
+
+  if (!(isset($form['type']['#value']) && $form['type']['#value'] == 'ipaper')) {
+    return;
+  }
+
+  $form['replace_upload']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_file_entity_add_upload_alter(&$form, &$form_state) {
+
+  // To create thumbnails for download center files.
+  $file = file_load($form['#entity']->fid);
+  if (is_object($file) && $file->filemime == 'application/pdf') {
+    souriau_common_create_thumbnails($file);
+  }
+
+  if ((!empty($form['#options']['types']) && !in_array('ipaper', $form['#options']['types']))) {
+    return;
+  }
+  if ($form['#step'] != '1') {
+    if (is_object($form_state['build_info']['args'][0])) {
+      // Extra submit handler to delete original.
+      $form['#submit'][] = 'souriau_common_ipaper_replace_delete';
+    }
+    return;
+  }
+
+  $form['#prefix'] = '<div id="ipaper-wrapper">';
+  $form['#suffix'] = '</div>';
+
+  $form['upload']['#states'] = [
+    'visible' => [
+      ':input[name="is_ipaper"]' => ['checked' => FALSE],
+    ],
+  ];
+
+  $form['is_ipaper'] = [
+    '#type' => 'checkbox',
+    '#title' => t('iPaper document', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#weight' => '-100',
+    '#ajax' => [
+      'callback' => 'souriau_common_form_file_entity_add_upload_ajax',
+      'wrapper' => 'ipaper-wrapper',
+      'method' => 'replace',
+    ],
+  ];
+
+  if (is_object($form_state['build_info']['args'][0])) {
+    drupal_set_message(t('Please be aware that the original file will be deleted and all its references in nodes will be removed and replaced with ipaper.', [], ['context' => SOURIAU_COMMON_T_ADMIN]), 'warning');
+    $form['is_ipaper']['#default_value'] = 1;
+    // Create Fake file for iPaper.
+    $fake_file = 'public://fakefile.ipaper';
+    if (!is_file($fake_file)) {
+      $file = file_save_data('', $fake_file);
+      $file->status = '0';
+      file_save($file);
+    }
+    else {
+      $files = file_load_multiple([], ['uri' => $fake_file]);
+      $file = reset($files);
+    }
+
+    $form['upload']['#default_value'] = $file->fid;
+    $form['upload']['fid']['#value'] = $file->fid;
+    $form['upload']['#value']['fid'] = $file->fid;
+    $form['upload']['#file'] = $file;
+    $form_state['values']['upload']['fid'] = $file->fid;
+  }
+  return $form;
+}
+
+/**
+ * Custom submit handler to delete the original file.
+ */
+function souriau_common_ipaper_replace_delete($form, &$form_state) {
+
+  if (!is_object($form_state['build_info']['args'][0])) {
+    return;
+  }
+  $file_to_delete = $form_state['build_info']['args'][0];
+  $file_replacement = (array) $form['#entity'];
+  $file_replacement['display'] = 1;
+  $file_replacement['description'] = NULL;
+
+  $usage = file_usage_list($file_to_delete);
+  foreach ($usage['file']['node'] as $nid => $count) {
+    $node = node_load($nid);
+    $w_containing_node = entity_metadata_wrapper('node', $node);
+    $downloads = $w_containing_node->field_downloads->value();
+    // Remove the file from referenced node.
+    foreach ($downloads as $key => $d) {
+      if ($d['fid'] == $file_to_delete->fid) {
+        // Replace the file in the node.
+        $downloads[$key] = $file_replacement;
+        break;
+      }
+    }
+
+    // Add the ipaper to the downloads section.
+    $w_containing_node->field_downloads = $downloads;
+    $w_containing_node->save();
+  }
+  // Delete the original file if it is not part of commerce.
+  if (!isset($usage['mediafield'])) {
+    file_delete($form_state['build_info']['args'][0]);
+  }
+}
+
+/**
+ * Ajax callback for is_ipaper element.
+ *
+ * @see souriau_common_form_file_entity_add_upload_alter()
+ */
+function souriau_common_form_file_entity_add_upload_ajax(&$form, &$form_state) {
+
+  if (!empty($form_state['values']['is_ipaper'])) {
+    // Create Fake file for iPaper.
+    $fake_file = 'public://fakefile.ipaper';
+    if (!is_file($fake_file)) {
+      $file = file_save_data('', $fake_file);
+      $file->status = '0';
+      file_save($file);
+    }
+    else {
+      $files = file_load_multiple([], ['uri' => $fake_file]);
+      $file = reset($files);
+    }
+
+    $form['upload']['#default_value'] = $file->fid;
+    $form['upload']['fid']['#value'] = $file->fid;
+    $form['upload']['#value']['fid'] = $file->fid;
+    $form['upload']['#file'] = $file;
+    $form_state['values']['upload']['fid'] = $file->fid;
+  }
+  else {
+    unset($form['upload']['#default_value']);
+    $form['upload']['#value']['fid'] = '0';
+    unset($form['upload']['fid']);
+    unset($form['upload']['#file']);
+    unset($form['upload']['filename']);
+  }
+
+  return $form;
+}
+
+/**
+ * Element validate for iPaper file.
+ *
+ * Rename & Move fakefile to the CT directory.
+ */
+function souriau_common_file_managed_ipaper_fake_file(&$element, &$form_state) {
+
+  // Replace Fake file for iPaper.
+  if (empty($form_state['values']['is_ipaper'])) {
+    return;
+  }
+  $upload_uri = $element['#upload_location'] . '/iPaper/';
+  if (!is_dir($upload_uri)) {
+    drupal_mkdir($upload_uri);
+  }
+  $file = !empty($element['#file']) ? $element['#file'] : FALSE;
+  if ($file) {
+    $fakename = $file->fid . '_' . mt_rand() . '.ipaper';
+    $file = file_move($file, $upload_uri . $fakename);
+    $file->filemime = 'souriau/iPaper';
+    $file->status = '0';
+    file_save($file);
+  }
+  $form_state['storage']['file'] = $file;
+}
+
+/**
+ * Implements hook_webform_component_render_alter().
+ */
+function souriau_common_webform_component_render_alter(&$element, &$component) {
+
+  if (!module_exists('maxlength')) {
+    return;
+  }
+
+  if (isset($element['#type']) && 'textarea' == $element['#type']) {
+    $element['#maxlength_js'] = TRUE;
+    $element['#maxlength'] = 2000;
+  }
+
+  if (strpos($component['form_key'], 'phone_number') !== FALSE) {
+    $element['#element_validate'][] = 'souriau_common_form_phone_number_validate';
+  }
+}
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function souriau_common_field_widget_info_alter(&$widgets) {
+
+  $widgets['addressfield_standard']['settings']['required_fields'] = [];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_field_ui_field_edit_form_alter(&$form, $form_state, $form_id) {
+
+  // Do nothing in a locked field.
+  if (!isset($form['instance']) || !empty($form['#field']['locked'])) {
+    return;
+  }
+
+  // Do nothing if widget not addressfield_standard.
+  if ($form['instance']['widget']['type']['#value'] != 'addressfield_standard') {
+    return;
+  }
+
+  $entity_type = $form['instance']['entity_type']['#value'];
+  $field_name = $form['instance']['field_name']['#value'];
+  $bundle = $form['instance']['bundle']['#value'];
+  $field = field_info_instance($entity_type, $field_name, $bundle);
+  $fields = $field['default_value'];
+  $default_value = isset($field['widget']['settings']['required_fields']) ? $field['widget']['settings']['required_fields'] : [];
+  $options = _souriau_common_get_addressfield_required_options($fields);
+  $form['instance']['widget']['settings']['required_fields'] = [
+    '#type' => 'checkboxes',
+    '#title' => t('Set required options'),
+    '#options' => $options,
+    '#default_value' => $default_value,
+  ];
+}
+
+/**
+ * Helper function for get required options on addressfield.
+ *
+ * @see souriau_common_form_field_ui_field_edit_form_alter()
+ */
+function _souriau_common_get_addressfield_required_options($fields, $key = FALSE) {
+
+  $options = [];
+  if (is_array($fields)) {
+    // Each element of array go through this function.
+    foreach ($fields as $key => $value) {
+      $options += _souriau_common_get_addressfield_required_options($value, $key);
+    }
+  }
+  // $key - name of field.
+  // If we have $key and !is_array($fields), we add it to the options as field.
+  elseif ($key && 'country' != $key) {
+    $options[$key] = $key;
+  }
+  return $options;
+}
+
+/**
+ * Implements hook_form_webform_client_form_alter().
+ */
+function souriau_common_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
+
+  $webform_nid = variable_get('training_inquiry_webform_nid');
+  if ($form_id == 'webform_client_form_' . $webform_nid) {
+    $form['#attributes']['novalidate'] = 'novalidate';
+    $form['submitted']['comments']['#maxlength_js'] = FALSE;
+    // Adding custom submit to send the confirmation email to user.
+    $form['#submit'][] = 'souriau_common_training_inquriy_webform_submit';
+  }
+
+  $node_wrapper = entity_metadata_wrapper('node', $form['#node']);
+  if ($node_wrapper->field_webform_type->value() == 'registration_webform') {
+    $form['#attributes']['novalidate'] = 'novalidate';
+    $current_node = menu_get_object();
+    if (!empty($current_node)) {
+      $form['submitted']['resource_nid']['#value'] = $current_node->nid;
+    }
+    $form['#submit'][] = 'souriau_common_custom_registration_webform_submit';
+  }
+
+  $contact_form_id = "webform_client_form_" . SOURIAU_WEBFORM_CONTACTFORM_NID;
+  if ($form_id == $contact_form_id) {
+    // Removes the HTML5 validation in webform. See https://www.drupal.org/node/2661008#comment-11439577.
+    $form['#attributes']['novalidate'] = 'novalidate';
+    unset($form['submitted']['first_name']['#attributes']['placeholder']);
+    unset($form['submitted']['last_name']['#attributes']['placeholder']);
+    unset($form['submitted']['e_mail']['#attributes']['placeholder']);
+    unset($form['submitted']['company']['#attributes']['placeholder']);
+    unset($form['submitted']['job_position']['#attributes']['placeholder']);
+    unset($form['submitted']['zip_code']['#attributes']['placeholder']);
+    unset($form['submitted']['message']['#attributes']['placeholder']);
+    unset($form['submitted']['company_address']['#attributes']['placeholder']);
+    unset($form['submitted']['city']['#attributes']['placeholder']);
+    $form['submitted']['state']['#required'] = FALSE;
+    $form['submitted']['message']['#maxlength_js'] = FALSE;
+    $form['submitted']['company_address']['#maxlength_js'] = FALSE;
+    unset($form['submitted']['attachments']['#file_upload_description']);
+    $data_config = [
+      'buttonText' => t('Attach files ( doc(x), jpg, png, pdf, xls(x) )', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'placeholderText' => '',
+    ];
+
+    $delta = $form['submitted']['attachments']['#file_upload_delta'];
+
+    $managed_file = &$form['submitted']['attachments'][$delta];
+    $managed_file['#attributes']['souriau_options']['data-jcf'] = json_encode($data_config);
+    $managed_file['#process'][] = 'souriau_common_webform_file_element_process';
+
+    $form['actions']['submit']['#souriau_settings'] = [
+      'hover_color' => 'orange',
+    ];
+
+    $form['actions']['#attributes']['class'] = ['text-center'];
+    $form['actions']['submit']['#value'] = t('SEND MY MESSAGE', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+    // Adding custom submit to send the confirmation email to user.
+    $form['#submit'][] = 'souriau_common_custom_webform_submit';
+  }
+}
+
+/**
+ * Implements hook_filter_info_alter().
+ */
+function souriau_common_filter_info_alter(&$info) {
+
+  if (module_exists('emogrifier')) {
+    $info['filter_emogrifier']['process callback'] = '_souriau_common_filter_emogrifier_process_alter';
+  }
+}
+
+/**
+ * Alter callback for emogrifier filter.
+ *
+ * Add Css file.
+ */
+function _souriau_common_filter_emogrifier_process_alter($text, $filter, $format, $langcode, $cache, $cache_id) {
+
+  if (empty($text)) {
+    return '';
+  }
+  // Avoid PHP fatal errors when the 'dom' extension is not loaded.
+  if (!extension_loaded('dom')) {
+    return $text;
+  }
+  // Avoid Fatal error while 'library' not present.
+  if (!_emogrifier_available()) {
+    return $text;
+  }
+
+  // Load Css file.
+  $theme = variable_get('theme_default', NULL);
+  $themepath = drupal_get_path('theme', $theme);
+  $css = file_scan_directory($themepath, '#^mail\.css*$#');
+  if (!empty($css)) {
+    $css = drupal_load_stylesheet(reset($css)->uri, TRUE);
+  }
+
+  // Emogrify text.
+  $emogrifier = new Emogrifier($text, $css);
+  return @$emogrifier->emogrify();
+}
+
+/**
+ * Custom submit handler for webform.
+ */
+function souriau_common_custom_registration_webform_submit($form, &$form_state) {
+
+  global $language;
+  $sid = $form_state['values']['details']['sid'] ? (int) $form_state['values']['details']['sid'] : NULL;
+  $node = $form['#node'];
+  $submission = webform_get_submission($form['#node']->webform['nid'], $sid);
+  $submission_render = webform_submission_render($node, $submission, NULL, 'text');
+  $children = element_children($submission_render);
+  foreach ($children as $child) {
+    if (!isset($submission_render[$child]['#webform_component']) || $submission_render[$child]['#webform_component']['type'] != 'email') {
+      continue;
+    }
+    $to = $submission_render[$child]['#value'];
+  }
+  $mail_params = [
+    'node' => $node,
+    'webform-submission' => $submission,
+  ];
+  if (!empty($to)) {
+    drupal_mail('souriau_common', 'training_confirmation_mail', trim($to), $language, $mail_params);
+  }
+
+  $mail_params = [
+    'node' => $node,
+    'webform-submission' => $submission,
+  ];
+  drupal_mail('souriau_common', 'training_notification_mail', SOURIAU_COMMON_WEBMASTER, $language, $mail_params);
+}
+
+/**
+ * Custom submit handler for training inquiry webform.
+ */
+function souriau_common_training_inquriy_webform_submit($form, &$form_state) {
+  global $language;
+  $sid = $form_state['values']['details']['sid'] ? (int) $form_state['values']['details']['sid'] : NULL;
+  $node = $form['#node'];
+  $submission = webform_get_submission($form['#node']->webform['nid'], $sid);
+
+  $mail_params = [
+    'node' => $node,
+    'webform-submission' => $submission,
+  ];
+
+  $contact_recipient = variable_get('training_inquiry_receipient');
+  drupal_mail('souriau_common', 'training_inquiry_notification_mail', $contact_recipient, $language, $mail_params);
+}
+
+/**
+ * Custom submit handler for webform.
+ */
+function souriau_common_custom_webform_submit($form, &$form_state) {
+  global $language;
+  $sid = $form_state['values']['details']['sid'] ? (int) $form_state['values']['details']['sid'] : NULL;
+  $node = $form['#node'];
+  $submission = webform_get_submission($form['#node']->webform['nid'], $sid);
+  $submission_render = webform_submission_render($node, $submission, NULL, 'text');
+  $children = element_children($submission_render);
+  foreach ($children as $child) {
+    if (!isset($submission_render[$child]['#webform_component']) || $submission_render[$child]['#webform_component']['type'] != 'email') {
+      continue;
+    }
+    $to = $submission_render[$child]['#value'];
+  }
+  // Process attachments.
+  foreach (element_children($submission_render['attachments']) as $attachment_key) {
+    if (empty($submission_render['attachments'][$attachment_key]['#value'])) {
+      continue;
+    }
+    $attachments[] = [
+      'filename' => $submission_render['attachments'][$attachment_key]['#value']->filename,
+      'filepath' => $submission_render['attachments'][$attachment_key]['#value']->uri,
+    ];
+  }
+  $mail_params = [
+    'node' => $node,
+    'webform-submission' => $submission,
+    'attachments' => $attachments,
+  ];
+  if (!empty($to)) {
+    drupal_mail('souriau_common', 'contact_confirmation_mail', trim($to), $language, $mail_params);
+  }
+  $contact_recipients = souriau_common_get_contact_recipients($submission_render);
+  $mail_params['headers'] = [
+    'Cc' => $to,
+  ];
+
+  drupal_mail('souriau_common', 'contact_notification_mail', trim($contact_recipients), $language, $mail_params);
+}
+
+/**
+ * Overrides file_managed_file_process.
+ *
+ * To append extra option for upload buttons.
+ */
+function souriau_common_webform_file_element_process($element, &$form_state, $form) {
+
+  if (isset($element['#attributes']['souriau_options'])) {
+    $element['upload']['#attributes']['data-jcf'] = $element['#attributes']['souriau_options'];
+  }
+  return $element;
+}
+
+/**
+ * Implements hook_file_mimetype_mapping_alter().
+ */
+function souriau_common_file_mimetype_mapping_alter(&$mapping) {
+
+  $mapping['mimetypes'][] = 'application/vnd.ms-access';
+  $mapping['mimetypes'][] = 'souriau/iPaper';
+
+  $mapping['extensions']['stp'] = array_search('application/vnd.ms-access', $mapping['mimetypes']);
+  $mapping['extensions']['ipaper'] = array_search('souriau/iPaper', $mapping['mimetypes']);
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function souriau_common_node_presave($node) {
+
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  if ($node->type == 'webform' && $node_wrapper->field_webform_type->value() == 'registration_webform' && is_null(webform_get_cid($node, 'resource_nid', 0))) {
+    $cid = count($node->webform['components']) + 1;
+    $hidden_component = [
+      'cid' => $cid,
+      'pid' => 0,
+      'form_key' => 'resource_nid',
+      'name' => t('Resource', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+      'type' => 'hidden',
+      'value' => '',
+      'extra' => [
+        'private' => 0,
+        'hidden_type' => 'value',
+        'analysis' => '',
+      ],
+      'required' => 0,
+      'weight' => -10,
+      'page_num' => 1,
+    ];
+
+    $node->webform['components'][] = $hidden_component;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_webform_component_delete_form_alter(&$form, $form_state) {
+  if ($form['component']['#value']['form_key'] == 'resource_nid') {
+    $form['description']['#markup'] = t('Sorry, you have no permission to delete this component', [], ['context' => SOURIAU_COMMON_T_ADMIN]);
+    // Remove the delete button.
+    unset($form['actions']['submit']);
+  }
+}
+
+/**
+ * Implements hook_webform_submission_render_alter().
+ */
+function souriau_common_webform_submission_render_alter(&$renderable) {
+
+  if (!empty($renderable['resource_nid']['#markup'])) {
+    $node = node_load($renderable['resource_nid']['#markup']);
+    $link = [
+      '#theme' => 'link',
+      '#text' => $node->title,
+      '#path' => 'node/' . $node->nid . '/edit',
+      '#options' => [
+        'attributes' => ['title' => $node->title],
+        'html' => FALSE,
+      ],
+      '#prefix' => '<label>' . t('Resource', [], ['context' => SOURIAU_COMMON_T_ADMIN]) . '</label>',
+    ];
+    $renderable['resource_nid'] = $link;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_common_form_domain_form_alter(&$form, $form_state) {
+
+  $form['#submit'][] = 'souriau_common_subdomain_submit';
+  $secure_host = '';
+
+  if ($form['#domain']['domain_id']) {
+    // Updating domain.
+    $secure_host = domain_conf_variable_get($form['#domain']['domain_id'], 'securepages_basepath_ssl');
+  }
+
+  // Secure domain.
+  if (module_exists('securepages')) {
+    $form['subdomain']['#weight'] = -3;
+    $form['sitename']['#weight'] = -2;
+
+    $form['securepages_basepath_ssl'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Secure Base URL'),
+      '#default_value' => $secure_host,
+      '#weight' => -1,
+    );
+  }
+}
+
+/**
+ * Submit callback for domain form.
+ */
+function souriau_common_subdomain_submit($form, $form_state) {
+
+  $domain_id = 0;
+  if ($form['#domain']['domain_id']) {
+    $domain_id = $form['#domain']['domain_id'];
+  }
+  elseif (isset($form_state['values']['domain_id'])) {
+    $domain_id = $form_state['values']['domain_id'];
+  }
+
+  if (empty($domain_id)) {
+    // Nothing to do.
+    return;
+  }
+
+  // Secure domain.
+  if (module_exists('securepages')) {
+    if (isset($form_state['values']['securepages_basepath_ssl']) && !empty($form_state['values']['securepages_basepath_ssl'])) {
+      domain_conf_variable_set($domain_id, 'securepages_basepath_ssl', $form_state['values']['securepages_basepath_ssl']);
+      $new_domain = $form['#domain'];
+      $new_domain['subdomain'] = $form_state['values']['subdomain'];
+      domain_conf_variable_set($domain_id, 'securepages_basepath', rtrim(domain_get_path($new_domain), '/'));
+    }
+    else {
+      domain_conf_delete_variable($domain_id, 'securepages_basepath_ssl');
+      domain_conf_delete_variable($domain_id, 'securepages_basepath');
+    }
+  }
+}
+
+/**
+ * After build duplicate id fix helper.
+ *
+ * @see https://www.drupal.org/node/2594955#comment-10951475
+ */
+function souriau_common_file_managed_fix_duplicate_id($element) {
+
+  if ($element['#id'] === $element['upload']['#id']) {
+    $element['#id'] = drupal_html_id($element['#id']);
+  }
+  return $element;
+}
+
+/**
+ * Implements hook_library_alter().
+ */
+function souriau_common_library_alter(&$libraries, $module) {
+
+  if ($module == 'system' && isset($libraries['drupal.ajax'])) {
+    // Adds new type of``ajax progress` into Drupal's Ajax framework.
+    $souriau_progress_js = drupal_get_path('module', 'souriau_common') . '/js/souriau_progress.js';
+    $libraries['drupal.ajax']['js'][$souriau_progress_js] = array(
+      'type' => 'file',
+      'group' => JS_LIBRARY,
+      'weight' => 3,
+    );
+  }
+}
+
+/**
+ * Implements hook_cronapi().
+ */
+function souriau_common_cronapi($op, $job = NULL) {
+
+  $items['souriau_common_google_imagemap_export'] = [
+    'description' => 'Google Image sitemap create queue.',
+    // Every week.
+    'rule' => '0 0 * * 0',
+    'file' => 'souriau_common.cron.inc',
+    'callback' => 'souriau_common_google_imagemap_export',
+  ];
+
+  $items['souriau_common_et_db_clear'] = [
+    'description' => 'Clearing databases from entity translations if language isn\'t exist anymore',
+    // Every day min.
+    'rule' => '0 0 * * *',
+    'file' => 'souriau_common.cron.inc',
+    'callback' => 'souriau_common_et_db_clear',
+  ];
+
+  $items['souriau_common_remove_webform_unused_files'] = [
+    'description' => 'Delete all temporary files from contact form.',
+    // Every Sunday at 3.00.
+    'rule' => '0 3 * * 0',
+  ];
+
+  return $items;
+}
+
+/**
+ * Menu callback for printing the sitemap.
+ */
+function souriau_common_image_sitemap() {
+
+  global $language_url;
+  $new_folder = 'private://google-imagemap';
+  file_prepare_directory($new_folder, FILE_CREATE_DIRECTORY);
+  $xml_file = $new_folder . '/image-map.' . $language_url->language . '.xml';
+
+  drupal_add_http_header('Content-Type', 'text/xml');
+  print file_get_contents(drupal_realpath($xml_file));
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function souriau_common_cron_queue_info() {
+
+  return [
+    'souriau_common_sitemap' => [
+      'worker callback' => 'souriau_common_imagemap_queue_worker',
+      'skip on cron' => FALSE,
+      // Max time 10 minutes for job.
+      'time' => 60 * 10,
+    ],
+    'souriau_common_et_db_clear' => [
+      'worker callback' => 'souriau_common_et_db_clear_queue_worker',
+      'skip on cron' => FALSE,
+      // Max time 240 sec for job.
+      'time' => 240,
+    ],
+  ];
+}
+
+/**
+ * Queue worker.
+ *
+ * @see souriau_common_et_db_clear()
+ */
+function souriau_common_et_db_clear_queue_worker($items) {
+
+  if (empty($items)) {
+    return;
+  }
+  $languages = language_list('language');
+  if (isset($languages['en'])) {
+    // We will remove EN translation.
+    // Note: en-en is default, not EN.
+    unset($languages['en']);
+  }
+  foreach ($items as $item) {
+    $entity = entity_load_single($item->entity_type, $item->entity_id);
+    if (empty($entity)) {
+      $ids[$item->entity_type][] = $item->entity_id;
+      continue;
+    }
+    $handler = entity_translation_get_handler($item->entity_type, $entity);
+    $entity_translations = $handler->getTranslations();
+    if (empty($entity_translations)) {
+      continue;
+    }
+    foreach (array_diff(array_keys($entity_translations->data), array_keys($languages)) as $language) {
+      $handler->removeTranslation($language);
+    }
+    field_attach_presave($item->entity_type, $entity);
+    field_attach_update($item->entity_type, $entity);
+  }
+  // Log && Delete trash.
+  if (!empty($ids)) {
+    $msg = '';
+    foreach ($ids as $type => $entity_ids) {
+      $msg .= '<br>';
+      $msg .= $type . ':' . implode(', ', $entity_ids);
+      // Delete non-existing entity in the entity_translation tables.
+      db_delete('entity_translation')
+        ->condition('entity_id', $entity_ids, 'IN')
+        ->condition('entity_type', $type)
+        ->execute();
+    }
+    // Inform, which entities were deleted.
+    $msg = t('Non-existent entities in the entity_translation table: @entities @newline were deleted', ['@entities' => $msg, '@newline' => '<br>'], ['context' => 'SOURIAU: cron']);
+    watchdog('cron job: et_db_clear', $msg);
+  }
+}
+
+/**
+ * Image sitemap queue worker.
+ */
+function souriau_common_imagemap_queue_worker($page_data) {
+
+  global $base_url;
+  $page = $page_data['page'];
+  $language = $page_data['language']->language;
+  $new_folder = 'private://google-imagemap';
+  file_prepare_directory($new_folder, FILE_CREATE_DIRECTORY);
+  $tmp_file = $new_folder . '/image-map.' . $language . '.temp';
+
+  if ($page === 0) {
+    $xml_header = '<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+            xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">';
+
+    // Add site logo path and base url.
+    $xml_header .= '<url>
+    <loc>' . $base_url . '</loc>
+    <image:image>
+      <image:loc>' . theme_get_setting('logo') . '</image:loc>
+    </image:image>';
+    file_save_data($xml_header, $tmp_file, FILE_EXISTS_REPLACE);
+    variable_set('google_imagemap_nids', [$language => []]);
+    variable_set('google_imagemap_fids', [$language => []]);
+  }
+
+  $xml_tags = file_get_contents(drupal_realpath($tmp_file));
+  $nid = variable_get('google_imagemap_nids');
+  $images = variable_get('google_imagemap_fids');
+
+  if ($page === SOURIAU_COMMON_IMAGEMAP_LAST) {
+    $xml_file = $new_folder . '/image-map.' . $language . '.xml';
+    $xml_tags .= '</url></urlset>';
+    file_save_data($xml_tags, $xml_file, FILE_EXISTS_REPLACE);
+    return;
+  }
+
+  $view = views_get_view('souriau_google_imagemap', TRUE);
+  $view->set_display('default');
+  $view->set_items_per_page(100);
+  $view->set_current_page($page);
+  $view->pre_execute();
+  $view->execute();
+  $view->post_execute();
+
+  foreach ($view->result as $result) {
+    $node = node_load($result->nid);
+    if (in_array($language, array_keys($node->translations->data))) {
+      if (!in_array($result->nid, $nid[$language])) {
+        $xml_tags .= '</url><url>';
+        $node_url = url('node/' . $result->nid, ['language' => $page_data['language']]);
+        $xml_tags .= '<loc>' . $base_url . $node_url . '</loc>';
+        $images[$language][$result->nid] = [];
+      }
+
+      if (!in_array($result->file_managed_field_data_field_sku_images_fid, $images[$language][$result->nid])) {
+        $images[$language][$result->nid][] = $result->file_managed_field_data_field_sku_images_fid;
+        $xml_tags .= '<image:image>';
+        $xml_tags .= '<image:loc>' . file_create_url($result->file_managed_field_data_field_sku_images_uri) . '</image:loc>';
+        $xml_tags .= '</image:image>';
+      }
+
+      if (!in_array($result->file_managed_field_data_field_image_fid, $images[$language][$result->nid])) {
+        $images[$language][$result->nid][] = $result->file_managed_field_data_field_image_fid;
+        $xml_tags .= '<image:image>';
+        $xml_tags .= '<image:loc>' . file_create_url($result->file_managed_field_data_field_image_uri) . '</image:loc>';
+        $xml_tags .= '</image:image>';
+      }
+
+      $nid[$language][$result->nid] = $result->nid;
+    }
+  }
+
+  variable_set('google_imagemap_nids', $nid);
+  variable_set('google_imagemap_fids', $images);
+  file_save_data($xml_tags, $tmp_file, FILE_EXISTS_REPLACE);
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function souriau_common_admin_paths() {
+
+  $paths = array(
+    'node/*/facets' => TRUE,
+  );
+  return $paths;
+}
+
+/**
+ * Helper function to check if login/registration is enabled.
+ */
+function souriau_common_is_userzone_available() {
+
+  $_domain = domain_get_domain();
+  $souriau_settings = variable_get('souriau_common_settings');
+  return isset($souriau_settings['registration_sample_checkout']['login_registration_status'][$_domain['domain_id']]) ? $souriau_settings['registration_sample_checkout']['login_registration_status'][$_domain['domain_id']] : TRUE;
+}
+
+/**
+ * Menu callback for redirecting sample order.
+ */
+function souriau_common_sample_order_url_redirect() {
+
+  $souriau_settings = variable_get('souriau_common_settings');
+  $front_page = variable_get('site_frontpage');
+  $sample_order_url = (isset($souriau_settings['sample_order'])) ? $souriau_settings['sample_order']['sample_order_url'] : $front_page;
+  drupal_goto($sample_order_url);
+}
+
+/**
+ * Helper function which returns CSR for a country.
+ */
+function souriau_common_get_csr_for_country($country_iso = 'default') {
+
+  $default_value = variable_get('souriau_site_settings_variables');
+  $global_contact_receipients = $default_value['csr_contact']['default_recepient'];
+
+  $contact_receipients_value = explode("\n", $global_contact_receipients);
+
+  // No recipients set.
+  if (empty($contact_receipients_value)) {
+    return;
+  }
+  $default = NULL;
+  foreach ($contact_receipients_value as $row) {
+    $receipient_data = explode('|', $row);
+    if (empty($receipient_data)) {
+      continue;
+    }
+    // Set 'send to' mail ids here.
+    list($receipient_country, $receipient_mail) = $receipient_data;
+    if ($receipient_country == 'default') {
+      $default = $receipient_mail;
+    }
+    if ($receipient_country == $country_iso) {
+      return trim($receipient_mail);
+    }
+  }
+  return trim($default);
+}
+
+/**
+ * Helper function for generating GTM tags.
+ */
+function souriau_common_gtm_tags() {
+
+  $souriau_settings = variable_get('souriau_common_settings');
+  $gtm_script = NULL;
+  $gtm_noscript = NULL;
+  $gtm_id = $souriau_settings['gtm']['container_id'];
+  if (!empty($gtm_id)) {
+    $gtm_script = "
+<script>
+dataLayer = [];
+</script>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','$gtm_id');</script>
+<!-- End Google Tag Manager -->";
+
+    $gtm_noscript = '
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=' . $gtm_id . '"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->';
+    $gtm_script = str_replace(array("\n", '  '), '', $gtm_script);
+    $gtm_noscript = str_replace(array("\n", '  '), '', $gtm_noscript);
+  }
+
+  return [
+    'script' => $gtm_script,
+    'noscript' => $gtm_noscript,
+  ];
+}
+
+/**
+ * Helper function to generate google optimize script.
+ */
+function souriau_common_google_optimize_code() {
+  $antiflicker_script = NULL;
+  $optimize_script = NULL;
+  $google_optimize = variable_get('google_optimize');
+  $optimize_id = $google_optimize['container_id'];
+  $snippet = $google_optimize['snippet'];
+
+  if (!empty($optimize_id)) {
+    if ($snippet) {
+      $antiflicker_script = "
+<!-- anti-flicker snippet (recommended)  -->
+<style>.async-hide { opacity: 0 !important} </style>
+<script>(function(a,s,y,n,c,h,i,d,e){s.className+=' '+y;h.start=1*new Date;
+h.end=i=function(){s.className=s.className.replace(RegExp(' ?'+y),'')};
+(a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+})(window,document.documentElement,'async-hide','dataLayer',4000,
+{'$optimize_id':true});</script>";
+    }
+    $optimize_script = '<script src="https://www.googleoptimize.com/optimize.js?id=' . $optimize_id . '"></script>';
+  }
+  return [
+    'anti-flicker' => $antiflicker_script,
+    'snippet' => $optimize_script,
+  ];
+}
+
+/**
+ * Helper function for generating canonical alternate elements.
+ */
+function souriau_common_prepare_canonical_alt_elelemt($domain) {
+
+  $hreflang = 'x-default';
+  if ($domain['domain_id'] != SOURIAU_COMMON_DOMAIN_INTERNATIONAL) {
+    global $language;
+    $lang = explode('-', $language->language);
+    $hreflang = $language->language;
+    $domain_countries = domain_conf_variable_get($domain['domain_id'], 'geo_countries');
+    $country_code = drupal_strtolower(array_shift($domain_countries));
+    if ($country_code != 'none') {
+      $hreflang = array_shift($lang) . '-' . $country_code;
+    }
+  }
+
+  $protocol = "https://";
+  return [
+    '#tag' => 'link',
+    '#attributes' => [
+      'rel' => 'alternate',
+      'href' => $protocol . $domain['subdomain'] . request_uri(),
+      'hreflang' => $hreflang,
+    ],
+  ];
+}
+
+/**
+ * Implements hook_entity_translation_languages_alter().
+ */
+function souriau_common_entity_translation_languages_alter(&$languages) {
+
+  if (isset($languages['en'])) {
+    // We will remove EN translation.
+    // Note: en-en is default, not EN.
+    unset($languages['en']);
+  }
+  return $languages;
+}
+
+/**
+ * Helper function to delete all temporary files uploaded from contact form.
+ */
+function souriau_common_remove_webform_unused_files() {
+
+  $view_data = json_encode(views_get_view_result('unused_contact_form_files', 'default'));
+  $file_array = json_decode($view_data, TRUE);
+  if (empty($file_array)) {
+    return;
+  }
+  file_delete_multiple(array_column($file_array, 'fid'));
+}
+
+/**
+ * To create cookies acceptance message for EU compilance.
+ */
+function souriau_common_cookie_alert_popup_page() {
+
+  $cookie_name = "cookie-agreed";
+  $souriau_variables = variable_get('souriau_site_settings_variables');
+  $eu_compliance_message = $souriau_variables['cookie_alert_message']['cookie message'];
+  if (isset($_COOKIE[$cookie_name]) || empty(trim($eu_compliance_message))) {
+    return;
+  }
+  $modal_style = [
+    'CToolsModal' => [
+      'modalTheme' => 'souriau_common_popup',
+    ],
+  ];
+  drupal_add_js($modal_style, 'setting');
+  $form_state = [
+    'ajax' => TRUE,
+    'eu_compliance_message' => $eu_compliance_message,
+  ];
+  // Use ctools to generate ajax instructions for the browser to create
+  // a form in a modal popup.
+  $commands = ctools_modal_form_wrapper('souriau_common_cookie_alert_message', $form_state);
+  // If the form has been submitted, there may be additional instructions
+  // such as dismissing the modal popup.
+  if (!empty($form_state['ajax_commands'])) {
+    $commands = $form_state['ajax_commands'];
+  }
+  // Return the ajax instructions to the browser via ajax_render().
+  print ajax_render($commands);
+  drupal_exit();
+}
+
+/**
+ * To show cookies acceptance message.
+ */
+function souriau_common_cookie_alert_message($form, $form_state) {
+
+  $form = [];
+  $form['content_title'] = [
+    '#markup' => t('Cookies Acceptance Message', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#prefix' => '<div class="popup-title"><h2 id="modal-title" class="modal-title">',
+    '#suffix' => '</h2></div>',
+  ];
+  $form['message_content'] = [
+    '#markup' => nl2br($form_state['eu_compliance_message']),
+  ];
+  return $form;
+}
+
+/**
+ * To create job link alert message to inform the web user.
+ */
+function souirau_common_jobclick_popup_callback() {
+  global $language;
+  $job_link_alert = i18n_variable_get('job_alert_message', $language->language);
+
+  $modal_style = [
+    'CToolsModal' => [
+      'modalTheme' => 'souriau_common_popup',
+    ],
+  ];
+  drupal_add_js($modal_style, 'setting');
+  $form_state = [
+    'ajax' => TRUE,
+    'job_alert_message' => $job_link_alert,
+  ];
+  // Use ctools to generate ajax instructions for the browser to create
+  // a form in a modal popup.
+  $commands = ctools_modal_form_wrapper('souriau_common_jobclick_alert_message', $form_state);
+
+  if (!empty($form_state['ajax_commands'])) {
+    $commands = $form_state['ajax_commands'];
+  }
+  // Return the ajax instructions to the browser via ajax_render().
+  print ajax_render($commands);
+  drupal_exit();
+}
+
+/**
+ * To show job link alert message and web user take the right decision.
+ */
+function souriau_common_jobclick_alert_message($form, $form_state) {
+  $form = [];
+  $form['content_title'] = [
+    '#markup' => '<div class="popup-title b-add-project"><h2 id="modal-title" class="modal-title">'
+    . t('You ask for consulting our Job Opportunities.', [], ['context' => SOURIAU_COMMON_T_USER]) .
+    '</h2></div>',
+  ];
+
+  $form['message_content'] = [
+    '#markup' => $form_state['job_alert_message'],
+  ];
+
+  $form['cancel'] = [
+    '#type' => 'submit',
+    '#prefix' => '<div class="wide-btns">',
+    '#value' => t('I decline', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#attributes' => [
+      'class' => ['btn', 'blue-btn', 'btn-cancel'],
+      'data-dismiss' => 'modal',
+    ],
+  ];
+
+  $form['accept'] = [
+    '#type' => 'link',
+    '#title' => t('I Accept', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#prefix' => '<div class="w-btn-stretch">',
+    '#suffix' => '</div></div>',
+    '#href' => SOURIAU_CAREER_LINK,
+    '#options' => [
+      'attributes' => [
+        'class' => ['btn', 'orange-btn-hover', 'gtm_element'],
+        'data-gtm-category' => 'Button',
+        'data-gtm-action' => SOURIAU_CAREER_LINK,
+        'data-gtm-label' => 'Job opportunities',
+        'target' => [
+          '_blank',
+        ],
+        'data-dismiss' => [
+          'modal',
+        ],
+      ],
+    ],
+  ];
+
+  if (!isset($form_state['ajax'])) {
+    $form['cancel']['#submit'] = ['souriau_common_jobclick_cancel'];
+  }
+  else {
+    $form['cancel']['#attributes']['class'] = [
+      'btn',
+      'blue-btn',
+      'btn-cancel',
+      'ctools-close-modal',
+    ];
+  }
+
+  return $form;
+}
+
+/**
+ * To cancel job click action.
+ */
+function souriau_common_jobclick_cancel($form, &$form_state) {
+  $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+}
+
+/**
+ * To create download center thumbnail files.
+ */
+function souriau_common_create_thumbnails($file, $resulution = 16.5) {
+  $pdf_thumbnail = new imagick();
+  $pdf_thumbnail->setResolution($resulution, $resulution);
+  $pdf_thumbnail->readImage(drupal_realpath($file->uri) . "[0]");
+  $pdf_thumbnail->setImageFormat('jpg');
+  $pdf_thumbnail->writeImage(substr(drupal_realpath($file->uri), 0, -4) . '.jpg');
+}
+
+/**
+ * Implements hook_file_delete().
+ */
+function souriau_common_file_delete($file) {
+  $file_uri = substr($file->uri, 0, -4) . '.jpg';
+  if (file_exists($file_uri) && $file->filemime === 'application/pdf') {
+    return drupal_unlink($file_uri);
+  }
+}
+
+/**
+ * Helper function to render FAQ per PR.
+ */
+function souriau_common_get_faq_per_productrange($nid) {
+  $view = views_get_view('faq_per_product_range');
+  $view->set_display('block_1');
+  $view->set_arguments([$nid]);
+  $view->pre_execute();
+  $view->execute();
+  return trim($view->render());
+}
+
+/**
+ * Implements hook_variable_info().
+ *
+ * Variables used for content translation.
+ */
+function souriau_common_variable_info() {
+  $variables['contact_form_description'] = [
+    'type' => 'text',
+    'title' => t('Contact form description'),
+    'description' => t('Contact form description'),
+    'localize' => TRUE,
+  ];
+
+  $variables['contact_information'] = [
+    'type' => 'text',
+    'title' => t('Contact information'),
+    'description' => t('Contact information'),
+    'localize' => TRUE,
+  ];
+
+  $variables['job_alert_message'] = [
+    'type' => 'text',
+    'title' => t('Job popup alert message'),
+    'description' => t('Job popup alert message'),
+    'localize' => TRUE,
+  ];
+
+  return $variables;
+}

@@ -1,0 +1,30 @@
+diff --git a/securepages.module b/securepages.module
+index 2a2c24c..512e290 100644
+--- a/securepages.module
++++ b/securepages.module
+@@ -310,11 +310,22 @@ function securepages_test() {
+ function securepages_baseurl($secure = TRUE) {
+   global $base_url;
+ 
+-  if ($secure) {
+-    $url = variable_get('securepages_basepath_ssl', NULL);
++  if (module_exists('domain_alias')) {
++    $domain = domain_get_domain();
++    if ($secure) {
++      $url = domain_conf_variable_get($domain['domain_id'], 'securepages_basepath_ssl', NULL);
++    }
++    else {
++      $url = domain_conf_variable_get($domain['domain_id'], 'securepages_basepath', NULL);
++    }
+   }
+   else {
+-    $url = variable_get('securepages_basepath', NULL);
++    if ($secure) {
++      $url = variable_get('securepages_basepath_ssl', NULL);
++    }
++    else {
++      $url = variable_get('securepages_basepath', NULL);
++    }
+   }
+ 
+   if (!empty($url)) {

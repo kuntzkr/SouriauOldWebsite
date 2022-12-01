@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the souriau_CPT_sku feature.
+ */
+
+include_once 'souriau_cpt_sku.features.inc';

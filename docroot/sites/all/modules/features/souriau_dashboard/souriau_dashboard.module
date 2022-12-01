@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Dashboard feature.
+ */
+
+include_once 'souriau_dashboard.features.inc';

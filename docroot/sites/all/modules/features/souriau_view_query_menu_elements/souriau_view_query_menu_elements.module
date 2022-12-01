@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau View Query Menu Elements feature.
+ */
+
+include_once 'souriau_view_query_menu_elements.features.inc';

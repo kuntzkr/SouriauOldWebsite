@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file
+ * Site Overrides module.
+ */
+
+/**
+ * Implements hook_views_api().
+ */
+function site_overrides_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'site_overrides') . '/views',
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function site_overrides_form_alter(&$form, &$form_state, $form_id) {
+  $form_ids = ['faq_node_form', 'tool_node_form', 'postcard_node_form'];
+  if (in_array($form_id, $form_ids)) {
+    $form['actions']['submit']['#submit'][] = 'site_overrides_generic_form_submit';
+    $form['actions']['save_and_publish']['#submit'][] = 'site_overrides_generic_form_submit';
+  }
+
+  if ('redirect_list_form' == $form_id) {
+    // Added the redirect link below the table.
+    $form['redirect_csv_export'] = [
+      '#markup' => t('Click here to <a href="@csv-exporter">export redirects</a> as CSV file.', ['@csv-exporter' => url('admin/config/search/redirect/csv-export')], ['context' => SOURIAU_COMMON_T_ADMIN])
+    ];
+  }
+}
+
+/**
+ * Generic submit handler for FAQ and Tools.
+ */
+function site_overrides_generic_form_submit(&$form, &$form_state) {
+  $form_state['redirect'] = [
+    'admin/dashboard/all',
+    ['query' => ['type[]' => $form_state['node']->type]],
+  ];
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function site_overrides_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'form_alter' && isset($implementations['draft_moderation']) && isset($implementations['site_overrides'])) {
+    $group = $implementations['site_overrides'];
+    unset($implementations['site_overrides']);
+    $implementations['site_overrides'] = $group;
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function site_overrides_menu_alter(&$items) {
+  $items['admin/config/search/redirect/export']['access'] = FALSE;
+  $items['admin/config/search/redirect/export']['access arguments'] = NULL;
+}

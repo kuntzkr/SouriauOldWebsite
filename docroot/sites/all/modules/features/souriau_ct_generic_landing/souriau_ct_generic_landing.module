@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Generic Landing feature.
+ */
+
+include_once 'souriau_ct_generic_landing.features.inc';

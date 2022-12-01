@@ -1,0 +1,58 @@
+diff --git a/file_admin.module b/file_admin.module
+index a376d5c..8296695 100644
+--- a/file_admin.module
++++ b/file_admin.module
+@@ -48,6 +48,11 @@ function file_admin_permission() {
+       'title' => t('View own unpublished file details'),
+       'description' => t('For viewing file details, not for downloading files.'),
+     ),
++    // Permission that allows to publish file entity status.
++    'publish files' => array(
++      'title' => t('Publish files'),
++      'restrict access' => TRUE,
++    ),
+   );
+ 
+   return $perms;
+@@ -150,7 +155,7 @@ function file_admin_form_file_entity_file_type_form_alter(&$form, &$form_state)
+       'promote' => t('Promoted'),
+       'sticky' => t('Sticky at top of lists'),
+     ),
+-    '#description' => t('Users with the <em>Administer files</em> permission will be able to override these options.'),
++    '#description' => t('Users with the <em>Publish files</em> permission will be able to override these options.'),
+   );
+   $form['display'] = array(
+     '#type' => 'fieldset',
+@@ -261,7 +266,7 @@ function _file_admin_add_file_admin_fieldset(&$form, $form_state, $file) {
+   // File options for administrators.
+   $form['options'] = array(
+     '#type' => 'fieldset',
+-    '#access' => user_access('administer files'),
++    '#access' => user_access('publish files'),
+     '#title' => t('Workflow'),
+     '#collapsible' => TRUE,
+     '#collapsed' => TRUE,
+@@ -409,6 +414,11 @@ function file_admin_action_info() {
+  * @ingroup actions
+  */
+ function file_admin_publish_action($file_entity, $context = array()) {
++  if (!user_access('publish files')) {
++    drupal_set_message(t('Operation is not granted.'), 'warning', FALSE);
++    return;
++  }
++
+   file_admin_mass_update(array('fid' => $file_entity->fid), array('published' => FILE_PUBLISHED));
+   if (!empty($file_entity->title)) {
+     $title = $file_entity->title;
+@@ -431,6 +441,11 @@ function file_admin_publish_action($file_entity, $context = array()) {
+  * @ingroup actions
+  */
+ function file_admin_unpublish_action($file_entity, $context = array()) {
++  if (!user_access('publish files')) {
++    drupal_set_message(t('Operation is not granted.'), 'warning', FALSE);
++    return;
++  }
++
+   file_admin_mass_update(array('fid' => $file_entity->fid), array('published' => FILE_NOT_PUBLISHED));
+   if (!empty($file_entity->title)) {
+     $title = $file_entity->title;

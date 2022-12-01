@@ -1,0 +1,879 @@
+<?php
+
+/**
+ * @file
+ * Souriau_common.module.
+ */
+
+require_once drupal_get_path('module', 'feeds') . '/feeds.pages.inc';
+
+define('SOURIAU_IMPORT_EMAIL', variable_get('master_file_import_notification_email', ''));
+define('IMPORT_LOG_DISABLE', 0);
+define('IMPORT_LOG_ENABLE', 1);
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_master_file_import_menu() {
+  $items = [];
+
+  $items['admin/dashboard/import'] = [
+    'title' => 'Import Products',
+    'weight' => 3,
+    'description' => 'Import Products from the Master-file',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_master_file_import_form'],
+    'access callback' => 'user_access',
+    'access arguments' => ['master-file management'],
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function souriau_master_file_import_permission() {
+  return [
+    'master-file management' => [
+      'title' => t('Master-file import and export'),
+      'description' => t('Content management via Master-file import tools'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_date_format_types().
+ */
+function souriau_master_file_import_date_format_types() {
+  return [
+    'souriau_mf_import_date' => t('Date format for notification: YYYY-MM-DD', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+  ];
+}
+
+/**
+ * Implements hook_date_formats().
+ */
+function souriau_master_file_import_date_formats() {
+  return [
+    [
+      'type' => 'souriau_mf_import_date',
+      'format' => 'Y-m-d',
+      'locales' => [],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_form().
+ */
+function souriau_master_file_import_form($form, &$form_state) {
+  // Load importers.
+  $sku_importer = feeds_importer('souriau_master_file_sku_importer');
+  $product_importer = feeds_importer('souriau_master_file_product_importer');
+
+  // Get feeds source.
+  $sku_source = feeds_source($sku_importer->id);
+  $product_source = feeds_source($product_importer->id);
+
+  // Get progress of import.
+  $sku_progress = $sku_source->progressImporting();
+  $product_progress = ($sku_progress !== FEEDS_BATCH_COMPLETE) ? '0' : $product_source->progressImporting();
+
+  $form = feeds_import_form($form, $form_state, $sku_importer);
+
+  // For validation mapping.
+  $form_state['sku_importer'] = $sku_importer;
+  $form_state['product_importer'] = $product_importer;
+
+  $form['source_status']['#title'] = t('SKU Status');
+  $form['source_status']['#weight'] = -11;
+
+  $form['source_pn_status'] = [
+    '#type' => 'fieldset',
+    '#title' => t('Part Numbers Status'),
+    '#tree' => TRUE,
+    '#value' => ($sku_progress !== FEEDS_BATCH_COMPLETE) ? '<ul><li>' . t('Pending', [], ['context' => SOURIAU_COMMON_T_ADMIN]) . '</li></ul>' : feeds_source_status($product_source),
+    '#weight' => -10,
+  ];
+
+  $total_progress = ($sku_progress + $product_progress) / 2;
+  if ($sku_progress !== FEEDS_BATCH_COMPLETE || $product_progress !== FEEDS_BATCH_COMPLETE) {
+    $form['submit']['#disabled'] = TRUE;
+    $form['submit']['#value'] = t('Total Importing (@progress %)', [
+        '@progress' => number_format(100 * $total_progress, 0)
+    ]);
+  }
+
+  $form['#validate'] = ['souriau_master_file_import_csv_validate', 'feeds_import_form_validate'];
+  $form['#submit'] = ['feeds_import_form_submit'];
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_master_file_import_form_souriau_common_form_site_settings_variables_alter(&$form, &$form_state, $form_id) {
+  $form['master_file_import_notification_email'] = [
+    '#type' => 'textarea',
+    '#title' => t('MDR Import Email', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#description' => t('Inform about starting import. Configuration Example: example@example.com. For several recipients: enter each recipient on the new line', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#default_value' => SOURIAU_IMPORT_EMAIL,
+  ];
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function souriau_master_file_import_form_system_logging_settings_alter(&$form, &$form_state, $form_id) {
+  $form['import_log_level'] = [
+    '#type' => 'radios',
+    '#default_value' => variable_get('import_log_level', 0),
+    '#options' => [
+      '0' => t('Disable', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+      '1' => t('Enable', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    ],
+    '#title' => t('Error logging during Import', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    '#description' => t('It is recommended that sites running on production environments do not log any errors.', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+  ];
+}
+
+/**
+ * Form validate callback.
+ */
+function souriau_master_file_import_csv_validate($form, &$form_state) {
+  $csv_path = '';
+  $filename = '';
+  if (!empty($_FILES['files']['tmp_name']['feeds'])) {
+    $csv_path = $_FILES['files']['tmp_name']['feeds'];
+    $filename = $_FILES['files']['name']['feeds'];
+  }
+  elseif (!empty($form_state['values']['feeds']['FeedsFileFetcher']['source'])) {
+    $csv_path = $form_state['values']['feeds']['FeedsFileFetcher']['source'];
+    $filename = drupal_basename($csv_path);
+  }
+
+  $errors = souriau_master_file_csv_mapping_validation($csv_path, $form_state['sku_importer'], $form_state['product_importer'], $filename);
+  if ($errors) {
+    if ($errors['type'] == 'error') {
+      form_set_error('feeds', $errors['message']);
+    }
+    else {
+      drupal_set_message($errors['message'], $errors['type']);
+    }
+  }
+
+}
+
+/**
+ * Helper function for validate csv file.
+ */
+function souriau_master_file_csv_mapping_validation($csv_path = '', $sku_importer = [], $product_importer = [], $filename = '') {
+  if (empty($csv_path) || !is_file($csv_path)) {
+    return [
+      'type' => 'error',
+      'message' => t('Can\' find CSV file', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    ];
+  }
+  if (empty($filename)) {
+    $filename = drupal_basename($csv_path);
+  }
+  $ext = pathinfo($filename, PATHINFO_EXTENSION);
+  if ($ext != 'csv') {
+    return [
+      'type' => 'error',
+      'message' => t('File is not a valid CSV file', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+    ];
+  }
+
+  if (empty($sku_importer) || !is_object($sku_importer)) {
+    $sku_importer = feeds_importer('souriau_master_file_sku_importer');
+  }
+
+  if (empty($product_importer) || !is_object($product_importer)) {
+    $product_importer = feeds_importer('souriau_master_file_product_importer');
+  }
+
+  // Get mapping columns.
+  $mapping_csv = $sku_importer->processor->getMappings();
+  $mapping_product = $product_importer->processor->getMappings();
+  $mapping = array_merge($mapping_csv, $mapping_product);
+  $source_fields = [];
+  foreach ($mapping as $map) {
+    $source_fields[$map['source']] = $map['source'];
+  }
+  $tech_fields = [
+    'code',
+    'category_code',
+    'category',
+    'sub_category',
+    'products_series'
+  ];
+  $source_fields += $tech_fields;
+
+  // Get CSV columns.
+  $file = drupal_realpath($csv_path);
+  $csv_columns = [];
+  if (($handle = fopen($file, "r")) !== FALSE) {
+    $csv_columns = fgetcsv($handle, 5000, $sku_importer->config['parser']['config']['delimiter']);
+  }
+
+  $diff_with_mapping = array_diff($csv_columns, $source_fields);
+  $diff_with_csv = array_diff($source_fields, $csv_columns);
+  if (!empty($diff_with_mapping)) {
+    return [
+      'type' => 'error',
+      'message' => t('CSV columns structure differs from the expected importer structure in columns: @columns', ['@columns' => print_r($diff_with_mapping, 1)], ['context' => SOURIAU_COMMON_T_ADMIN])
+    ];
+  }
+  $ignored_fields = array_merge([
+    'product_range_code_p',
+    'currency_code',
+    'price',
+    'module',
+    'body',
+  ], $tech_fields);
+  foreach ($ignored_fields as $field) {
+    if ($key = array_search($field, $diff_with_csv)) {
+      unset($diff_with_csv[$key]);
+    }
+  }
+  if (!empty($diff_with_csv)) {
+    return [
+      'type' => 'warning',
+      'message' => t('No found source column in the CSV file for next mapping: @mapping', ['@mapping' => implode(', ', $diff_with_csv)]),
+    ];
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_feeds_before_import().
+ */
+function souriau_master_file_import_feeds_before_import(FeedsSource $source) {
+  // Send inform message.
+  if ($source->id == 'souriau_master_file_sku_importer') {
+    souriau_master_file_import_notification('started');
+  }
+}
+
+/**
+ * Implements hook_feeds_after_parse().
+ */
+function souriau_master_file_import_feeds_after_parse(FeedsSource $source, FeedsParserResult $result) {
+  $error_lvl = variable_get('import_log_level', IMPORT_LOG_DISABLE);
+  if ($source->id == 'souriau_master_file_sku_importer') {
+    $items = $result->items;
+    $media_directory = 'private://feeds/media/';
+    $file_fields = ['pdf', 'images', '3d_model'];
+    $all_files = [];
+
+    foreach ($items as $key => $item) {
+      if (empty($item['part_number'])) {
+        unset($items[$key]);
+        $message = t('Part number ID is empty. Skipped');
+        $errors[] = $message;
+        if ($error_lvl != IMPORT_LOG_DISABLE) {
+          $source->log('import', $message);
+          watchdog('import', $message);
+        }
+        continue;
+      }
+      if (!is_array($item['products_series'])) {
+        $item['products_series'] = [$item['products_series']];
+      }
+
+      if (!isset($item['price'])) {
+        $item['price'] = 0;
+        $item['currency_code'] = commerce_default_currency();
+      }
+
+      foreach ($file_fields as $field) {
+        if (empty($items[$key][$field]) || (isset($items[$key][$field][0]) && empty($items[$key][$field][0]))) {
+          continue;
+        }
+
+        if (!is_array($items[$key][$field])) {
+          $items[$key][$field] = [$items[$key][$field]];
+        }
+        foreach ($items[$key][$field] as $i => $f) {
+          $uri = $media_directory . $f;
+          $items[$key][$field][$i] = souriau_master_file_import_upload_file($uri, $field);
+          $all_files[$field][$f] = $f;
+        }
+        $items[$key][$field] = array_filter($items[$key][$field]);
+        $missfiles[$field] = array_diff($all_files[$field], $items[$key][$field]);
+      }
+
+    }
+
+    if (!empty($errors)) {
+      $options['errors'] = $errors;
+      souriau_master_file_import_status($source, 'set', $options);
+    }
+    // Log missed files.
+    if ($error_lvl != IMPORT_LOG_DISABLE) {
+      $message = t('Files not found:');
+      foreach ($file_fields as $field) {
+        $message .= !empty($missfiles[$field]) ? '<br>' . $field . ':' . implode(', ', $missfiles[$field]) : '';
+      }
+      $source->log('import', $message);
+    }
+    $result->items = $items;
+  }
+
+  // Replace pr_code_p with Product Range Nid,
+  // or set error if node not detected.
+  if ($source->id == 'souriau_master_file_product_importer') {
+
+    $items = $result->items;
+    $errors = [];
+    $pr_errors = [];
+    $count = 0;
+
+    foreach ($items as $key => $item) {
+      if (empty($item['part_number'])) {
+        unset($items[$key]);
+        if ($error_lvl != IMPORT_LOG_DISABLE) {
+          $message = t('Part number ID is empty. Skipped');
+          $errors[] = $message;
+          $source->log('import', $message);
+          watchdog('import', $message);
+        }
+        continue;
+      }
+
+      $productranges = souriau_master_file_import_get_product_range($item);
+      if (!isset($productranges['error'])) {
+        $items[$key]['product_range_code_p'] = $productranges;
+      }
+      else {
+        if ($error_lvl != IMPORT_LOG_DISABLE) {
+          $pr_errors = array_merge($pr_errors, $productranges['error']);
+          $count++;
+        }
+      }
+    }
+
+    if (!empty($pr_errors) && $error_lvl != IMPORT_LOG_DISABLE) {
+      $message = t('Product ranges haven\'t been found: !products_series. !count products imported without product ranges.', [
+        '!count' => $count,
+        '!products_series' => implode(', ', $pr_errors),
+      ]);
+      $errors[] = $message;
+      $source->log('import', $message);
+      watchdog('import', $message);
+    }
+
+    if (!empty($errors)) {
+      $options['errors'] = $errors;
+      souriau_master_file_import_status($source, 'set', $options);
+    }
+
+    $result->items = $items;
+  }
+}
+
+/**
+ * Product range ids getter.
+ *
+ * @param array $item
+ *   Item for import.
+ *
+ * @return array
+ *   Product range ids.
+ */
+function souriau_master_file_import_get_product_range(array &$item) {
+  $static_key = implode('_', [$item['sub_category'], $item['products_series_code']]);
+  $productranges = &drupal_static(__FUNCTION__);
+  if (isset($productranges[$static_key])) {
+    return $productranges[$static_key];
+  }
+
+  $sub_categories = explode('|', $item['sub_category']);
+  $input_productrange = [];
+  foreach ($sub_categories as $sub_category) {
+    $input_productrange[] = str_replace(' ', '_', empty($sub_category) ? $item['products_series_code'] : $sub_category . '_' . $item['products_series_code']);
+  }
+
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', ['productrange', 'productrangehub'], 'IN')
+    ->fieldCondition('field_pr_code_p', 'value', $input_productrange, 'IN')
+    ->fieldCondition('field_draft', 'value', FALSE, '=')
+    ->addMetaData('account', user_load(1));
+
+  $productrange = $query->execute();
+  if (!isset($productrange['node'])) {
+    return ['error' => $input_productrange];
+  }
+
+  $productranges[$static_key] = array_keys($productrange['node']);
+  return $productranges[$static_key];
+}
+
+/**
+ * File in library validator\uploader.
+ *
+ * @param string $uri
+ *   File URI.
+ * @param string $source
+ *   Feeds source field.
+ *
+ * @return string
+ *   Availible filename form file managed table.
+ */
+function souriau_master_file_import_upload_file($uri, $source) {
+  if (!in_array($source, ['pdf', 'images', '3d_model'])) {
+    return '';
+  }
+
+  // Replace backslash on slash.
+  $uri = str_replace(DIRECTORY_SEPARATOR, "/", $uri);
+
+  $uploads = &drupal_static(__FUNCTION__, array());
+  if (isset($uploads['files'][$uri])) {
+    return $uploads['files'][$uri];
+  }
+  $uploads['files'][$uri] = '';
+
+  // Get term Id.
+  if (isset($uploads['term_id'][$source])) {
+    $term_id = $uploads['term_id'][$source];
+  }
+  elseif ($source == '3d_model') {
+    // Load Term ID of 3d model from 'document_types'.
+    $term = taxonomy_get_term_by_name('3D model');
+    $term = !empty($term) ? reset($term) : '';
+    $term_id = !empty($term) ? $term->tid : FALSE;
+    // Set Term ID into static array.
+    $uploads['term_id'][$source] = $term_id;
+  }
+
+  // Query existing files.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'file');
+  $query->propertyCondition('filename', drupal_basename($uri));
+  // Get the result.
+  $result = $query->execute();
+  if (!isset($result['file']) && file_exists($uri)) {
+    $file = new stdClass();
+    $file->uid = 1;
+    $file->filename = drupal_basename($uri);
+    $file->uri = $uri;
+    $file->filemime = file_get_mimetype($uri);
+    $file->filesize = filesize($uri);
+    $file->status = FILE_STATUS_PERMANENT;
+    file_save($file);
+    // Force set published because file_admin_entity_presave() code
+    // for new files.
+    $file->published = FILE_PUBLISHED;
+
+    if (!empty($term_id)) {
+      $file->field_document_type[LANGUAGE_NONE] = [];
+      $file->field_document_type[LANGUAGE_NONE][] = ['target_id' => $term_id];
+    }
+
+    file_save($file);
+    file_usage_add($file, 'feeds', 'FeedsFileFetcher', 0);
+
+    $uploads['files'][$uri] = $file->filename;
+  }
+  elseif (isset($result['file']) && file_exists($uri)) {
+    $fid = key($result['file']);
+    $file = file_load($fid);
+    $need_save = FALSE;
+    if ($file->published != FILE_PUBLISHED) {
+      $file->published = FILE_PUBLISHED;
+      $need_save = TRUE;
+    }
+    $mimetype = file_get_mimetype($uri);
+    if ($file->filemime != $mimetype) {
+      $file->filemime = $mimetype;
+      $need_save = TRUE;
+    }
+    $filesize = filesize($uri);
+    if ($file->filesize != $filesize) {
+      $file->filesize = $filesize;
+      $need_save = TRUE;
+    }
+
+    if (empty($file->field_document_type) && !empty($term_id)) {
+      $file->field_document_type[LANGUAGE_NONE] = [];
+      $file->field_document_type[LANGUAGE_NONE][] = ['target_id' => $term_id];
+      $need_save = TRUE;
+    }
+
+    if ($need_save) {
+      $file = file_save($file);
+    }
+
+    $uploads['files'][$uri] = $file->filename;
+  }
+
+  return $uploads['files'][$uri];
+}
+
+/**
+ * Implements hook_feeds_after_import().
+ */
+function souriau_master_file_import_feeds_after_import(FeedsSource $source) {
+  // If Import of Commerce_products.
+  if ($source->id == 'souriau_master_file_sku_importer') {
+    $status = souriau_master_file_import_status($source, 'get');
+    if (isset($status['errors'])) {
+      drupal_set_message(t('@count products without Part Number was skipped', [
+        '@count' => count($status['errors']),
+      ]), 'warning');
+      souriau_master_file_import_status($source, 'unset');
+    }
+    // Start import Part Numbers(Products).
+    $fetcher_config = $source->getConfigFor($source->importer->fetcher);
+    $parser_config = $source->getConfigFor($source->importer->parser);
+    $second_source = feeds_source('souriau_master_file_product_importer');
+    $second_source->setConfigFor($second_source->importer->fetcher, $fetcher_config);
+    $second_source->setConfigFor($second_source->importer->parser, $parser_config);
+    $second_source->save();
+    // @todo Check with Ivan.
+    $source_config = $source->importer->getConfig();
+    if (!$source_config['process_in_background']) {
+      $second_source->startImport();
+    }
+    else {
+      $job = [
+        'type' => $second_source->id,
+        'id' => $second_source->feed_nid,
+        'period' => 0,
+        'periodic' => FALSE,
+      ];
+      JobScheduler::get('feeds_source_import')->set($job);
+    }
+  }
+
+  // If import of PartNumber nodes.
+  if ($source->id == 'souriau_master_file_product_importer') {
+    $status = souriau_master_file_import_status($source, 'get');
+    if (isset($status['errors'])) {
+      drupal_set_message(t('@count products does not assigned to product range', [
+        '@count' => count($status['errors']),
+      ]), 'warning');
+      foreach ($status['errors'] as $error) {
+        drupal_set_message($error, 'error');
+      }
+    }
+
+    souriau_master_file_import_status($source, 'unset');
+
+    $conf = $source->getConfig();
+    $filenames = [
+      'masterfile' => $conf['FeedsFileFetcher']['source'],
+    ];
+
+    $config = $source->getConfig();
+    if (preg_match('/private:\/\/autoimport\/Master_File_Products_/', $config['FeedsFileFetcher']['source'])) {
+      $import_backup = 'private://import_backup/';
+      file_prepare_directory($import_backup, FILE_CREATE_DIRECTORY);
+      foreach ($filenames as $filename) {
+        $file = file_uri_to_object($filename);
+        if ($file) {
+          file_move($file, $import_backup);
+        }
+      }
+    }
+
+    // Send inform message.
+    souriau_master_file_import_notification('finished');
+  }
+}
+
+/**
+ * Helper function for set/add/unset import status.
+ */
+function souriau_master_file_import_status($source, $op, $options = []) {
+  if (!is_object($source)) {
+    // Nothing to do here.
+    return [];
+  }
+  $status = variable_get('souriau_master_file_import_status', []);
+  $importer = $source->id;
+
+  if ($op == 'get') {
+    return isset($status[$importer]) ? $status[$importer] : [];
+  }
+
+  if ($op == 'set') {
+    if (empty($status[$importer])) {
+      $status[$importer] = $options;
+    }
+    else {
+      foreach ($status[$importer] as $key => &$option) {
+        $option = array_merge($option, $options[$key]);
+      }
+    }
+    // Update import status.
+    variable_set('souriau_master_file_import_status', $status);
+  }
+
+  // Delete status of current importer.
+  if ($op == 'unset') {
+    unset($status[$importer]);
+    if (!empty($status)) {
+      // Update import status.
+      variable_set('souriau_master_file_import_status', $status);
+    }
+    else {
+      // Update import status.
+      variable_del('souriau_master_file_import_status');
+    }
+  }
+}
+
+/**
+ * Implements hook_cronapi().
+ */
+function souriau_master_file_import_cronapi($op, $job = NULL) {
+  $items['souriua_master_import'] = [
+    'description' => 'Souriua master file import.',
+    // At 2AM once a day.
+    'rule' => '0 2 * * *',
+    'file' => 'souriau_master_file.cron.inc',
+    'callback' => 'souriau_master_file_import_feeds_cron',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_entity_presave().
+ */
+function souriau_master_file_import_entity_presave($entity, $type) {
+  $supported_types = [
+    'commerce_product',
+    'file',
+  ];
+  if (!in_array($type, $supported_types) || !isset($entity->original)) {
+    return;
+  }
+  $function = "souriau_master_file_import_{$type}_entity_presave_process";
+  if (is_callable($function)) {
+    $function($entity, $type);
+  }
+}
+
+/**
+ * File presave/delete reset feeds hash helper for file.
+ *
+ * @param object $entity
+ *   Entity to be updated/deleted.
+ * @param string $type
+ *   Entity type.
+ * @param string $action
+ *   Processed action.
+ */
+function souriau_master_file_import_file_entity_presave_process($entity, $type, $action = 'update') {
+  $allowed_actions = [
+    'update',
+    'delete',
+  ];
+  if (!in_array($action, $allowed_actions)) {
+    return;
+  }
+  $original_entity = ($action == 'delete') ? $entity : $entity->original;
+  if ($entity->filesize == $original_entity->filesize && $entity->uri == $original_entity->uri && $action == 'update') {
+    return;
+  }
+  // Get the file entity_type.
+  $file_entity = entity_metadata_wrapper($type, $original_entity);
+  // Get the file type.
+  $file_type = $file_entity->type();
+  $usage = souriau_dc_file_get_file_references($entity, NULL, FIELD_LOAD_CURRENT, [$file_type, 'media']);
+  foreach ($usage as $using_entities) {
+    foreach ($using_entities as $using_entity) {
+      $feeds_info = feeds_item_info_load($using_entity->type, $using_entity->entity_id);
+      if (!$feeds_info) {
+        continue;
+      }
+      $feeds_info->hash = '';
+      $feeds_item_entity = new stdClass();
+      $feeds_item_entity->feeds_item = $feeds_info;
+      feeds_item_info_save($feeds_item_entity, $using_entity->entity_id);
+    }
+  }
+}
+
+/**
+ * File presave/delete reset feeds hash helper for commerce_product.
+ *
+ * @param object $entity
+ *   Entity to be updated/deleted.
+ * @param string $type
+ *   Entity type.
+ * @param string $action
+ *   Processed action.
+ */
+function souriau_master_file_import_commerce_product_entity_presave_process($entity, $type, $action = 'update') {
+  $allowed_actions = [
+    'update',
+    'delete',
+  ];
+  if (!in_array($action, $allowed_actions)) {
+    return;
+  }
+  $original_entity = ($action == 'delete') ? $entity : $entity->original;
+  $file_fields = [
+    'field_sku_3d_model',
+    'field_sku_attachments',
+    'field_sku_images'
+  ];
+  foreach ($file_fields as $file_field) {
+    if (!isset($original_entity->{$file_field})) {
+      return;
+    }
+    $original_files = field_get_items($type, $original_entity, $file_field);
+    $files = field_get_items($type, $entity, $file_field);
+    // Reset imported sku feeds hash on file change via BO.
+    if (($files != $original_files) || ($action == 'delete')) {
+      $original_entity_wrapper = entity_metadata_wrapper($type, $original_entity);
+      $feeds_info = feeds_item_info_load($type, $original_entity_wrapper->getIdentifier());
+      if (!$feeds_info) {
+        continue;
+      }
+      $feeds_info->hash = '';
+      $feeds_item_entity = new stdClass();
+      $feeds_item_entity->feeds_item = $feeds_info;
+      feeds_item_info_save($feeds_item_entity, $original_entity_wrapper->getIdentifier());
+      break;
+    }
+  }
+}
+
+/**
+ * Implements hook_file_delete().
+ */
+function souriau_master_file_import_file_delete($file) {
+  souriau_master_file_import_file_entity_presave_process($file, 'file', 'delete');
+}
+
+/**
+ * Implements hook_mailkeys().
+ */
+function souriau_master_file_import_mailkeys() {
+  return [
+    'import_started' => t('Send Notify message about starting import.', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'import_finished' => t('Send Notify message about finishing import.', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+}
+
+/**
+ * Implements hook_mail_edit_text().
+ */
+function souriau_master_file_import_mail_edit_text($key, $language) {
+  $text = [];
+  // Implement default value.
+  $text['subject'] = _souriau_common_mail_text($key . '_subject', $language);
+  $text['body'] = _souriau_common_mail_text($key . '_body', $language);
+  return $text;
+}
+
+/**
+ * Implements hook_mail().
+ */
+function souriau_master_file_import_mail($key, &$message, $params) {
+  $language = isset($message['language']) ? $message['language'] : NULL;
+  $message['subject'] = _souriau_common_mail_text($key . '_subject', $language, $params);
+  $message['body'] = _souriau_common_mail_text($key . '_body', $language, $params);
+}
+
+/**
+ * Mail subject for import_started.
+ *
+ * @see _souriau_common_mail_text()
+ */
+function _souriau_master_file_import_mail_import_started_subject() {
+  return 'Import started of MDR on [site:url] on [current-date:souriau_mf_import_date]';
+}
+
+/**
+ * Mail body for import_started.
+ *
+ * @see _souriau_common_mail_text()
+ */
+function _souriau_master_file_import_mail_import_started_body() {
+  return 'Import is started';
+}
+
+/**
+ * Mail subject for import_finished.
+ *
+ * @see _souriau_common_mail_text()
+ */
+function _souriau_master_file_import_mail_import_finished_subject() {
+  return 'Import finished of MDR on [site:url] on [current-date:souriau_mf_import_date]';
+}
+
+/**
+ * Mail body for import_finished.
+ *
+ * @see _souriau_common_mail_text()
+ */
+function _souriau_master_file_import_mail_import_finished_body() {
+  return 'Import is finished';
+}
+
+/**
+ * Helper function for notification.
+ *
+ * @param string $import_status
+ *   Import status: started||finished.
+ */
+function souriau_master_file_import_notification($import_status) {
+  if (!in_array($import_status, ['started', 'finished'])) {
+    return;
+  }
+
+  $all_recipients = souriau_master_file_import_prepare_recipients();
+  if (!$all_recipients) {
+    return;
+  }
+  $default_lang = [];
+  foreach ($all_recipients as $langcode => $recipients) {
+    if ($langcode == SOURIAU_COMMON_VAR_DEFAULT_LNG) {
+      $default_lang = array_merge($default_lang, $recipients);
+      continue;
+    }
+    if ($recipient_language = domain_locale_language_load($langcode)) {
+      drupal_mail('souriau_master_file_import', 'import_' . trim($import_status, implode(',', $recipients)), $recipient_language);
+    }
+    else {
+      $default_lang = array_merge($default_lang, $recipients);
+    }
+  }
+  if (!empty($default_lang)) {
+    drupal_mail('souriau_master_file_import', 'import_' . $import_status, trim(implode(',', $default_lang)), language_default());
+  }
+}
+
+/**
+ * Recipient Getter for inform about import.
+ */
+function souriau_master_file_import_prepare_recipients() {
+  $configuration = SOURIAU_IMPORT_EMAIL;
+  if (empty($configuration)) {
+    return FALSE;
+  }
+  $lines = explode(PHP_EOL, $configuration);
+  $ret = [];
+  foreach (array_filter($lines) as $recipient) {
+    if (strpos($recipient, '|') === FALSE) {
+      $ret[SOURIAU_COMMON_VAR_DEFAULT_LNG][] = trim($recipient);
+      continue;
+    }
+    $recipient = explode('|', $recipient);
+    $to = array_shift($recipient);
+    $langcode = array_shift($recipient);
+    $ret[$langcode][] = trim($to);
+  }
+  return $ret;
+}

@@ -1,0 +1,9 @@
+name = Souriau Tools
+description = Tools CT integration
+core = 7.x
+package = SOURIAU
+php = 5.2.4
+version = 7.x-1.0
+
+; CT tool
+dependencies[] = souriau_ct_tool

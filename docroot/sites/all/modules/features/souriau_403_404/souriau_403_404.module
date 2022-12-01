@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau 403 & 404 feature.
+ */
+
+include_once 'souriau_403_404.features.inc';

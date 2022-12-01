@@ -1,0 +1,28 @@
+name = Souriau
+description = Soriau Frontend theme.
+core = 7.x
+base theme = qtheme
+
+;stylesheets[all][] = html/css/system.css
+stylesheets[all][] = html/css/vendor.css
+stylesheets[all][] = html/css/screen.css
+stylesheets[all][] = style.css
+
+scripts[] = html/js/modernizr.js
+scripts[] = html/js/vendor.js
+scripts[] = html/js/jcf.select.js
+scripts[] = html/js/jcf.number.js
+; deprecated
+;scripts[] = html/js/jcf.radio.js
+;scripts[] = html/js/jcf.checkbox.js
+scripts[] = html/js/jquery.editable.min.js
+scripts[] = html/js/fastclick.js
+scripts[] = html/js/jcf.file.js
+
+scripts[] = html/js/behaviors/custom.js
+scripts[] = js/modules/ctools/js/modal.js
+;scripts[] = html/js/behaviors/example-with-settings.js
+
+; Devs override.
+scripts[] = js/souriau_main.js
+scripts[] = js/masonry.js

@@ -1,0 +1,16 @@
+name = Draft moderation
+description = Provides special logic for content moderation.
+core = 7.x
+package = SOURIAU
+php = 5.2.4
+version = 7.x-1.0
+dependencies[] = field_ui
+dependencies[] = entity_translation
+files[] = includes/translation.handler.node.inc
+files[] = includes/translation.handler.product.inc
+files[] = views/draft_moderation_views_handler_filter_workflow.inc
+files[] = views/draft_moderation_views_handler_field_workflow.inc
+files[] = views/draft_moderation_views_handler_field_publish_link.inc
+files[] = views/draft_moderation_views_handler_field_unpublish_link.inc
+files[] = views/draft_moderation_views_handler_field_status.inc
+files[] = views/draft_moderation_views_handler_translation_relationship.inc

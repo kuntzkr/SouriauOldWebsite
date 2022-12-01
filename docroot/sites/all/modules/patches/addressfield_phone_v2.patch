@@ -1,0 +1,45 @@
+diff --git a/plugins/format/phone.inc b/plugins/format/phone.inc
+index 7b463fe..c58f2a3 100644
+--- a/plugins/format/phone.inc
++++ b/plugins/format/phone.inc
+@@ -18,7 +18,8 @@ $plugin = array(
+  * @see CALLBACK_addressfield_format_callback()
+  */
+ function addressfield_format_phone_generate(&$format, $address, $context = array()) {
+-  if ($context['mode'] == 'form' && !empty($address['country'])) {
++  if ($context['mode'] == 'form') {
++    // if ($context['mode'] == 'form' && !empty($address['country'])) {.
+     $format['phone_block'] = array(
+       '#type' => 'addressfield_container',
+       '#attributes' => array('class' => array('custom-block')),
+@@ -66,7 +67,7 @@ function addressfield_format_phone_generate(&$format, $address, $context = array
+         '#default_value' => isset($address['mobile_number']) ? $address['mobile_number'] : '',
+       );
+     }
+-    if (!$settings || $settings['fax']) {
++    if (!$settings || isset($settings['fax'])) {
+       $format['phone_block']['fax_number'] = array(
+         '#title' => t('Fax Number'),
+         '#size' => 15,
+diff --git a/views/handlers/addressfield_phone_handler_field_address_phone_nr.inc b/views/handlers/addressfield_phone_handler_field_address_phone_nr.inc
+index 5a576a3..669105c 100644
+--- a/views/handlers/addressfield_phone_handler_field_address_phone_nr.inc
++++ b/views/handlers/addressfield_phone_handler_field_address_phone_nr.inc
+@@ -46,13 +46,15 @@ class addressfield_phone_handler_field_address_phone_nr extends views_handler_fi
+    * Render the addresfields phone field.
+    */
+   public function render($values) {
+-    $phoneNrs = unserialize($this->get_value($values))
+-      + array(
++    $phoneNrs = $this->get_value($values);
++    $phoneNrs = isset($phoneNrs) ? unserialize($phoneNrs) : array();
++    $phoneNrs += array(
+         'phone_number' => '',
+         'phone_number_extension' => '',
+         'mobile_number' => '',
+         'fax_number' => '',
+       );
++
+     switch ($this->options['selected_phone_type']) {
+       case 1:
+         return $phoneNrs['phone_number'];

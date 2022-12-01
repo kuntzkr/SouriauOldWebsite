@@ -1,0 +1,84 @@
+.b-themes-list {
+  background: $grey2;
+  padding: 42px 0 30px;
+
+  @include media("<desktop") {
+    padding: 42px 0 48px;
+  }
+
+  @include media("<tablet") {
+    padding: 46px 0 60px;
+  }
+
+  .items {
+    margin: 0 -10px;
+
+    @include media("<desktop") {
+      margin: 0 -7px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 -10px;
+    }
+  }
+
+  .item {
+    width: 220px;
+    height: 161px;
+    background-color: white;
+    box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+    text-align: center;
+    display: table;
+    float: left;
+    @include box-sizing(border-box);
+    padding: 10px;
+    margin: 0 10px 22px;
+    text-decoration: none;
+    @include transition(all 0.3s ease-in-out);
+
+    @include media("<desktop") {
+      width: 233px;
+      margin: 0 7px 12px;
+    }
+
+    @include media("<tablet") {
+      height: 96px;
+      margin: 0 0 4px;
+      width: 100%;
+      float: none;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      text-decoration: none;
+      background: $blue2;
+      color: $white;
+
+      h5, .b-count {
+        color: $white;
+      }
+    }
+
+    &:active {
+      box-shadow: 0 11px 22px rgba(169, 169, 169, 0.3);
+    }
+  }
+
+  .b-align {
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  h5 {
+    margin: 0 0 7px;
+  }
+
+  .b-count {
+    color: $grey;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    display: block;
+    margin: 0 0 2px;
+  }
+}

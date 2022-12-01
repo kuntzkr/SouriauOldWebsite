@@ -1,0 +1,291 @@
+<?php
+
+/**
+ * @file
+ * Souriau_site install hooks.
+ */
+
+/**
+ * Change old language prefix.
+ */
+function souriau_site_install() {
+  db_update('languages')->fields(array(
+    'prefix' => 'old-en',
+  ))
+    ->condition('language', 'en')
+    ->condition('enabled', 0)
+    ->execute();
+}
+
+/**
+ * Batch Update content.
+ */
+function souriau_site_update_7001(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    // Init batch: Set `max` and `progress`.
+
+    // Find how many content items to update.
+    $q = db_select('node', 'n')
+      ->fields('n', array('nid'))
+      ->condition('type', 'productrange');
+    $q = $q->execute()->fetchCol();
+
+    $sandbox['result'] = $q;
+    $sandbox['max'] = count($sandbox['result']);
+    $sandbox['progress'] = 0;
+  }
+
+  $limit = variable_get('souriau_site_remove_redirect_limit', 50);
+  for ($i = 1; $i <= $limit; $i++) {
+    if (!empty($sandbox['result'])) {
+      $id = array_shift($sandbox['result']);
+      $node = node_load($id);
+      $title = _souriau_common_get_title($node);
+
+      // Parent subcategory.
+      $parent_subcategory = _souriau_common_get_parent_node_id($id, 'subcategory');
+      if (!empty($parent_subcategory)) {
+        $parent_node = node_load($parent_subcategory);
+        $sub_cat_title = _souriau_common_get_title($parent_node);
+        $sub_cat_title .= '_';
+      }
+
+      $language = entity_language('node', $node);
+      $node_wrapper = entity_metadata_wrapper('node', $node)->language($language);
+      $node_wrapper->field_pr_code_p->set($sub_cat_title . $title);
+      $node_wrapper->save();
+
+      $sandbox['progress']++;
+    }
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+  if ($sandbox['#finished'] === TRUE) {
+    drupal_set_message(t('Updated !count Product Range nodes. DONE!', array('!count' => $sandbox['progress'])));
+  }
+}
+
+/**
+ * Batch Update content.
+ *
+ * Update code_P.
+ */
+function souriau_site_update_7002(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    // Init batch: Set `max` and `progress`.
+
+    // Find how many content items to update.
+    $q = db_select('node', 'n')
+      ->fields('n', array('nid'))
+      ->condition('type', 'product');
+    $q = $q->execute()->fetchCol();
+
+    $sandbox['result'] = $q;
+    $sandbox['max'] = count($sandbox['result']);
+    $sandbox['progress'] = 0;
+  }
+
+  $limit = variable_get('souriau_site_remove_redirect_limit', 50);
+  for ($i = 1; $i <= $limit; $i++) {
+    if (!empty($sandbox['result'])) {
+      $id = array_shift($sandbox['result']);
+      $node = node_load($id);
+      $language = entity_language('node', $node);
+      $node_wrapper = entity_metadata_wrapper('node', $node)->language($language);
+      $sku = $node_wrapper->field_sku_products->value();
+      if (!empty($sku)) {
+        $node_wrapper->field_code_p->set($sku->sku);
+        $node_wrapper->save();
+      }
+      $sandbox['progress']++;
+    }
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+  if ($sandbox['#finished'] === TRUE) {
+    $message = t('Updated !count Products nodes. DONE!', array('!count' => $sandbox['progress']));
+    watchdog('updb', $message);
+    drupal_set_message($message);
+  }
+}
+
+/**
+ * Batch Delete content.
+ *
+ * Delete duplicate.
+ */
+function souriau_site_update_7004(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    // Init batch: Set `max` and `progress`.
+
+    // Find how many content items to update.
+    $q = db_select('field_data_field_code_p', 'p')
+      ->fields('p', array('field_code_p_value'))
+      ->groupBy('field_code_p_value');
+    $q = $q->execute()->fetchCol();
+
+    $sandbox['result'] = $q;
+    $sandbox['max'] = count($sandbox['result']);
+    $sandbox['progress'] = 0;
+  }
+
+  $limit = variable_get('souriau_site_remove_redirect_limit', 50);
+  for ($i = 1; $i <= $limit; $i++) {
+    if (empty($sandbox['result'])) {
+      // Nothing to do.
+      $sandbox['#finished'] = TRUE;
+      return;
+    }
+    $sku = array_shift($sandbox['result']);
+    $count = db_select('field_data_field_code_p', 'p')
+      ->fields('p', array('entity_id'))
+      ->condition('field_code_p_value', $sku, '=');
+    $count = $count->execute()->fetchCol();
+    if (count($count) > 2) {
+      $node = node_load(array_shift($count));
+      $edition_node_id = $node->edition_id;
+      foreach ($count as $key => $nid) {
+        if ($nid == $edition_node_id) {
+          unset($count[$key]);
+        }
+      }
+    }
+    node_delete_multiple($count);
+    $sandbox['progress']++;
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+  if ($sandbox['#finished'] === TRUE) {
+    $message = t('Deleted !count Products nodes. DONE!', array('!count' => $sandbox['progress']));
+    watchdog('updb', $message);
+    drupal_set_message($message);
+  }
+}
+
+/**
+ * Update Language table. Add field source.
+ */
+function souriau_site_update_7005() {
+  if (!db_field_exists('languages', 'source')) {
+    db_add_field('languages', 'source', array(
+      'description' => "Source language code, e.g. 'en' or 'fr-fr'.",
+      'type' => 'varchar',
+      'length' => 12,
+      'not null' => FALSE,
+      'default' => '',
+    ));
+  }
+}
+
+/**
+ * Batch Update content.
+ *
+ * Update commerce price.
+ */
+function souriau_site_update_7006(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    // Init batch: Set `max` and `progress`.
+
+    // Find how many content items to update.
+    $q = new EntityFieldQuery();
+
+    $q->entityCondition('entity_type', 'commerce_product')
+      ->entityCondition('bundle', 'sku')
+      ->addMetaData('account', user_load(1));
+
+    $result = $q->execute();
+
+    if (!isset($result['commerce_product'])) {
+      return;
+    }
+
+    $sandbox['result'] = $result['commerce_product'];
+    $sandbox['max'] = count($sandbox['result']);
+    $sandbox['progress'] = 0;
+  }
+
+  $limit = variable_get('souriau_site_remove_redirect_limit', 50);
+  for ($i = 1; $i <= $limit; $i++) {
+    if (!empty($sandbox['result'])) {
+      $item = array_shift($sandbox['result']);
+      $id = $item->product_id;
+      $product = commerce_product_load($id);
+      if (!empty($product->commerce_price)) {
+        $sandbox['progress']++;
+        continue;
+      }
+
+      $product->commerce_price[LANGUAGE_NONE][] = [
+        'amount' => 0,
+        'currency_code' => 'USD',
+        'data' => ['components' => []]
+      ];
+
+      commerce_product_save($product);
+
+      $sandbox['progress']++;
+    }
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+  if ($sandbox['#finished'] === TRUE) {
+    $message = t('Updated !count Products. DONE!', array('!count' => $sandbox['progress']));
+    watchdog('updb', $message);
+    drupal_set_message($message);
+  }
+}
+
+/**
+ * Disable default language.
+ */
+function souriau_site_update_7011(&$sandbox) {
+  souriau_site_install();
+}
+
+/**
+ * Assign document type for all existing 3d files.
+ */
+function souriau_site_update_7012(&$sandbox) {
+  $term = taxonomy_get_term_by_name('3D model');
+  if (empty($term)) {
+    return;
+  }
+  $term = reset($term);
+  $term_id = $term->tid;
+
+  if (!isset($sandbox['progress'])) {
+    // Find how many files to update.
+    $q = db_select('file_managed', 'fm')
+      ->fields('fm', ['fid']);
+    $q->leftJoin('field_data_field_document_type', 'fd', 'fm.fid = fd.entity_id');
+    $q->condition(db_or()->isNull('fd.entity_id')->condition('fd.entity_id', $term_id, '!='))
+      ->condition('fm.filename', '%.stp', 'LIKE');
+    $q = $q->execute()->fetchCol();
+
+    $sandbox['result'] = $q;
+    $sandbox['max'] = count($sandbox['result']);
+    $sandbox['progress'] = 0;
+  }
+
+  $limit = variable_get('souriau_site_remove_redirect_limit', 50);
+  for ($i = 1; $i <= $limit; $i++) {
+    if (empty($sandbox['result'])) {
+      // Nothing to do.
+      $sandbox['#finished'] = TRUE;
+      return;
+    }
+    $fid = array_shift($sandbox['result']);
+    $file_wrapper = entity_metadata_wrapper('file', $fid);
+    $file_wrapper->field_document_type[] = $term_id;
+    $file_wrapper->save();
+
+    $sandbox['progress']++;
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+  if ($sandbox['#finished'] === TRUE) {
+    $message = t('Updated !count stp files. DONE!', array('!count' => $sandbox['progress']));
+    watchdog('updb', $message);
+    drupal_set_message($message);
+  }
+}

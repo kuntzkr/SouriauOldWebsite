@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Entity Distributor feature.
+ */
+
+include_once 'souriau_entity_distributor.features.inc';

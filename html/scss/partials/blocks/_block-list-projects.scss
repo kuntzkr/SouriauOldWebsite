@@ -1,0 +1,167 @@
+.b-list-projects {
+  border-top: 1px solid #f0f1f4;
+  padding: 0 0 68px;
+
+  @include media("<desktop") {
+    padding: 0 0 45px;
+    margin: 0 -20px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 49px;
+  }
+
+  .item {
+    display: block;
+    border-bottom: 1px solid #f0f1f4;
+    padding: 30px 0 39px;
+
+    @include media("<desktop") {
+      padding: 27px 20px 38px;
+    }
+
+    @include media("<tablet") {
+      padding: 12px 30px 40px;
+    }
+  }
+
+  .pic {
+    float: left;
+    margin: 0 30px 0 20px;
+    width: 190px;
+    min-height: 20px;
+
+    @include media("<desktop") {
+      margin: 0px 23px 0 13px;
+      width: 155px;
+    }
+
+    @include media("<tablet") {
+      display: block;
+      float: none;
+      width: auto;
+      margin: 0 0 18px;
+      min-height: 0px;
+    }
+
+    a {
+      display: block;
+    }
+
+    img {
+      margin: 0 auto;
+    }
+  }
+
+  .w-info {
+    overflow: hidden;
+    position: relative;
+    padding: 9px 50px 0 0;
+
+    @include media("<desktop") {
+      padding: 11px 50px 0 0;
+    }
+
+    @include media("<tablet") {
+      overflow: visible;
+      padding: 0 15px 0 0;
+    }
+  }
+
+  .remove-link {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    -moz-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    -webkit-transform: translateY(-50%);
+
+    @include media("<desktop") {
+      margin: -14px 0 0;
+    }
+
+    @include media("<tablet") {
+      transform: translateY(0);
+      -moz-transform: translateY(0);
+      -ms-transform: translateY(0);
+      -webkit-transform: translateY(0);
+      top: 20px;
+      right: -16px;
+    }
+  }
+
+  .b-main-info {
+    width: 340px;
+    float: left;
+    margin: 0 20px 0 0;
+
+    @include media("<desktop") {
+      width: 291px;
+    }
+
+    @include media("<tablet") {
+      width: auto;
+      float: none;
+      margin: 0 0 30px;
+    }
+  }
+
+  .b-add-info {
+    overflow: hidden;
+  }
+
+  .b-title {
+    color: $blue2;
+    font-family: $avenir-next-regular;
+    font-size: 16px;
+    line-height: 24px;
+    margin: 0 0 2px;
+
+    @include media("<desktop") {
+      margin-top: 2px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+  }
+
+  .b-part-numb {
+    p {
+      padding: 0 0 10px;
+      color: $blue2;
+      font-family: $avenir-next-regular;
+      font-size: 16px;
+      line-height: 24px;
+    }
+  }
+
+  .b-add-info {
+    p {
+      padding: 0;
+    }
+  }
+
+  .b-short-descr, .b-notes {
+    p {
+      padding: 0 0 3px;
+    }
+  }
+
+  .link-search-small {
+    margin: 4px 0 43px;
+
+    @include media("<desktop") {
+      margin: 12px 0 0;
+    }
+  }
+
+  .b-notes-title {
+    color: $grey;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+  }
+}

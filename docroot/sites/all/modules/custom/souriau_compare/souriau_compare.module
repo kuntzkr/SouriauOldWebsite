@@ -1,0 +1,16 @@
+<?php
+/**
+ * @file
+ * Souriau Compare Part Numbers.
+ */
+
+require_once 'souriau_compare.inc';
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_compare_ctools_plugin_directory($owner, $plugin_type) {
+  if ($owner == 'panels' || $owner == 'ctools' || $owner == 'page_manager') {
+    return 'plugins/' . $plugin_type;
+  }
+}

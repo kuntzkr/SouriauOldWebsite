@@ -1,0 +1,106 @@
+.w-breadcrumb {
+  display: block;
+  padding: 25px 0 22px;
+
+  .w-banner-block & {
+    position: relative;
+    z-index: 1;
+  }
+
+  @include media("<desktop") {
+    padding: 18px 0 10px;
+  }
+
+  @include media("<tablet") {
+    padding: 14px 0 18px;
+  }
+
+  .container {
+    @include media("<tablet") {
+      display: none;
+    }
+  }
+
+  .breadcrumb {
+    background: none;
+    display: block;
+    padding: 0;
+    margin: 0;
+
+    ul {
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      display: inline-block;
+      color: $grey3;
+      font-size: 11px;
+      letter-spacing: 1px;
+      line-height: 18px;
+      text-transform: uppercase;
+      padding: 0 18px 0 0;
+      vertical-align: top;
+
+
+      &:before {
+        position: absolute;
+        right: 2px;
+        top: 50%;
+        content: "";
+        background: url('../svg/breadcrumb-arrow.svg');
+        background-size: 100% 100%;
+        width: 7px;
+        height: 10px;
+        margin: -5px 0 0;
+        left: auto;
+      }
+
+      &.without-link {
+        &:before, &:after {
+          display: none;
+          padding-right: 0;
+        }
+      }
+    }
+
+    &.b-white li {
+      color: $white;
+
+      &:before {
+        background: url('../svg/breadcrumb-arrow-white.svg');
+      }
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .b-share {
+    float: right;
+    margin-right: -3px;
+  }
+
+  &.show-share {
+    @include media("<tablet") {
+      .container {
+        display: block;
+      }
+
+      .breadcrumb {
+        display: none;
+      }
+
+      .b-share {
+        margin: 0 -6px 23px 0;
+      }
+    }
+  }
+}

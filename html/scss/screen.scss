@@ -1,0 +1,41 @@
+@charset "UTF-8";
+@import "bourbon";
+@import "partials/helpers";
+
+@import "partials/reset";
+
+@import "partials/fonts";
+@import "partials/sprites";
+
+@import "partials/custom-bootstrap-variables";
+
+// Vendor styles settings.
+@import "partials/vendor-settings";
+
+// bower:scss
+@import "bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
+@import "bower_components/slick-carousel/slick/slick.scss";
+@import "bower_components/slick-carousel/slick/slick-theme.scss";
+@import "bower_components/include-media/dist/_include-media.scss";
+// endbower
+
+// Vendor styles fixes and overrides.
+@import "partials/vendor-overrides";
+
+// Drupal system styles fixes and overrides.
+@import "partials/system-overrides";
+
+// Main styles.
+@import "partials/base";
+@import "partials/helpers-styles";
+
+@import "partials/header";
+@import "partials/nav";
+
+@import "partials/buttons";
+@import "partials/forms";
+
+@import "partials/blocks";
+
+@import "partials/footer";
+

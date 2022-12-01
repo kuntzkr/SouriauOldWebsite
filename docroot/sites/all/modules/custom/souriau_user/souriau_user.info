@@ -1,0 +1,6 @@
+name = Souriau User
+description = Userzone tools and plugins for SOURIAU.
+core = 7.x
+package = SOURIAU
+
+version = "7.x-0.01"

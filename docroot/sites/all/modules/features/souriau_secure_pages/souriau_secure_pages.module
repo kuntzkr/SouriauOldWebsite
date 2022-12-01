@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Secure Pages feature.
+ */
+
+include_once 'souriau_secure_pages.features.inc';

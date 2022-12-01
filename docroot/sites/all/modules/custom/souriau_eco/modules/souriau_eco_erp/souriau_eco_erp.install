@@ -1,0 +1,89 @@
+<?php
+/**
+ * @file
+ * Install hooks.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function souriau_eco_erp_schema() {
+  $schema = array();
+
+  $schema['souriau_eco_erp'] = array(
+    'description' => 'Holds requests sent to webservices',
+    'fields' => array(
+      'goid' => array(
+        'description' => 'Request ID',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'order_id' => array(
+        'description' => 'Order ID',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => -1,
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'User uid.',
+      ),
+      'service' => array(
+        'description' => 'WebService Name',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'req_data' => array(
+        'description' => 'Request Data',
+        'type' => 'text',
+        'size' => 'big',
+      ),
+      'resp_data' => array(
+        'description' => 'Response Data',
+        'type' => 'text',
+        'size' => 'big',
+      ),
+      'result' => array(
+        'description' => 'Result code',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'status' => array(
+        'description' => 'Status. 1 if succeded',
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => '0',
+      ),
+      'comment' => array(
+        'description' => 'Comments',
+        'type' => 'text',
+        'size' => 'big',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the request was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'The Unix timestamp when this request was updated.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('goid'),
+    'indexes' => array(
+      'order_id' => array('order_id'),
+      'status' => array('status'),
+    ),
+  );
+  return $schema;
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau_eco ERP orders feature.
+ */
+
+include_once 'souriau_eco_erp_orders.features.inc';

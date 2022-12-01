@@ -1,0 +1,895 @@
+<?php
+/**
+ * @file
+ * Souriau Ecommerce module.
+ */
+
+define('SOURIAU_DC_CACHE_BIN', 'cache');
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_dc_menu() {
+  $items['souriau/ajax/download_center/clear'] = [
+    'page callback' => 'souriau_dc_clear_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+  ];
+  $items['souriau/ajax/dc-pager/%/%/%/%/%/%'] = [
+    'title' => 'Search AHAH callback',
+    'page callback' => 'souriau_dc_pager_callback',
+    'page arguments' => [3, 4, 5, 6, 7, 8],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+  ];
+
+  return $items;
+}
+
+/**
+ * Pager callback.
+ *
+ * @param string $range
+ *   Selected ranges.
+ * @param string $brand
+ *   Selected brands.
+ * @param string $application
+ *   Selected applications.
+ * @param string $capability
+ *   Selected capabilities.
+ * @param string $dc_keyword
+ *   Search keyword.
+ * @param string $types
+ *   Selected types.
+ */
+function souriau_dc_pager_callback($range, $brand, $application, $capability, $dc_keyword, $types) {
+  $filters = [
+    'range' => $range,
+    'brand' => $brand,
+    'application' => $application,
+    'capability' => $capability,
+    'language' => 'all',
+    'types' => $types,
+    'dc_keyword' => $dc_keyword,
+  ];
+
+  $results = _souriau_dc_pager_get_items($filters);
+  $ret = array(
+    'html' => '',
+    'next_page' => $results['next_page'],
+  );
+  $ret['html'] = $results['html'];
+
+  drupal_json_output($ret);
+  drupal_exit();
+}
+
+/**
+ * Views entity results render helper.
+ *
+ * @param string $entity_type
+ *   Entity type.
+ * @param array $views_result
+ *   Views results array with items key keyd be entity_id.
+ * @param string $view_mode
+ *   Entity view mode.
+ *
+ * @return string
+ *   Rendered view result.
+ *
+ * @deprecated
+ */
+function souriau_dc_render_views_result_entity($entity_type, $views_result, $view_mode) {
+  $output = '';
+  if (!isset($views_result['items']) || empty($views_result['items'])) {
+    return $output;
+  }
+  $files = entity_load($entity_type, $views_result['items']);
+  $prepared_files = entity_view($entity_type, $files, $view_mode);
+  unset($prepared_files['file']['#sorted']);
+  foreach ($prepared_files['file'] as $file) {
+    $output .= render($file);
+  }
+  return $output;
+}
+
+/**
+ * Pager helper.
+ *
+ * @param array $filters
+ *   Active filters.
+ * @param int $ipp
+ *   Items per page.
+ *
+ * @return array
+ *   Array of founded entities ID.
+ */
+function _souriau_dc_pager_get_items($filters, $ipp = 15) {
+  $ret = [
+    'items' => [],
+    'total' => 0,
+  ];
+  $allowed_filters = [
+    'range',
+    'brand',
+    'application',
+    'capability',
+    'language',
+    'types',
+  ];
+  $prepared_filters = [];
+  foreach ($allowed_filters as $filter_name) {
+    $prepared_filters[$filter_name] = isset($filters[$filter_name]) ? $filters[$filter_name] : 'all';
+  }
+
+  $view = views_get_view('souriau_download_center', TRUE);
+  if (!is_object($view)) {
+    return $ret;
+  }
+  $view->set_display('default');
+  $view->set_arguments(array_values($prepared_filters));
+  if ($filters['dc_keyword'] != 'all') {
+    $view->display['default']->handler->options['filters']['name']['value'] = $filters['dc_keyword'];
+    $view->display['default']->handler->options['filters']['dc_title']['value'] = $filters['dc_keyword'];
+  }
+  $view->set_items_per_page($ipp);
+  $page = isset($_GET['page']) ? (int) $_GET['page'] : 0;
+  $view->set_current_page($page);
+  $view->pre_execute();
+  $view->execute();
+  $view->post_execute();
+
+  $items_from_start = ($view->get_current_page() + 1) * $view->get_items_per_page();
+  $next_page = 0;
+  if ($items_from_start < $view->total_rows) {
+    $next_page = $view->get_current_page() + 1;
+  }
+  $ret['html'] = $view->render('default');
+  $ret['next_page'] = $next_page;
+  return $ret;
+}
+
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function souriau_dc_entity_property_info_alter(&$info) {
+  // Define usage property info for files.
+  $info['file']['properties']['reference_fields'] = [
+    'type' => 'list<text>',
+    'label' => t('Reference fields'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_reference_fields_getter_callback',
+  ];
+  $info['file']['properties']['dc_reference_capability'] = [
+    'type' => 'list<node>',
+    'label' => t('Souriau: Reference Capability Nid'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_reference_capatibility_getter_callback',
+  ];
+  $info['file']['properties']['dc_reference_productrange'] = [
+    'type' => 'list<node>',
+    'label' => t('Souriau: Reference Product Range Nid'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_reference_productrange_getter_callback',
+  ];
+  $info['file']['properties']['dc_reference_application'] = [
+    'type' => 'list<node>',
+    'label' => t('Souriau: Reference Application Nid'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_reference_application_getter_callback',
+  ];
+  $info['file']['properties']['dc_weight'] = [
+    'type' => 'integer',
+    'label' => t('Souriau: Sort weight'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_weight_getter_callback',
+  ];
+  $info['file']['properties']['dc_title'] = [
+    'type' => 'text',
+    'label' => t('Souriau: Title for text search'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_title_getter',
+  ];
+  $info['file']['properties']['dc_dtype_weight'] = [
+    'type' => 'integer',
+    'label' => t('Souriau: Dc document type weight for sorting'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_dc_document_type_weight_getter',
+  ];
+}
+
+/**
+ * Value getter callback for title field.
+ */
+function souriau_dc_title_getter($file, array $options, $name, $type, $info) {
+  global $language;
+  $wrapper = entity_metadata_wrapper('file', $file);
+  return $wrapper->language($language->language)->title_field->value();
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_dc_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' || $module == 'ctools' || $module == 'entityreference' || $module == 'addressfield') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_dc_reference_capatibility_getter_callback($file, array $options, $name, $type, $info) {
+  $ref_via = souriau_dc_reference_fields_getter_callback($file, $options, $name, $type, $info);
+  return souriau_dc_filter_usage($ref_via, 'node', 'capability', 'field_downloads');
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_dc_reference_productrange_getter_callback($file, array $options, $name, $type, $info) {
+  $ref_via = souriau_dc_reference_fields_getter_callback($file, $options, $name, $type, $info);
+  return souriau_dc_filter_usage($ref_via, 'node', 'productrange', 'field_downloads');
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_dc_reference_application_getter_callback($file, array $options, $name, $type, $info) {
+  $ref_via = souriau_dc_reference_fields_getter_callback($file, $options, $name, $type, $info);
+  return souriau_dc_filter_usage($ref_via, 'node', 'application', 'field_downloads');
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_dc_weight_getter_callback($file, array $options, $name, $type, $info) {
+  if ($file->filemime == 'application/pdf') {
+    // Show PDF first.
+    return 0;
+  }
+  return 1;
+}
+
+/**
+ * Filter usage by types helper.
+ *
+ * Filtered $data should belong to given entity_type bundle and field.
+ *
+ * @param array $data
+ *   Data for filter from souriau_dc_reference_fields_getter_callback().
+ * @param string $entity_type
+ *   Requested entity_type type.
+ * @param string $bundle
+ *   Requested bundle.
+ * @param string $field
+ *   Requested field.
+ *
+ * @return array
+ *   Filtered data.
+ */
+function souriau_dc_filter_usage(array $data, $entity_type, $bundle, $field) {
+  $results = [];
+  if (empty($data)) {
+    return $results;
+  }
+  foreach ($data as $imploded_value) {
+    list($splited_entity_type, $splited_bundle, $splited_field, $splited_entity_id) = explode(':', $imploded_value);
+    // Validate if given file is belong to requested entity_type bundle and field.
+    if ($splited_entity_type == $entity_type && $splited_bundle == $bundle && $splited_field == $field) {
+      $results[$splited_entity_id] = $splited_entity_id;
+    }
+  }
+
+  return $results;
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ *
+ * Return array of elements in format
+ * entity_type:bundle:referenced_field:entity_id.
+ */
+function souriau_dc_reference_fields_getter_callback($file, array $options, $name, $type, $info) {
+  $reference_fields = &drupal_static(__FUNCTION__, array());
+  $index_key = $file->fid . '_' . $type;
+  if (isset($reference_fields[$index_key])) {
+    return $reference_fields[$index_key];
+  }
+  // Retrieve all entities that reference the file entity_type.
+  $usage = souriau_dc_get_usage($file, $type);
+  $sku_fields = ['field_sku_attachments', 'field_sku_3d_model'];
+  $reference_fields[$index_key] = [];
+  foreach ($usage as $field_name => $using_entities) {
+    foreach ($using_entities as $using_entity) {
+      if ($using_entity->bundle == 'productrange' && empty($using_entity->tid)) {
+        continue;
+      }
+      $item_data = [
+        'node',
+        $using_entity->bundle,
+        in_array($field_name, $sku_fields) ? 'field_downloads' : $field_name,
+        empty($using_entity->tid) ? $using_entity->entity_id : $using_entity->tid,
+      ];
+      $imploded_data = implode(':', $item_data);
+      $reference_fields[$index_key][$imploded_data] = $imploded_data;
+    }
+  }
+  // Return the entity_type ids of the entities that reference the file entity_type.
+  return $reference_fields[$index_key];
+}
+
+/**
+ * File usage getter by fields with age FIELD_LOAD_CURRENT.
+ */
+function souriau_dc_get_usage($file, $type) {
+  return souriau_dc_file_get_file_references($file, NULL, FIELD_LOAD_CURRENT, [$type, 'media']);
+}
+
+/**
+ * Retrieves a list of references to a file.
+ *
+ * @see file_get_file_references()
+ */
+function souriau_dc_file_get_file_references($file, $field = NULL, $age = FIELD_LOAD_REVISION, $field_type = ['file']) {
+  $references = &drupal_static(__FUNCTION__, array());
+  $imploded_field_types = implode(':', $field_type);
+  if (isset($references[$imploded_field_types]['references'][$file->fid]) && !isset($field)) {
+    return array_filter($references[$imploded_field_types]['references'][$file->fid]);
+  }
+
+  if (isset($references[$imploded_field_types]) && !isset($field)) {
+    $fields = $references[$imploded_field_types];
+    unset($fields['references']);
+  }
+  else {
+    $fields = isset($field) ? array($field['field_name'] => $field) : field_info_fields();
+    $references[$imploded_field_types] = [];
+  }
+  $sku_fields = ['field_sku_attachments', 'field_sku_3d_model'];
+  foreach ($fields as $field_name => $file_field) {
+    if ((empty($field_type) || in_array($file_field['type'], $field_type)) && !isset($references[$imploded_field_types]['references'][$file->fid][$field_name])) {
+      if (in_array($field_name, $sku_fields)) {
+        $sql = "SELECT node_field_data_field_parent_product_range.nid AS entity_id, node_field_data_field_parent_product_range.type AS bundle, pr_series.field_product_series_tid AS tid, 'commerce_product' AS type
+FROM node node
+LEFT JOIN field_data_field_parent_product_range field_data_field_parent_product_range ON node.nid = field_data_field_parent_product_range.entity_id AND field_data_field_parent_product_range.entity_type = 'node'
+LEFT JOIN node node_field_data_field_parent_product_range ON field_data_field_parent_product_range.field_parent_product_range_target_id = node_field_data_field_parent_product_range.nid
+LEFT JOIN field_data_field_sku_products field_data_field_sku_products ON node.nid = field_data_field_sku_products.entity_id AND field_data_field_sku_products.entity_type = 'node'
+LEFT JOIN field_data_field_product_series pr_series ON node_field_data_field_parent_product_range.nid = pr_series.entity_id
+WHERE (( (field_data_field_sku_products.field_sku_products_product_id IN (SELECT field_table.entity_id AS entity_id
+FROM field_data_{$field_name} AS field_table
+WHERE  (field_table.{$field_name}_fid = {$file->fid}) AND (field_table.deleted = '0'))) )AND(( (node_field_data_field_parent_product_range.status = '1') AND (node_field_data_field_parent_product_range.type IN  ('productrange', 'productrangehub')) )))";
+      }
+      else {
+        $sql = "SELECT DISTINCT field_table.entity_id AS entity_id, field_table.revision_id AS revision_id, field_table.bundle AS bundle, pr_series.field_product_series_tid AS tid, field_table.entity_type AS type
+FROM field_data_{$field_name} AS field_table
+LEFT JOIN node ON node.nid = field_table.entity_id
+LEFT JOIN field_data_field_product_series pr_series ON node.nid = pr_series.entity_id
+WHERE  (field_table.{$field_name}_fid = {$file->fid}) AND (field_table.deleted = '0') AND (node.status = '1')";
+      }
+      $query = db_query($sql);
+
+      $references[$imploded_field_types]['references'][$file->fid][$field_name] = $query->fetchAll();
+      $references[$imploded_field_types][$field_name] = $file_field;
+    }
+  }
+
+  return isset($field)
+  ? $references[$imploded_field_types]['references'][$file->fid][$field['field_name']]
+  : array_filter($references[$imploded_field_types]['references'][$file->fid]);
+}
+
+/**
+ * Implements hook_search_api_index_items_alter().
+ */
+function souriau_dc_search_api_index_items_alter(array &$items, SearchApiIndex $index) {
+  if ($index->machine_name != 'download_center_index') {
+    foreach ($items as $id => $item) {
+      if (isset($item->field_do_not_index_in_solr) && !empty($item->field_do_not_index_in_solr[LANGUAGE_NONE][0]['value'])) {
+        unset($items[$id]);
+      }
+    }
+    return;
+  }
+
+  // This work only for index download_center_index.
+  foreach (element_children($items) as $item_id) {
+    // Discard unpublished and files from MDR from indexing.
+    if (empty($items[$item_id]->field_document_type) || !$items[$item_id]->published || stristr($items[$item_id]->uri, 'feeds/media/multimedia') !== FALSE) {
+      unset($items[$item_id]);
+      continue;
+    }
+  }
+}
+
+/**
+ * Filter settings getter.
+ *
+ * @return array;
+ *   Filter settings array keyed by filter name.
+ */
+function souriau_dc_filter_settings() {
+  return [
+    'application' => [
+      'solr_field' => 'dc_reference_application',
+      'solr_field_type' => 'node',
+      'placeholder' => t('All applications', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    ],
+    'range' => [
+      'solr_field' => 'dc_reference_productrange',
+      'solr_field_type' => 'view',
+      'placeholder' => t('All product range', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    ],
+    'tags' => [
+      'solr_field' => 'field_document_type',
+      'solr_field_type' => 'taxonomy_term',
+    ],
+  ];
+}
+
+/**
+ * Cached filters values getter.
+ */
+function souriau_dc_get_cached_filter_values($field_info, $filter_values = []) {
+  global $language;
+  $values = [];
+  $result = &drupal_static(__FUNCTION__, array());
+
+  // Cache ID.
+  $cid = implode(':', [$language->language, 'dc_form_options']);
+
+  // Loading results from the cache if it isn't present in static.
+  if (empty($result)) {
+    $cache = cache_get($cid, SOURIAU_DC_CACHE_BIN);
+    $result = !empty($cache) ? unserialize($cache->data) : [];
+  }
+  // Prepare RAW filters.
+  foreach ($filter_values as $data) {
+    if ($data['count'] > 0) {
+      $filter = trim($data['filter'], '"');
+      $values[$filter] = $filter;
+    }
+  }
+
+  if (!empty($result[$field_info['solr_field_type']][$field_info['solr_field']])) {
+    // Result is present in the cache.
+    // Check difference.
+    $diff = array_diff_key($values, $result[$field_info['solr_field_type']][$field_info['solr_field']]);
+    if (empty($diff)) {
+      // Return cached result.
+      return $result[$field_info['solr_field_type']][$field_info['solr_field']];
+    }
+    // Add missed values.
+    $result[$field_info['solr_field_type']][$field_info['solr_field']] += souriau_dc_get_filter_values($field_info, $diff);
+  }
+  else {
+    // Update all results.
+    $result[$field_info['solr_field_type']][$field_info['solr_field']] = souriau_dc_get_filter_values($field_info, $values);
+  }
+  // Set/Update cache for 24 hours.
+  cache_set($cid, serialize($result), SOURIAU_DC_CACHE_BIN, 3600 * 24);
+  return $result[$field_info['solr_field_type']][$field_info['solr_field']];
+}
+
+/**
+ * Filters values getter.
+ *
+ * @param array $field_info
+ *   Field info array @see souriau_dc_filter_settings() for details.
+ * @param array $values
+ *   Filter values @see souriau_dc_get_cached_filter_values().
+ *
+ * @return array
+ *   Filter allowed values.
+ */
+function souriau_dc_get_filter_values($field_info, $values = []) {
+  $result = [];
+  switch ($field_info['solr_field_type']) {
+    case 'raw':
+      $result = array_combine($values, $values);
+      if ($field_info['solr_field'] == 'field_brand') {
+        $result = souriau_dc_get_field_allowed_values($field_info['solr_field'], $values);
+      }
+      break;
+
+    case 'view':
+      $tids = implode(',', $values);
+      $view_result = views_get_view_result('souriau_query_get_productrange_by_series_code', 'default', $tids);
+      foreach ($view_result as $key => $view_row) {
+        if (empty($result[$view_row->taxonomy_term_data_field_data_field_product_series_tid . '_' . $key])) {
+          $result[$view_row->taxonomy_term_data_field_data_field_product_series_tid . '_' . $key] = $view_row->node_title;
+        }
+      }
+      break;
+
+    default:
+      $entities = entity_load($field_info['solr_field_type'], $values);
+      foreach ($entities as $entity_id => $entity) {
+        $wrapper = entity_metadata_wrapper($field_info['solr_field_type'], $entity);
+        $result[$entity_id] = $wrapper->label();
+      }
+      break;
+  }
+  return array_filter($result);
+}
+
+/**
+ * Implements hook_form().
+ */
+function souriau_dc_search_form($form, &$form_state) {
+  $facet_settings_variable = 'souriau_common_dc_applications';
+  $facet_settings = variable_get($facet_settings_variable);
+  $visible_facets = [];
+  foreach ($facet_settings as $facet_name => $facet_setting) {
+    if ($facet_setting['enabled'] != 1) {
+      continue;
+    }
+    $node_wrapper = entity_metadata_wrapper('node', $facet_setting['nid']);
+    $nids = [];
+    foreach ($node_wrapper->field_application->value() as $application) {
+      $nids[] = $application->nid;
+    }
+    if (!empty($nids)) {
+      $visible_facets[] = array(
+        'weight' => $facet_setting['weight'],
+        'name' => $facet_name,
+        'nid' => implode('+', $nids)
+      );
+    }
+  }
+
+  uasort($visible_facets, 'drupal_sort_weight');
+  foreach ($visible_facets as $facet) {
+    $visible_application[$facet['nid']] = $facet['name'];
+  }
+
+  $index_name = 'download_center_index';
+  $results = [];
+  $filters = souriau_dc_filter_settings();
+
+  // Create Search_API objects.
+  list($index, $service) = _souriau_common_get_search_api_objects($index_name);
+
+  // Get filters values.
+  $query = new SearchApiQuery($index);
+  $facets = [];
+  foreach ($filters as $filter_field => $field_info) {
+    $facets[$field_info['solr_field']] = [
+      'field' => $field_info['solr_field'],
+      'limit' => 100,
+      'min_count' => 0,
+      'missing' => FALSE,
+    ];
+  }
+  $query->setOption('search_api_facets', $facets);
+  // SET LIMIT, for getting 'facet values' we can use only 1 item for request.
+  $query->range(NULL, 1);
+  // No fields.
+  $query->fields([]);
+  // Filter values.
+  $search_result = $service->search($query);
+  $product_tree = taxonomy_vocabulary_machine_name_load('dc_product_tree');
+  foreach ($filters as $filter_field => $field_info) {
+    $results[$filter_field] = [];
+    if (!empty($search_result['search_api_facets'][$field_info['solr_field']])) {
+      // Convert values to human-readable.
+      $results[$filter_field] = souriau_dc_get_cached_filter_values($field_info, $search_result['search_api_facets'][$field_info['solr_field']]);
+    }
+
+    if (isset($field_info['placeholder'])) {
+      if ($filter_field == 'range') {
+        $final_product_facet = souriau_dc_get_product_facets($product_tree->vid);
+        foreach ($final_product_facet as $facet_parent => $facet_products) {
+          $form['filters'][$filter_field][$facet_parent]['range'] = [
+            '#title' => '',
+            '#type' => 'checkboxes',
+            '#multiple' => TRUE,
+            '#options' => $facet_products,
+            '#attributes' => [
+              'placeholder' => $field_info['placeholder'],
+            ],
+            '#ajax' => [
+              'callback' => 'souriau_dc_search_callback',
+            ],
+          ];
+        }
+        continue;
+      }
+      $form['filters'][$filter_field] = [
+        '#title' => '',
+        '#type' => 'checkboxes',
+        '#multiple' => TRUE,
+        '#options' => $results[$filter_field],
+        '#attributes' => [
+          'placeholder' => $field_info['placeholder'],
+        ],
+        '#ajax' => [
+          'callback' => 'souriau_dc_search_callback',
+        ],
+      ];
+    }
+  }
+  $form['filters']['application']['#options'] = $visible_application;
+
+  $count = souriau_dc_get_results_count_helper();
+
+  $form['results'] = [
+    '#type' => 'item',
+    '#markup' => format_plural($count, '1 Item', '@count Items'),
+  ];
+
+  foreach ($results['tags'] as $tid => $tag) {
+    $form['types'][$tid] = [
+      '#title' => $tag,
+      '#type' => 'checkbox',
+      '#default_value' => FALSE,
+      '#ajax' => [
+        'callback' => 'souriau_dc_search_callback',
+      ],
+    ];
+  }
+
+  $form['dc_keyword'] = [
+    '#type' => 'textfield',
+    '#title' => '',
+    '#attributes' => [
+      'class' => ['autocomplete', 'ui-autocomplete-input'],
+      'placeholder' => t('Enter Search Keywords', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'autocomplete' => 'off',
+    ],
+    '#ajax' => [
+      'callback' => 'souriau_dc_search_callback',
+      'keypress' => TRUE,
+    ],
+  ];
+
+  $form['dc_keyword_button'] = [
+    '#type' => 'button',
+    '#value' => '<span class="ico ico-search">
+      <!--[if gte IE 9]><!-->
+          <svg class="svg-ico"><use xlink:href="#ico-search"></use></svg>
+      <!--<![endif]-->',
+    '#attributes' => [
+      'class' => ['btn', 'link-view-all-results', 'checkLinkvisible-processed'],
+    ],
+    '#ajax' => [
+      'callback' => 'souriau_dc_search_callback',
+    ],
+  ];
+
+  $form['dc_view_type'] = [
+    '#type' => 'hidden',
+    '#attributes' => [
+      'id' => 'dc_view_type',
+    ],
+    '#default_value' => 'list-view',
+  ];
+
+  $form['#attributes'] = ['class' => 'customForms-processed'];
+
+  return $form;
+}
+
+/**
+ * Helper function to fetch product facets for DC.
+ */
+function souriau_dc_get_product_facets($vid) {
+  $final_product_facet = [];
+  $visible_product_facets = [];
+  foreach (taxonomy_get_tree($vid) as $term) {
+    $facet_settings_variable = "souriau_common_dc_facets_term_$term->tid";
+    $facet_settings = variable_get($facet_settings_variable);
+    if (empty($facet_settings)) {
+      continue;
+    }
+    foreach ($facet_settings as $facet_name => $facet_setting) {
+      if ($facet_setting['enabled'] != 1) {
+        continue;
+      }
+      $visible_product_facets[$term->name][$facet_setting['nid']] = [
+        'name' => $facet_name,
+        'weight' => $facet_setting['weight'],
+      ];
+    }
+
+    uasort($visible_product_facets[$term->name], 'drupal_sort_weight');
+  }
+
+  foreach ($visible_product_facets as $filter_parent => $filter_node) {
+    foreach ($filter_node as $nid => $node_attributes) {
+      $position = strpos($nid, '_');
+      $nid = ($position !== FALSE) ? substr($nid, 0, $position) : $nid;
+      $final_product_facet[$filter_parent][$nid] = $node_attributes['name'];
+    }
+  }
+
+  return $final_product_facet;
+}
+/**
+ * Search callback.
+ */
+function souriau_dc_search_callback(&$form, &$form_state) {
+  return souriau_dc_apply_filter_helper($form_state['values'], TRUE);
+}
+
+/**
+ * Clear filters callback.
+ */
+function souriau_dc_clear_callback() {
+  return souriau_dc_apply_filter_helper([], TRUE);
+}
+
+/**
+ * Apply filter helper.
+ *
+ * @param array $filters
+ *   Filters array.
+ * @param bool $ajax
+ *   If TRUE return #ajax render array.
+ *
+ * @return array
+ *   Count/view array or #ajax render array.
+ */
+function souriau_dc_apply_filter_helper($filters = [], $ajax = FALSE, $pager = FALSE) {
+  $result = [
+    'count' => 0,
+    'next_page' => 0,
+    'view' => '',
+  ];
+  $default_filters = [
+    'range' => 'all',
+    'brand' => 'all',
+    'application' => 'all',
+    'capability' => 'all',
+    'language' => 'all',
+    'types' => 'all',
+    'dc_keyword' => 'all',
+  ];
+  $types = [];
+  $view_type = isset($filters['dc_view_type']) ? $filters['dc_view_type'] : 'list-view';
+  foreach ($filters as $filter_name => $filter_value) {
+    if (in_array($filter_name, array_keys($default_filters))) {
+      if (!is_array($filter_value)) {
+        $filter_value = [$filter_value];
+      }
+      $filter_value = array_filter($filter_value);
+      if (in_array('all', $filter_value, TRUE)) {
+        $filter_value = ['all'];
+      }
+      $filters[$filter_name] = implode('+', $filter_value);
+    }
+    elseif (is_int($filter_name) && $filter_value == 1) {
+      $types[] = $filter_name;
+    }
+  }
+  if (!empty($types)) {
+    $filters['types'] = implode('+', $types);
+  }
+  $filters = array_filter($filters);
+  $filters += $default_filters;
+
+  // Gets search results.
+  $items = _souriau_dc_pager_get_items($filters);
+
+  $result['next_page'] = $items['next_page'];
+  $result['view'] = $items['html'];
+
+  // Gets result count.
+  $result['count'] = souriau_dc_get_results_count_helper();
+
+  if ($ajax) {
+    // Return ajax commands set for ajax requests.
+    $commands = [];
+    $commands[] = ajax_command_replace('.b-cnt-result', '<div class="b-cnt-result">' . format_plural($result['count'], '1 Item', '@count Items') . '</div>');
+    if ($pager) {
+      $commands[] = ajax_command_append('.b-list-documents', $result['view']);
+    }
+    else {
+      $commands[] = ajax_command_replace('.b-list-documents', '<div class="result-col b-list-documents b-result-view"><div class="b-result-wrapper grey-bg"><div class="b-view-results ' . $view_type . '" id="all-results">' . $result['view'] . '</div></div></div>');
+    }
+    if ($result['next_page'] > 0) {
+      $commands[] = ajax_command_invoke('.w-btn.text-center', 'show');
+      $commands[] = ajax_command_invoke('.ajax-progress-souriau-hover', 'remove');
+      $commands[] = ajax_command_invoke('.view-more', 'show');
+    }
+    else {
+      $commands[] = ajax_command_invoke('.w-btn.text-center', 'hide');
+    }
+    $commands[] = ajax_command_souriau_common_jcf('refresh');
+    return array('#type' => 'ajax', '#commands' => $commands);
+  }
+
+  // Return results.
+  return $result;
+}
+
+/**
+ * Results count helper.
+ *
+ * @return int
+ *   Results count.
+ */
+function souriau_dc_get_results_count_helper() {
+  $count = 0;
+  // Gets result count.
+  $searches = search_api_current_search('search_api_views:souriau_download_center:default');
+  if (!empty($searches)) {
+    list(, $count_results) = $searches;
+    $count = $count_results['result count'];
+  }
+  return $count;
+}
+
+/**
+ * Implements hook_file_download().
+ */
+function souriau_dc_file_download($uri) {
+  // Get the file record based on the URI. If not in the database just return.
+  $files = file_load_multiple(array(), array('uri' => $uri));
+  if (count($files)) {
+    foreach ($files as $item) {
+      // Since some database servers sometimes use a case-insensitive comparison
+      // by default, double check that the filename is an exact match.
+      if ($item->uri === $uri) {
+        $file = $item;
+        break;
+      }
+    }
+  }
+  if (!isset($file)) {
+    return;
+  }
+
+  if ($file->published && $file->type == 'document') {
+    return file_get_content_headers($file);
+  }
+
+  return file_file_download($uri);
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * @var array $implementations
+ */
+function souriau_dc_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'file_download' && array_key_exists('souriau_dc', $implementations)) {
+    $group = $implementations['souriau_dc'];
+    unset($implementations['souriau_dc']);
+    unset($implementations['file']);
+
+    $implementations = ['souriau_dc' => $group] + $implementations;
+  }
+}
+
+/**
+ * Helper function to get the allowed values for select list field.
+ */
+function souriau_dc_get_field_allowed_values($field_name, $filter_values) {
+  $dc_field_value = NULL;
+  $field = field_info_field($field_name);
+  $allowed_values = list_allowed_values($field);
+  if (empty($filter_values)) {
+    return $allowed_values;
+  }
+  foreach ($filter_values as $value) {
+    $dc_field_value[$value] = $allowed_values[$value];
+  }
+  return $dc_field_value;
+}
+
+/**
+ * Value getter callback for document types weight field..
+ */
+function souriau_dc_document_type_weight_getter($file, array $options, $name, $type, $info) {
+  global $language;
+  $wrapper = entity_metadata_wrapper('file', $file);
+  $document_type = $wrapper->language($language->language)->field_document_type->value();
+  if (isset($document_type[0]->weight)) {
+    return $document_type[0]->weight;
+  }
+}

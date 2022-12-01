@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau My Projects feature.
+ */
+
+include_once 'souriau_my_projects.features.inc';

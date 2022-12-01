@@ -1,0 +1,420 @@
+.w-menu {
+  display: inline-block;
+  vertical-align: top;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
+  @include media("<desktop") {
+    position: relative;
+  }
+
+  .icon-header-nav-mobile {
+    display: none;
+    width: 74px;
+    height: 83px;
+    overflow: hidden;
+    cursor: pointer;
+
+    @include media("<desktop") {
+      display: block;
+    }
+
+    @include media("<tablet") {
+      width: 52px;
+      height: 73px;
+    }
+  }
+
+  .ico-menu {
+    display: block;
+    height: 12px;
+    width: 20px;
+    fill: #003865;
+    margin: 37px auto 0;
+    @include transition(fill 0.5s ease-in-out);
+
+    @include media("<tablet") {
+      margin: 30px auto 0
+    }
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    color: $grey;
+    font-size: 14px;
+    line-height: 24px;
+    display: inline-block;
+    margin-right: 35px;
+    letter-spacing: 0.25px;
+
+    &.home-link {
+      @include media("<desktop") {
+        padding: 0 40px 40px 0;
+      }
+
+      @include media("<tablet") {
+        padding: 0 30px 16px 0;
+      }
+    }
+
+    &.open-menu {
+      @include media("<desktop") {
+        .b-sub-menu {
+          opacity: 1;
+          max-height: 2000px;
+          transform: translate(0,0%);
+          -moz-transform: translate(0,0%);
+          -ms-transform: translate(0,0%);
+          -webkit-transform: translate(0,0%);
+        }
+
+        .arrow {
+          -moz-transform: rotate(90deg); /* Для Firefox */
+          -ms-transform: rotate(90deg); /* Для IE */
+          -webkit-transform: rotate(90deg); /* Для Safari, Chrome, iOS */
+          -o-transform: rotate(90deg); /* Для Opera */
+          transform: rotate(90deg);
+        }
+      }
+    }
+
+    @include media("<desktop") {
+      color: #FFF;
+      display: block;
+      font-family: $avenir-next-regular;
+      padding: 0 40px 28px 0;
+      margin: 0;
+      font-size: 30px;
+      line-height: 32px;
+      position: relative;
+    }
+
+    @include media("<tablet") {
+      font-size: 24px;
+      line-height: 32px;
+      padding: 0 30px 16px 0;
+    }
+
+    &:before {
+      display: none;
+    }
+
+    a {
+      color: inherit;
+      display: inline-block;
+      padding: 0 0 13px;
+      text-decoration: none;
+      position: relative;
+      z-index: 1;
+
+      &:before {
+        position: absolute;
+        left: -8px;
+        right: -8px;
+        bottom: -1px;
+        height: 3px;
+        background: $blue3;
+        content: "";
+        display: none;
+      }
+
+      @include media("<desktop") {
+        padding: 0;
+      }
+    }
+
+    .no-touchevents &:hover, .no-js &:hover, &.active {
+      a {
+        color: $blue3;
+
+        @include media("<desktop") {
+          color: #FFF;
+        }
+      }
+
+      a:before {
+        display: block;
+
+        @include media("<desktop") {
+          display: none;
+        }
+      }
+
+      .b-sub-menu {
+        a {
+          color: #4a5763;
+
+          @include media("<desktop") {
+            color: $white;
+          }
+
+          &:before {
+            display: none;
+          }
+        }
+      }
+    }
+
+    &:hover {
+      .b-sub-menu {
+        visibility: visible;
+        left: 50%;
+        top: 100%;
+        opacity: 1;
+
+        @include media("<desktop") {
+          visibility: visible;
+          left: auto;
+        }
+      }
+    }
+  }
+
+  .additional-link {
+    margin: 85px 0 0;
+
+    @include media("<tablet") {
+      margin: 13px 0 0;
+    }
+
+    ul li {
+      padding: 0 0 18px;
+
+      @include media("<tablet") {
+        font-size: 20px;
+        padding: 0 0 6px;
+      }
+    }
+  }
+
+  .close-btn {
+    display: none;
+    position: absolute;
+    left: 16px;
+    top: 28px;
+
+    .ico {
+      width: 24px;
+      height: 24px;
+      display: block;
+      fill: #FFF;
+      -moz-transform: rotate(45deg); /* Для Firefox */
+      -ms-transform: rotate(45deg); /* Для IE */
+      -webkit-transform: rotate(45deg); /* Для Safari, Chrome, iOS */
+      -o-transform: rotate(45deg); /* Для Opera */
+      transform: rotate(45deg);
+    }
+
+    @include media("<desktop") {
+      display: block;
+    }
+  }
+
+  .block-header-nav {
+    height: auto;
+
+    @include media("<desktop") {
+      z-index: 100;
+      position: fixed;
+      left: -100%;
+      top: 0;
+      width: 100%;
+      background: #003865;
+      padding: 196px 43px 20px 143px;
+      @include box-sizing(border-box);
+      @include transition(all 0.5s ease-in-out);
+      height: 100%;
+    }
+
+    @include media("<tablet") {
+      padding: 90px 20px 20px 39px;
+    }
+
+    .arrow {
+      position: absolute;
+      right: 0;
+      top: 0px;
+      width: 30px;
+      height: 30px;
+      text-align: center;
+      @include transition(transform 0.3s ease-in-out);
+      cursor: pointer;
+    }
+
+    .ico-breadcrumb-arrow-white {
+      width: 14px;
+      display: inline-block;
+      height: 20px;
+    }
+  }
+
+  nav {
+    @include media("<desktop") {
+      position: relative;
+      overflow: auto;
+      height: 100%;
+      padding-right: 100px;
+    }
+
+    @include media("<tablet") {
+      padding-right: 19px;
+    }
+  }
+
+  .b-sub-menu {
+    left: 50%;
+    opacity: 0;
+    min-height: 260px;
+    position: absolute;
+    top: 60%;
+    visibility: hidden;
+    transform: translateX(-50%);
+    -moz-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    -webkit-transform: translateX(-50%);
+    width: 100%;
+    max-width: 1200px;
+    min-width: 980px;
+    background: $white;
+    box-shadow: 0 22px 22px rgba(169, 169, 169, 0.3);
+    margin: 1px 0 0;
+    letter-spacing: normal;
+    @include transition-property(opacity, top);
+    @include transition-duration(0.3s, 0.3s);
+
+
+
+    @include media("<desktop") {
+      box-shadow: none;
+      background: none;
+      min-height: 0px;
+      max-height: 0px;
+      min-width: 0px;
+      width: auto;
+      top: auto;
+      left: auto;
+      position: relative;
+      opacity: 1;
+      @include transition(all 0.25s ease-in-out);
+      overflow: hidden;
+      transform: translate(0, 50%);
+      -moz-transform: translate(0, 50%);
+      -ms-transform: translate(0, 50%);
+      -webkit-transform: translate(0, 50%);
+      visibility: visible;
+    }
+
+
+    .wrapper {
+      padding: 31px 0;
+
+      @include media("<desktop") {
+        padding: 14px 0 21px;
+      }
+    }
+
+    h3 {
+      color: #003865;
+      font-size: 14px;
+      font-weight: bold;
+      line-height: 24px;
+      margin: 0 0 18px;
+
+      @include media("<desktop") {
+        display: none;
+      }
+    }
+
+    li {
+      display: block;
+      letter-spacing: normal;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      font-weight: normal;
+      line-height: 36px;
+
+      @include media("<desktop") {
+        opacity: 0.8;
+        color: $white;
+        font-family: $avenir-next-regular;
+        font-size: 20px;
+        line-height: 36px;
+      }
+
+      .no-touchevents &:hover, .no-js &:hover, &.active {
+        a {
+          color: #003865;
+
+          @include media("<desktop") {
+            color: $white;
+          }
+        }
+      }
+    }
+
+    a {
+      color: #4a5763;
+      padding: 0;
+
+      @include media("<desktop") {
+        color: $white;
+        display: inline-block;
+      }
+
+      &:before {
+        display: none;
+      }
+
+      @include media("<desktop") {
+        .no-touchevents &:hover, .no-js &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    ul {
+      vertical-align: top;
+      display: inline-block;
+      min-width: 165px;
+      max-width: 247px;
+      margin: 0 71px 0 0;
+
+      &.long-list {
+        min-width: 247px;
+
+        @include media("<desktop") {
+          min-width: 0px;
+        }
+      }
+
+      @include media("<desktop") {
+        width: auto;
+        margin: 0 0 0 23px;
+        display: block;
+        min-width: 0px;
+        max-width: none;
+      }
+    }
+  }
+}
+
+@include media("<desktop") {
+  html.nav-active {
+    overflow: hidden !important;
+    -ms-overflow-style: none !important;
+
+    body {
+      overflow: hidden !important;
+      -ms-overflow-style: none !important;
+    }
+
+    .block-header-nav {
+      left: 0;
+    }
+  }
+}

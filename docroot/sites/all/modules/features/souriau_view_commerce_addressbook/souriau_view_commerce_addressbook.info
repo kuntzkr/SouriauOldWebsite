@@ -1,0 +1,11 @@
+name = Souriau Commerce Addressbook
+core = 7.x
+package = Souriau Features
+version = 7.x-0.03
+dependencies[] = commerce_addressbook
+dependencies[] = entity
+dependencies[] = views
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = souriau_commerce_addressbook
+features_exclude[dependencies][ctools] = ctools

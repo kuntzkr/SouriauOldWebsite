@@ -1,0 +1,68 @@
+.b-help {
+  background: $blue4;
+  padding: 57px 0 44px;
+
+  @include media("<desktop") {
+    padding: 50px 0 32px;
+  }
+
+  @include media("<tablet") {
+    padding: 44px 0 32px;
+    text-align: center;
+  }
+
+  .container {
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+    }
+  }
+
+  .text {
+    overflow: hidden;
+
+    @include media("<desktop") {
+      padding: 0 15px;
+    }
+
+    @include media("<tablet") {
+      overflow: visible;
+      display: table-header-group;
+      padding: 0;
+    }
+  }
+
+  h4 {
+    color: $white;
+    margin: 0 0 12px;
+
+    @include media("<tablet") {
+      margin: 0 0 9px;
+    }
+  }
+
+  p {
+    color: $white;
+    padding: 0 0 20px;
+
+    @include media("<tablet") {
+      padding: 0 20px 20px;
+    }
+  }
+
+  .view-more {
+    float: right;
+    margin: 16px 0px 0 40px;
+    text-decoration: none;
+    min-width: 180px;
+
+    @include media("<desktop") {
+      margin: 17px 0px 0 30px;
+    }
+
+    @include media("<tablet") {
+      margin: 18px 0;
+      float: none;
+    }
+  }
+}

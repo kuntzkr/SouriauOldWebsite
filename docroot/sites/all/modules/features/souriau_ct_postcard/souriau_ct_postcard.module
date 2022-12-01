@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Postcard feature.
+ */
+
+include_once 'souriau_ct_postcard.features.inc';

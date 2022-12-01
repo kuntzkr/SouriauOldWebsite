@@ -1,0 +1,48 @@
+.b-list-events {
+  padding: 70px 0 56px;
+
+  @include media("<desktop") {
+    padding: 36px 0 34px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 -10px;
+    padding: 37px 0 20px;
+  }
+
+  h4 {
+    margin: 0 0 31px;
+
+    @include media("<desktop") {
+      margin: 0 0 25px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 18px;
+    }
+  }
+}
+
+.b-toolkit {
+  padding: 35px 0 63px;
+
+  @include media("<desktop") {
+    padding: 41px 0 57px;
+  }
+
+  @include media("<tablet") {
+    padding: 15px 0 60px;
+  }
+
+  h4 {
+    margin: 0 0 31px;
+
+    @include media("<desktop") {
+      margin: 0 0 25px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 18px;
+    }
+  }
+}

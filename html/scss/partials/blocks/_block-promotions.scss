@@ -1,0 +1,144 @@
+.b-promotions {
+  padding: 20px 0 20px;
+
+  @include media("<desktop") {
+    padding: 25px 0 4px;
+  }
+
+  @include media("<tablet") {
+    padding: 20px 0 34px;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    display: block;
+    width: 100%;
+
+    @include media("<tablet") {
+      display: block;
+      text-align: center;
+    }
+
+    li {
+      padding: 0;
+      display: inline-block;
+      vertical-align: top;
+      width: 139px;
+      margin: 0 25px 18px;
+      text-align: center;
+
+      &:nth-child(5n) {
+        margin-right: 0;
+      }
+
+      &:nth-child(5n+1) {
+        margin-left: 12px;
+      }
+
+      @include media("<desktop") {
+        margin: 0 22px 38px;
+
+        &:nth-child(5n) {
+          margin-right: 22px;
+        }
+
+        &:nth-child(5n+1) {
+          margin-left: 22px;
+        }
+
+        &:nth-child(4n) {
+          margin-right: 0;
+        }
+
+        &:nth-child(4n+1) {
+          margin-left: 16px;
+        }
+      }
+
+      @include media("<tablet") {
+        padding: 0 0 56px;
+        margin: 0;
+
+        &:nth-child(5n) {
+          margin-right: 0;
+        }
+
+        &:nth-child(5n+1) {
+          margin-left: 0;
+        }
+
+        &:nth-child(4n) {
+          margin-right: 0;
+        }
+
+        &:nth-child(4n+1) {
+          margin-left: 0;
+        }
+      }
+
+      &:before {
+        display: none;
+        padding: 0;
+      }
+    }
+  }
+
+  .b-ico {
+    height: 45px;
+
+    .pic {
+      display: inline-block;
+
+      img {
+        max-height: 100%;
+      }
+    }
+  }
+
+  .text {
+    color: #005eb8;
+    font-family: $main-sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.86px;
+    line-height: 18px;
+  //  padding: 0 20px;
+
+    @include media("<desktop") {
+
+    }
+  }
+
+  .ico {
+    display: inline-block;
+    fill: #005eb8;
+    vertical-align: top;
+  }
+
+  .ico-promotion-1 {
+    width: 32px;
+    height: 28px;
+  }
+
+  .ico-promotion-2 {
+    width: 32px;
+    height: 22px;
+    margin: 4px 0 0;
+  }
+
+  .ico-promotion-3 {
+    width: 30px;
+    height: 30px;
+  }
+
+  .ico-promotion-4 {
+    width: 30px;
+    height: 30px;
+  }
+
+  .ico-promotion-5 {
+    width: 30px;
+    height: 25px;
+    margin: 3px 0 0;
+  }
+}

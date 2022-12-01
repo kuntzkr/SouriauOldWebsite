@@ -1,0 +1,63 @@
+.b-not-found {
+  padding: 123px 0 193px;
+  text-align: center;
+
+  @include media("<desktop") {
+    padding: 90px 0 203px;
+  }
+
+  @include media("<tablet") {
+    padding: 84px 0 100px;
+    margin: 0 -5px;
+  }
+
+  h1 {
+    font-family: $avenir-next-bold;
+    font-weight: bold;
+    font-size: 120px;
+    line-height: 84px;
+    margin: 0 0 12px;
+
+    @include media("<desktop") {
+      margin: 0 0 19px;
+    }
+
+    @include media("<tablet") {
+      font-size: 80px;
+      line-height: 42px;
+      margin: 0 0 31px;
+    }
+  }
+
+  h5 {
+    line-height: 36px;
+    margin: 0 0 30px;
+
+    @include media("<desktop") {
+      margin: 0 0 39px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 30px;
+    }
+  }
+
+  .b-text {
+    padding: 0 0 66px;
+
+    @include media("<desktop") {
+      padding: 0 0 45px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 27px;
+    }
+
+    p {
+      color: $blue2;
+      font-family: $avenir-next-regular;
+      font-size: 24px;
+      line-height: 36px;
+    }
+  }
+}

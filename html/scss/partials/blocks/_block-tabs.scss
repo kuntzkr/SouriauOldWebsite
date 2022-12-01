@@ -1,0 +1,123 @@
+.b-tabs {
+  .tab-content > .tab-pane {
+    display: block;
+    visibility: hidden;
+    position: absolute;
+    left: -10000em;
+
+    &.active {
+      position: relative;
+      left: 0;
+      visibility: visible;
+    }
+  }
+
+  .b-category-description + & {
+    padding: 5px 0 16px;
+
+    @include media("<desktop") {
+      padding: 16px 0;
+    }
+
+    @include media("<tablet") {
+      padding: 7px 0 0;
+    }
+  }
+
+  .nav-tabs {
+    border: none;
+    text-align: center;
+    margin: 0 0 25px;
+
+    @include media("<desktop") {
+      margin: 0 0 11px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 -20px 20px;
+    }
+
+    li {
+      color: #a4abb1;
+      font-size: 12px;
+      letter-spacing: 0.86px;
+      line-height: 24px;
+      padding: 0 25px;
+      float: none;
+      display: inline-block;
+      margin: 0;
+      text-transform: uppercase;
+
+      &:first-child {
+        padding-left: 0;
+      }
+
+      &:last-child {
+        padding-right: 0;
+      }
+
+      @include media("<tablet") {
+        display: block;
+        padding: 0 0 9px;
+      }
+
+      &:before {
+        display: none;
+      }
+    }
+
+    a {
+      color: inherit;
+      background: none;
+      border: none;
+      padding: 0 4px 7px;
+      margin: 0;
+      line-height: 24px;
+      border-bottom: 3px solid transparent;
+      text-decoration: none;
+
+      @include media("<tablet") {
+        padding: 0 4px;
+        border-bottom: none;
+        border-right: 4px solid transparent;
+        border-left: 4px solid transparent;
+      }
+
+      &:focus, &:hover {
+        text-decoration: none;
+        background: none;
+        border: none;
+      }
+
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: none;
+        color: $blue3;
+        border-bottom: 3px solid #003865;
+
+        @include media("<tablet") {
+          border-bottom: none;
+        }
+      }
+    }
+
+    li.active {
+      a, a:hover, a:focus {
+        background: none;
+        text-decoration: none;
+      }
+
+      a {
+        border: none;
+        color: $blue3;
+        border-bottom: 3px solid #003865;
+
+        @include media("<tablet") {
+          border-bottom: none;
+          border-left: 4px solid #003865;
+          border-right: 4px solid transparent;
+        }
+      }
+    }
+  }
+}

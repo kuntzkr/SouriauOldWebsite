@@ -1,0 +1,23 @@
+diff --git a/addressfield.module b/addressfield.module
+index 68b45d9..17722c3 100644
+--- a/addressfield.module
++++ b/addressfield.module
+@@ -427,7 +427,8 @@ function addressfield_default_values($field, $instance, array $address = array()
+ function addressfield_field_is_empty($item, $field) {
+   // Every address field must have at least a country value or it is considered
+   // empty, even if it has name information.
+-  return empty($item['country']);
++  // return empty($item['country']);
++  return FALSE;
+ }
+ 
+ /**
+@@ -547,7 +548,7 @@ function addressfield_field_widget_form(&$form, &$form_state, $field, $instance,
+   if (!empty($input_address)) {
+     $address = $input_address;
+   }
+-  elseif (!empty($items[$delta]['country'])) {
++  elseif (!empty($items[$delta])) {
+     // Else use the saved value for the field.
+     $address = $items[$delta];
+   }

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau eco feature feature.
+ */
+
+include_once 'souriau_eco_feature.features.inc';

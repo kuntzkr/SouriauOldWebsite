@@ -1,0 +1,183 @@
+.b-products-category {
+  margin-bottom: 69px;
+
+  @include media("<desktop") {
+    margin-bottom: 59px;
+  }
+
+  @include media("<tablet") {
+    margin-bottom: 35px;
+  }
+
+  .list {
+    display: block;
+
+    @include clearfix();
+    border-top: 1px solid #f2f3f5;
+  }
+
+  .item {
+    float: left;
+    height: 267px;
+    @include box-sizing(border-box);
+    text-align: center;
+    display: table;
+    border-left: 1px solid #f2f3f5;
+    border-bottom: 1px solid #f2f3f5;
+    width: 33.333%;
+    padding: 20px;
+    position: relative;
+
+    @include media("<desktop") {
+      height: 231px;
+      width: 50%;
+      padding: 20px 40px 20px 80px;
+      text-align: left;
+    }
+
+    @include media("<tablet") {
+      height: auto;
+      width: 100%;
+      text-align: left;
+      padding: 26px 50px 26px 22px;
+      border-left: none;
+
+      &:after {
+        position: absolute;
+        right: 25px;
+        top: 50%;
+        content: "";
+        width: 0px;
+        height: 0px;
+        border: 5px solid transparent;
+        border-left-color: #FFF;
+        margin: -5px 0 0;
+        z-index: 2;
+      }
+    }
+
+
+    &:before {
+      position: absolute;
+      left: -8px;
+      right: -2px;
+      top: -10px;
+      bottom: -10px;
+      content: "";
+      background: #FFF;
+      opacity: 0;
+      z-index: 2;
+      @include transition(background 0.4s ease-in-out);
+      box-shadow: 0 22px 40px rgba(169, 169, 169, 0.5);
+
+      @include media("<desktop") {
+        left: -2px;
+        top: -12px;
+        bottom: -15px;
+      }
+
+      @include media("<tablet") {
+        opacity: 1;
+        right: 23px;
+        top: 50%;
+        left: auto;
+        bottom: auto;
+        content: "";
+        width: 0px;
+        height: 0px;
+        background: none;
+        border: 5px solid transparent;
+        border-left-color: #003865;
+        margin: -5px 0 0 0;
+      }
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover {
+      .text {
+        z-index: 2;
+        padding: 0 0 24px;
+      }
+
+      &:before {
+        opacity: 1;
+        background-color: #003865;
+      }
+
+      h2 {
+        color: #FFF;
+
+        &:before {
+          display: none;
+        }
+      }
+
+      .view-more {
+        display: inline-block;
+      }
+
+      @include media("<tablet") {
+        h2 {
+          color: $blue2;
+        }
+
+        .text {
+          padding: 0;
+        }
+
+        &:before {
+          background: none;
+        }
+
+        .view-more {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .text {
+    display: table-cell;
+    max-width: 100%;
+    vertical-align: middle;
+    position: relative;
+  }
+
+  h2 {
+    font-size: 30px;
+    line-height: 36px;
+    margin: 2px 0 0;
+    position: relative;
+    padding: 0 0 26px;
+    display: inline-block;
+
+    &:before {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 90px;
+      height: 3px;
+      background: $orange;
+      content: "";
+    }
+
+    @include media("<desktop") {
+      padding: 0 0 24px;
+      margin: 0;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+      font-size: 20px;
+      line-height: 24px;
+
+      &:before {
+        display: none;
+      }
+    }
+  }
+
+  .view-more {
+    display: none;
+  }
+}

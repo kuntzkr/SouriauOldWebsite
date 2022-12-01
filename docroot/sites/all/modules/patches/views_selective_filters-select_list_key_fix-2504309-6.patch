@@ -1,0 +1,28 @@
+diff --git a/views_handler_filter_selective.inc b/views_handler_filter_selective.inc
+index faabe12..8ee9e33 100644
+--- a/views_handler_filter_selective.inc
++++ b/views_handler_filter_selective.inc
+@@ -417,12 +417,17 @@ class views_handler_filter_selective extends views_handler_filter_in_operator {
+       $oids = array();
+       $field_alias = isset($display_field_handler->aliases[$display_field_handler->real_field]) ? $display_field_handler->aliases[$display_field_handler->real_field] : $display_field_handler->table_alias . '_' . $display_field_handler->real_field;
+       foreach ($view_copy->result as $index => $row) {
+-        // $key = $display_field_handler->get_value($row) should be more robust.
+-        // But values are sometimes nested arrays, and we need single values.
+-        // For the filters.
+-        $key = $display_field_handler->get_value($row);
+-        if (is_array($key)) {
+-          $key = $row->{$field_alias};
++        // Try to retrieve the value directly from the field alias if possible.
++        // This is the best solution to retrieve the key for select lists.
++        $key = $row->{substr($field_alias, 0, 60)};
++        if (is_array($key) || is_object($key)) {
++          // $key = $display_field_handler->get_value($row) should be more robust.
++          // But values are sometimes nested arrays, and we need single values.
++          // For the filters.
++          $key = $display_field_handler->get_value($row);
++          if (is_array($key)) {
++            $key = $row->{substr($field_alias, 0, 60)};
++          }
+         }
+         $value = strip_tags($view_copy->render_field($display_field_id, $index));
+         $oids[$key] = empty($value) ? t('Empty (@key)', array('@key' => empty($key) ? json_encode($key) : $key)) : $value;

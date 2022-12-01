@@ -1,0 +1,354 @@
+.link-view-all-results {
+  color: #FFF;
+  display: block;
+  text-transform: uppercase;
+  font-family: $main-sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.86px;
+  line-height: 24px;
+  text-decoration: none;
+  padding: 8px 34px 5px 0;
+  background: transparent;
+  border: none;
+  position: relative;
+  font-weight: normal;
+
+  @include media("<tablet") {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    display: block;
+    background: #003865;
+    margin: 0;
+    padding: 18px 60px 22px;
+    text-align: center;
+  }
+
+  &.b-to-fixed {
+    border-top: 2px solid #FFF;
+  }
+
+  &.hidden-btn {
+    display: none !important;
+  }
+
+  .no-touchevents &:hover,
+  .no-js &:hover, &:focus{
+    text-decoration: none;
+    color: $white;
+  }
+
+  .ico-arrow-right {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    fill: $white;
+    width: 20px;
+    height: 16px;
+    transform: translateY(-50%);
+    -moz-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    -webkit-transform: translateY(-50%);
+
+    @include media("<tablet") {
+      right: 28px;
+      margin: 0;
+    }
+  }
+}
+
+.b-result-bar {
+  background-color: #003865;
+
+  h1 {
+    color: white;
+    margin: 0;
+    padding: 35px 0;
+
+    @include media("<tablet") {
+      padding: 10px 0;
+    }
+  }
+}
+
+.b-result-view {
+  border-bottom: 2px solid $white;
+
+  .b-tabs {
+    .nav-tabs {
+      margin: 0 -15px;
+      text-align: center;
+
+      @include media("<desktop") {
+        margin: 0 -20px;
+      }
+
+      @include media("<tablet") {
+        margin: 20px -20px 20px;
+      }
+
+      li {
+        padding: 10px 15px 0;
+
+        @include media("<desktop") {
+          padding: 0 4px 0;
+        }
+
+        @include media("<tablet") {
+          padding: 0 0 9px;
+        }
+
+        &:first-child {
+          padding-left: 15px;
+
+          @include media("<desktop") {
+            padding-left: 4px;
+          }
+
+          @include media("<tablet") {
+            padding-left: 0;
+          }
+        }
+
+        &:last-child {
+          padding-right: 15px;
+
+          @include media("<desktop") {
+            padding-right: 4px;
+          }
+
+          @include media("<tablet") {
+            padding-right: 0;
+          }
+        }
+      }
+
+      a {
+        padding: 19px 1px 19px;
+
+        @include media("<tablet") {
+          padding: 0 4px;
+        }
+      }
+    }
+  }
+
+  .b-result-wrapper {
+    padding: 59px 0 183px;
+
+    @include media("<desktop") {
+      padding: 59px 0 70px;
+    }
+
+    @include media("<tablet") {
+      padding: 10px 0 40px;
+    }
+  }
+
+  .b-view-params {
+    @include clearfix();
+    padding: 0 0 21px;
+
+    @include media("<tablet") {
+      padding: 0 0 12px;
+    }
+  }
+
+  .b-params {
+    overflow: hidden;
+    text-align: right;
+
+    @include media("<tablet") {
+      padding: 12px 0 0;
+    }
+
+    .link {
+      margin: 5px 0 5px 17px;
+    }
+  }
+
+  .w-btn-filter {
+    @include media("<tablet") {
+      display: block;
+      text-align: center;
+      float: none;
+      padding: 0;
+    }
+  }
+
+  .link-filter {
+    margin: 0 20px 0 0;
+
+    @include media("<tablet") {
+      margin: 0;
+    }
+  }
+
+  .b-choose-view {
+    display: inline-block;
+
+    @include media("<desktop") {
+      padding-right: 8px;
+    }
+  }
+}
+
+.b-view-results {
+  padding: 0 0 40px;
+
+  @include media("<desktop") {
+    padding: 0 0 36px;
+  }
+
+  &.table-view {
+    @include media(">=tablet") {
+      padding: 0 0 50px;
+
+      .b-product-item {
+        width: 220px;
+        display: inline-block;
+        padding: 10px 20px;
+        vertical-align: top;
+        margin-right: 16px;
+
+        &:nth-child(4n) {
+          margin-right: 0;
+        }
+
+        .pic {
+          float: none;
+          width: auto;
+          margin: 0;
+        }
+
+        .b-info {
+          padding: 11px 4px 0;
+        }
+
+        h3 {
+          font-size: 20px;
+          line-height: 30px;
+          margin: 0 0 12px;
+        }
+
+        .b-product-info {
+          float: none;
+          width: auto;
+          margin: 0;
+
+          p {
+            padding: 0;
+          }
+        }
+
+        .b-part-numb {
+          float: none;
+          width: auto;
+          text-align: left;
+          margin: 5px 0 0;
+        }
+
+        .b-links {
+          padding: 23px 0 4px;
+
+          .link, .b-compare-btn {
+            float: left;
+            clear: left;
+            margin: 0 0 1px;
+          }
+        }
+      }
+    }
+
+    @include media("<desktop", ">=tablet") {
+      .b-product-item {
+        width: 229px;
+
+        &:nth-child(4n) {
+          margin-right: 16px;
+        }
+
+        &:nth-child(3n) {
+          margin-right: 0;
+        }
+      }
+    }
+  }
+}
+
+.b-search-info {
+  display: block;
+  @include clearfix();
+  margin: -5px 0 10px;
+
+  .b-cnt-results {
+    padding-top: 5px;
+  }
+}
+
+.b-cnt-results {
+  color: $blue3;
+  font-family: $main-sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.86px;
+  line-height: 24px;
+  margin: 0 0 15px 40px;
+
+  @include media("<tablet") {
+    margin: 0;
+    display: block;
+    float: none;
+    text-align: right;
+  }
+}
+
+.b-list-filters {
+  overflow: hidden;
+
+  @include media("<tablet") {
+    overflow: visible;
+    display: block;
+    clear: both;
+    padding: 20px 0 0;
+  }
+
+  .filter-item {
+    display: inline-block;
+    vertical-align: top;
+    background: #d0d4d8;
+    border-radius: 4px;
+    color: $white;
+    font-family: $main-sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+    line-height: 18px;
+    padding: 8px 38px 8px 18px;
+    position: relative;
+    margin: 0 5px 10px 0;
+
+    @include media("<tablet") {
+      margin-right: 0;
+      display: block;
+    }
+  }
+
+  .close-link {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+
+    .ico {
+      display: block;
+      width: 15px;
+      height: 15px;
+      fill: #FFF;
+      -moz-transform: rotate(45deg); /* Для Firefox */
+      -ms-transform: rotate(45deg); /* Для IE */
+      -webkit-transform: rotate(45deg); /* Для Safari, Chrome, iOS */
+      -o-transform: rotate(45deg); /* Для Opera */
+      transform: rotate(45deg);
+    }
+  }
+}
+

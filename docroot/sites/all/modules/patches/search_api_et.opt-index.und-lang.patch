@@ -1,0 +1,173 @@
+diff --git a/includes/SearchApiEtDatasourceController.php b/includes/SearchApiEtDatasourceController.php
+index eb9222f..6b2aeaa 100644
+--- a/includes/SearchApiEtDatasourceController.php
++++ b/includes/SearchApiEtDatasourceController.php
+@@ -209,6 +209,61 @@ class SearchApiEtDatasourceController extends SearchApiEntityDataSourceControlle
+   }
+ 
+   /**
++   * {@inheritdoc}
++   */
++  public function _startTracking_nodes(array $indexes) {
++    if (!$this->table) {
++      return;
++    }
++    // We first clear the tracking table for all indexes, so we can just insert
++    // all items again without any key conflicts.
++    $this->stopTracking($indexes);
++
++    if (!empty($this->entityInfo['base table']) && $this->idKey) {
++      // Use a subselect, which will probably be much faster than entity_load().
++
++      // Assumes that all entities use the "base table" property and the
++      // "entity keys[id]" in the same way as the default controller.
++      $table = $this->entityInfo['base table'];
++
++      // We could also use a single insert (with a UNION in the nested query),
++      // but this method will be mostly called with a single index, anyways.
++      foreach ($indexes as $index) {
++        
++        // Select all entity ids.
++        $table = 'entity_translation';
++
++        $query = db_select($table, 't');
++        $query->addExpression("CONCAT(t.entity_id, '/', t.language)", 'item_id');
++        $query->addExpression(':index_id', 'index_id', array(':index_id' => $index->id));
++        $query->addExpression('1', 'changed');
++        $query->condition('t.entity_type', 'node');
++        $query->condition('t.status', 1);
++
++        $query->join('node', 'n', 'n.nid = t.entity_id');
++        $query->condition('n.status', 1);
++
++
++        if ($bundles = $this->getIndexBundles($index)) {
++          // $bundle_column = $this->bundleKey;
++          $bundle_column = 'n.type';
++          if ($bundles) {
++            $query->condition($bundle_column, $bundles);
++          }
++        }
++
++        // INSERT ... SELECT ...
++        db_insert($this->table)
++          ->from($query)
++          ->execute();
++      }
++    }
++    else {
++      $this->startTrackingFallback($indexes);
++    }
++  }
++
++  /**
+    * Overrides SearchApiEntityDataSourceController::startTracking().
+    *
+    * Reverts the behavior to always use getAllItemIds(), instead of taking a
+@@ -218,6 +273,12 @@ class SearchApiEtDatasourceController extends SearchApiEntityDataSourceControlle
+    * index changes, to take care of new and/or out-dated IDs.
+    */
+   public function startTracking(array $indexes) {
++    if (!empty($this->entityInfo['base table']) && 'node' == $this->entityInfo['base table']) {
++      $this->_startTracking_nodes($indexes);
++      return;
++    }
++
++    // @Important: The Code below is extremely inefficient. And should be never executed.
+     if (!$this->table) {
+       return;
+     }
+@@ -235,7 +296,7 @@ class SearchApiEtDatasourceController extends SearchApiEntityDataSourceControlle
+       for ($step = 0; $step < $steps; $step++) {
+         $operations[] = array(
+           'search_api_et_batch_queue_entities',
+-          array($index, $entity_ids, $step),
++          array($index->machine_name, $entity_ids, $step),
+         );
+       }
+     }
+@@ -465,4 +526,5 @@ class SearchApiEtDatasourceController extends SearchApiEntityDataSourceControlle
+     // indexed translations.
+     return $trackable_item_ids;
+   }
++
+ }
+diff --git a/search_api_et.batch.inc b/search_api_et.batch.inc
+index 416f86d..8159924 100644
+--- a/search_api_et.batch.inc
++++ b/search_api_et.batch.inc
+@@ -18,6 +18,10 @@
+  *   The batch context.
+  */
+ function search_api_et_batch_queue_entities($index, $entity_ids, $step, &$context) {
++  if (is_string($index)) {
++    $index = search_api_index_load($index);
++  }
++
+   // Persistent data among batch runs for results.
+   if (!isset($context['results']['indexes'][$index->id])) {
+     $context['results']['indexes'][$index->id] = $index;
+diff --git a/search_api_et.inc b/search_api_et.inc
+index 9f598c5..e3c34d9 100644
+--- a/search_api_et.inc
++++ b/search_api_et.inc
+@@ -34,7 +34,7 @@ function search_api_et_item_languages_all() {
+ function search_api_et_item_languages_entity($entity, $entity_type) {
+   // Get the translations for this entity, and return the languages.
+   $translations = entity_translation_get_handler($entity_type, $entity)->getTranslations();
+-  return array_keys($translations->data);
++  return empty($translations->data) ? [LANGUAGE_NONE] : array_keys($translations->data);
+ }
+ 
+ 
+@@ -83,7 +83,7 @@ function search_api_et_item_languages_complete($entity, $entity_type) {
+   }
+ 
+   // Return the languages that we found.
+-  return $return;
++  return empty($return) ? [LANGUAGE_NONE] : $return;
+ }
+ 
+ 
+diff --git a/search_api_et.module b/search_api_et.module
+index 25712a1..fc0145c 100644
+--- a/search_api_et.module
++++ b/search_api_et.module
+@@ -347,6 +347,10 @@ function search_api_et_entity_update($entity, $entity_type) {
+  * Implements hook_entity_translation_insert().
+  */
+ function search_api_et_entity_translation_insert($entity_type, $entity, $translation, $values = array()) {
++  if (!empty($entity->is_draft)) {
++    // Completely exclude drafts from search.
++    return;
++  }
+   list($entity_id) = entity_extract_ids($entity_type, $entity);
+   $item_id = SearchApiEtHelper::buildItemId($entity_id, $translation['language']);
+ 
+@@ -354,7 +358,6 @@ function search_api_et_entity_translation_insert($entity_type, $entity, $transla
+   // that subsequent loads will produce a fresh entity containing the inserted
+   // translation.
+   entity_get_controller($entity_type)->resetCache(array($entity_id));
+-
+   search_api_track_item_insert(SearchApiEtHelper::getItemType($entity_type), array($item_id));
+ }
+ 
+@@ -362,10 +365,17 @@ function search_api_et_entity_translation_insert($entity_type, $entity, $transla
+  * Implements hook_entity_translation_update().
+  */
+ function search_api_et_entity_translation_update($entity_type, $entity, $translation, $values = array()) {
++  if (!empty($entity->is_draft)) {
++    // Completely exclude drafts from search.
++    return;
++  }
++
+   list($entity_id) = entity_extract_ids($entity_type, $entity);
+   $item_id = SearchApiEtHelper::buildItemId($entity_id, $translation['language']);
++  $item_type = SearchApiEtHelper::getItemType($entity_type);
+ 
+-  search_api_track_item_change(SearchApiEtHelper::getItemType($entity_type), array($item_id));
++  search_api_track_item_insert(SearchApiEtHelper::getItemType($entity_type), array($item_id));
++  // search_api_track_item_change($item_type, array($item_id));
+ }
+ 
+ /**

@@ -1,0 +1,184 @@
+.b-filters {
+  padding: 0 0 20px;
+
+  @include media("<desktop") {
+    padding: 0 0 7px;
+  }
+
+  .b-form {
+    @include media("<tablet") {
+      margin: 0 -5px;
+    }
+  }
+
+  .b-top-filters {
+    margin: 0 -26px 0 0;
+    padding: 0 0 18px;
+    @extend .clearfix;
+
+    @include media("<desktop") {
+      padding: 0 0 13px;
+    }
+
+    @include media("<tablet") {
+      margin-right: 0;
+      padding: 0 0 27px;
+    }
+
+    .form-type-select {
+      width: 20%;
+      float: left;
+      padding: 0;
+      margin: 0 0 27px;
+
+      @include media("<desktop") {
+        width: auto;
+      }
+
+      @include media("<tablet") {
+        float: none;
+        display: block;
+        margin: 0 0 20px;
+      }
+
+      .jcf-select {
+        margin-right: 24px;
+
+        @include media("<desktop") {
+          margin-right: 38px;
+          width: 198px;
+        }
+
+        @include media("<tablet") {
+          margin: 0;
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .b-cnt-result {
+    color: $blue2;
+    font-family: $avenir-std;
+    font-size: 24px;
+    line-height: 36px;
+    margin: 0 0 16px;
+  }
+
+  .b-type-filters {
+    padding: 0 0 7px;
+    margin-right: -4px;
+
+    @include media("<desktop") {
+      padding: 0 0 19px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 11px;
+    }
+
+    .form-type-checkbox {
+      display: inline-block;
+      margin: 0 5px 11px 0;
+
+      @include media("<desktop") {
+        margin-right: 4px;
+      }
+
+      label {
+        padding: 7px 15px;
+        border: 1px solid #82a7cc;
+        border-radius: 3px;
+        background: none;
+        color: #004793;
+        font-family: $main-sans-serif;
+        font-size: 11px;
+        letter-spacing: 1px;
+        line-height: 18px;
+        min-height: 1px;
+        text-transform: uppercase;
+
+        &:before, &:after {
+          display: none;
+        }
+      }
+
+      input[type="checkbox"]:checked + label {
+        background: #003865;
+        color: $white;
+
+        &:before, &:after {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .b-tag-filters {
+    padding: 36px 0 14px;
+
+    @include media("<desktop") {
+      padding: 30px 0 14px;
+    }
+
+    .ajax-progress {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .form-type-checkbox {
+      display: inline-block;
+      margin: 0 5px 11px 0;
+
+      @include media("<desktop") {
+        margin-right: 4px;
+      }
+
+      label {
+        padding: 7px 15px;
+        border: 1px solid #b2c7de;
+        border-radius: 3px;
+        background: none;
+        color: #004793;
+        font-family: $main-sans-serif;
+        font-size: 11px;
+        letter-spacing: 1px;
+        line-height: 18px;
+        min-height: 1px;
+        text-transform: uppercase;
+
+        &:before, &:after {
+          display: none;
+        }
+      }
+
+      input[type="checkbox"]:checked + label {
+        background: #003865;
+        color: $white;
+
+        &:before, &:after {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .b-theme-filters {
+    padding: 4px 0 5px;
+
+    @include media("<desktop") {
+      padding: 11px 0 5px;
+    }
+
+    @include media("<tablet") {
+      padding: 30px 0 5px;
+    }
+
+    .form-type-select {
+      display: inline-block;
+      width: 188px;
+    }
+  }
+}

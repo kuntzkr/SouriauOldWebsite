@@ -1,0 +1,32 @@
+<?php
+/**
+ * @file
+ * Souriau News Landing.
+ */
+
+include_once 'souriau_news_landing.form.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_news_landing_menu() {
+  $items = [];
+
+  $items['souriau/ajax/landing-news/tags-news-filter'] = [
+    'page callback' => 'souriau_news_landing_tags_news_filter_ajax_callback',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_news_landing.pages.inc',
+  ];
+
+  $items['souriau/ajax/landing-news/load-more'] = [
+    'page callback' => 'souriau_news_landing_load_more_ajax_callback',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'file' => 'souriau_news_landing.pages.inc',
+  ];
+
+  return $items;
+}

@@ -1,0 +1,19 @@
+diff --git a/dmemcache.inc b/dmemcache.inc
+index 8fa07bc..ab39055 100644
+--- a/dmemcache.inc
++++ b/dmemcache.inc
+@@ -320,8 +320,12 @@ function _dmemcache_get_pieces($item, $key, $bin = 'cache', $mc = NULL) {
+ 
+   // Append all of the pieces together.
+   $data = '';
+-  foreach ($pieces as $piece) {
+-    $data .= $piece->data;
++  if (!empty($pieces)) {
++    foreach ($pieces as $piece) {
++      if (isset($pieces->data)) {
++        $data .= $piece->data;
++      }
++    }
+   }
+   unset($pieces);
+ 

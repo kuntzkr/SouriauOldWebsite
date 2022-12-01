@@ -1,0 +1,34 @@
+diff --git a/media_ckeditor.module b/media_ckeditor.module
+index b39703a..ef77fa4 100644
+--- a/media_ckeditor.module
++++ b/media_ckeditor.module
+@@ -84,6 +84,21 @@ function media_ckeditor_media_browser_params_alter(&$stored_params) {
+         'document'
+       ));
+     }
++    if (empty($stored_params['file_extensions'])) {
++      // Possible only for Image.
++      $stored_params['file_extensions'] = 'png gif jpg jpeg';
++      // Uncomment if we need to upload not only images.
++      // $extensions = '';
++      // foreach ($stored_params['types'] as $type) {
++      // $type = file_type_load($type);
++      // $extensions .= implode(' ', file_type_get_valid_extensions($type));
++      // }
++      // $stored_params['file_extensions'] = implode(' ', $extensions);.
++    }
++
++    // Extra params for use only public file system. (wysiwyg)
++    $stored_params['schemes'] = ['public' => 'public'];
++    $stored_params['uri_scheme'] = 'public';
+   }
+ }
+ 
+@@ -176,7 +191,6 @@ function media_ckeditor_form_media_admin_config_browser_alter(&$form, &$form_sta
+ 
+   // Add our optional settings to the Media Browser admin form.
+   $form['media_ckeditor'] = array(
+-  $form['media_ckeditor'] = array(
+     '#type' => 'fieldset',
+     '#title' => t('Ckeditor WYSIWYG configuration'),
+     '#collapsible' => TRUE,

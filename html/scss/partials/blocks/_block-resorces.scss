@@ -1,0 +1,173 @@
+.b-resorces {
+  padding: 67px 0 54px;
+
+  @include media("<desktop") {
+    padding: 23px 0 0;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 22px;
+  }
+
+  h1 {
+    margin: 0 0 3px;
+
+    @include media("<desktop") {
+      text-align: center;
+    }
+
+    @include media("<tablet") {
+      text-align: left;
+      margin: 0 0 46px;
+    }
+  }
+}
+
+.b-list-resources {
+  padding: 58px 0 70px;
+
+  @include media("<desktop") {
+    padding-bottom: 76px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 -10px;
+    padding: 20px 0 32px;
+  }
+
+  h2 {
+    color: $blue3;
+    font-family: $avenir-next-regular;
+    font-size: 32px;
+    line-height: 36px;
+    margin: 0 0 32px;
+
+    @include media("<desktop") {
+      padding: 0 0 0 8px;
+      margin: 0 0 25px;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+      margin: 0 0 18px;
+      font-size: 30px;
+    }
+  }
+
+  .b-theme-filters {
+    @include media("<desktop") {
+      padding-left: 8px;
+    }
+
+    @include media("<tablet") {
+      padding-left: 0;
+    }
+  }
+}
+
+.b-resorce-content {
+  padding: 8px 0 25px;
+
+  @include media("<desktop") {
+    padding: 0;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 22px;
+  }
+
+  .b-visual-content {
+    padding: 0 0 59px;
+
+    .b-video, .pic {
+      margin: 0;
+      padding: 0;
+
+      img {
+        margin: 0 auto;
+      }
+    }
+
+    @include media("<desktop") {
+      padding: 0 0 49px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 20px;
+    }
+  }
+
+  h1 {
+    margin: 0 0 18px;
+
+    @include media("<desktop") {
+      margin: 0 0 21px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 5px;
+    }
+  }
+
+  .b-resorce-info {
+    margin-left: 211px;
+    margin-right: 211px;
+
+    @include media("<desktop") {
+      margin-left: 111px;
+      margin-right: 111px;
+    }
+
+    @include media("<tablet") {
+      margin: 0;
+    }
+  }
+
+  .b-main-info {
+    @include media("<desktop") {
+      padding: 0 0 24px;
+    }
+
+    @include media("<tablet") {
+      padding: 0 0 18px;
+    }
+  }
+
+  .b-course {
+    display: inline-block;
+    color: $grey;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    line-height: 18px;
+    vertical-align: top;
+    margin: 0 15px 0 0;
+
+    @include media("<tablet") {
+      margin: 0 10px 0 0;
+    }
+  }
+
+  .publicate-date {
+    margin: 0 15px 0 0;
+
+    @include media("<tablet") {
+      margin: 0 2px 0 0;
+    }
+  }
+
+  .wysiwyg {
+    h2 {
+      margin: 51px 0 21px;
+
+      @include media("<tablet") {
+        margin: 33px 0 21px;
+      }
+    }
+
+    .pic {
+      margin: 0 0 26px;
+    }
+  }
+}

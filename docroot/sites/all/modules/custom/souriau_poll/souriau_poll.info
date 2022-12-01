@@ -1,0 +1,4 @@
+name = Souriau Poll
+description = Provides advanced poll functions.
+core = 7.x
+package = SOURIAU

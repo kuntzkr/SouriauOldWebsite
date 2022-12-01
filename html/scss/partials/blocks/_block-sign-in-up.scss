@@ -1,0 +1,164 @@
+.b-sign-in-up {
+  padding: 72px 0 9px;
+
+  @include media("<desktop") {
+    padding: 62px 0 4px;
+  }
+
+  @include media("<tablet") {
+    padding: 41px 0 49px;
+  }
+
+  .b-tabs-navigation {
+    display: none;
+    text-align: center;
+
+    a {
+      color: #ddd;
+      font-family: $avenir-next-regular;
+      font-size: 30px;
+      line-height: 36px;
+      text-decoration: none;
+      display: inline-block;
+      margin: 0 15px 38px;
+      @include transition(color 0.4s ease-in-out);
+
+      &.active-tab {
+        color: #2a569f;
+      }
+    }
+
+    @include media("<tablet") {
+      display: block;
+    }
+  }
+}
+
+.b-sign-in, .b-sign-up {
+  .btn {
+    min-height: 44px;
+    padding: 11px 29px;
+  }
+
+  .b-wrapper {
+    padding: 52px 17px 20px;
+    min-height: 384px;
+
+    @include media("<desktop") {
+      padding: 42px 20px 20px;
+    }
+
+    @include media("<tablet") {
+      min-height: 231px;
+      padding: 34px 12px 20px;
+
+      h1 {
+        display: none;
+      }
+    }
+  }
+
+  h1 {
+    margin: 0 0 51px;
+
+    @include media("<desktop") {
+      margin: 0 0 61px;
+    }
+  }
+
+  .btn {
+    @include media("<tablet") {
+      font-size: 10px;
+      line-height: 14px;
+      letter-spacing: 0.74px;
+      min-height: 36px;
+      padding: 10px 29px;
+      min-width: 210px;
+    }
+  }
+}
+
+.b-sign-in {
+  h1 {
+    text-align: center;
+  }
+
+  .b-wrapper {
+    border: 1px solid #e5e5e5;
+  }
+
+  .w-btn {
+    margin: -15px 0 15px;
+
+    @include media("<tablet") {
+      margin-top: -14px;
+    }
+  }
+}
+
+.b-sign-up {
+  text-align: center;
+
+  .b-wrapper {
+    background: $blue3;
+  }
+
+  .w-btn {
+    padding: 37px 0 65px;
+
+    .btn {
+      margin: 0 7px 15px;
+    }
+
+    @include media("<tablet") {
+      padding-bottom: 0;
+    }
+  }
+
+  .text {
+    padding: 52px 15px 30px;
+
+    @include media("<desktop") {
+      padding: 62px 0px 30px;
+    }
+
+    @include media("<tablet") {
+      padding: 2px 0 0;
+    }
+  }
+
+  h1, p, ul, ol {
+    color: $white;
+  }
+}
+
+.b-two-columns {
+  display: block;
+  text-align: center;
+
+  .align-container {
+    display: inline-block;
+    text-align: left;
+
+    @include media("<tablet") {
+      width: 100%;
+      padding-bottom: 24px;
+    }
+  }
+
+  .col {
+    width: 380px;
+    margin: 0 8px;
+    display: inline-block;
+    vertical-align: top;
+
+    @include media("<desktop") {
+      width: 345px;
+    }
+
+    @include media("<tablet") {
+      width: 100%;
+      margin: 0;
+    }
+  }
+}

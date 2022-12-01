@@ -1,0 +1,11 @@
+diff --git a/webform_multiple_file.info b/webform_multiple_file.info
+index 9b0e2ba..1428aea 100644
+--- a/webform_multiple_file.info
++++ b/webform_multiple_file.info
+@@ -3,5 +3,5 @@ description = Adds a new component to webform to allow multiple file uploads.
+ core = 7.x
+ package = Webform
+ 
+-dependencies[] = webform (4.x)
++dependencies[] = webform
+ dependencies[] = file

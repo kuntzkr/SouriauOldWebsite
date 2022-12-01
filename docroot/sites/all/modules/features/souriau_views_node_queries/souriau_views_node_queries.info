@@ -1,0 +1,13 @@
+name = Souriau Views Node Queries
+description = Contain queries for getting Similar Products and News
+core = 7.x
+package = Souriau Features
+version = 7.x-0.04
+dependencies[] = views
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = souriau_query_get_latest_news
+features[views_view][] = souriau_query_get_news
+features[views_view][] = souriau_query_get_partnumber_by_sku
+features[views_view][] = souriau_query_get_similar_products
+features_exclude[dependencies][ctools] = ctools

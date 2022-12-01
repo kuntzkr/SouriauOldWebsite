@@ -1,0 +1,58 @@
+.b-news-description {
+  padding: 22px 0 44px;
+
+  @include media("<desktop") {
+    padding: 20px 0 52px;
+  }
+
+  @include media("<tablet") {
+    padding: 0;
+  }
+
+  .b-title {
+    width: 407px;
+    margin: 0 30px 0 0;
+
+    @include media("<desktop") {
+      float: none;
+      width: auto;
+      margin: 0;
+      text-align: center;
+    }
+
+    h1{
+      @include media("<desktop") {
+        margin: 0 0 36px;
+      }
+
+      @include media("<tablet") {
+        padding: 0 0 13px;
+        margin: 0 0 28px;
+      }
+
+      &:before {
+        @include media("<desktop") {
+          left: 50%;
+          transform: translateX(-50%);
+          -moz-transform: translateX(-50%);
+          -ms-transform: translateX(-50%);
+          -webkit-transform: translateX(-50%);
+        }
+
+        @include media("<tablet") {
+          width: 90px;
+        }
+      }
+    }
+  }
+
+  .b-description {
+    overflow: hidden;
+    padding: 2px 0 0;
+
+    @include media("<desktop") {
+      text-align: center;
+      overflow: visible;
+    }
+  }
+}

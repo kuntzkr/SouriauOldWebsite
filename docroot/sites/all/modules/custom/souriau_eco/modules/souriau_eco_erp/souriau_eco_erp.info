@@ -1,0 +1,10 @@
+name = Souriau ECommerce ERP
+description = Ecommerce tools and plugins for work with ERP.
+core = 7.x
+package = SOURIAU
+
+version = "7.x-0.01"
+
+files[] = views/souriau_eco_erp.views.inc
+files[] = views/handlers/souriau_eco_erp_views_handler_erp_link.inc
+files[] = views/handlers/souriau_eco_erp_views_handler_line_items.inc

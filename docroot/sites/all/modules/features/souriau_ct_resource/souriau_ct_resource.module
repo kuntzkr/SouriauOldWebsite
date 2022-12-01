@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT Resource feature.
+ */
+
+include_once 'souriau_ct_resource.features.inc';

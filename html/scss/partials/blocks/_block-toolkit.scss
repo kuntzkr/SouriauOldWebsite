@@ -1,0 +1,188 @@
+.b-toolkit-description {
+  padding: 67px 0 74px;
+
+  @include media("<desktop") {
+    padding: 80px 0 26px;
+  }
+
+  @include media("<tablet") {
+    padding: 11px 0 10px;
+  }
+
+  .b-title {
+    width: 407px;
+    margin: 0 30px 0 0;
+
+    @include media("<desktop") {
+      float: none;
+      width: auto;
+      margin: 0;
+      text-align: center;
+    }
+
+    h1{
+      @include media("<desktop") {
+        margin: 0 0 17px;
+      }
+
+      @include media("<tablet") {
+        padding: 0 0 19px;
+        margin: 0 0 12px;
+      }
+
+      &:before {
+        @include media("<desktop") {
+          left: 50%;
+          transform: translateX(-50%);
+          -moz-transform: translateX(-50%);
+          -ms-transform: translateX(-50%);
+          -webkit-transform: translateX(-50%);
+        }
+
+        @include media("<tablet") {
+          width: 90px;
+        }
+      }
+    }
+  }
+
+  .b-description {
+    overflow: hidden;
+    padding: 14px 0 0;
+
+    @include media("<desktop") {
+      text-align: center;
+      overflow: visible;
+    }
+  }
+}
+
+.b-tool-feature {
+  .wrapper {
+    margin: 0 auto;
+    display: block;
+    width: 387px;
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+
+  .b-form {
+    .form-type-textfield, .form-type-email, .form-type-password, .form-type-textarea {
+      label {
+        padding: 0;
+        top: 20px;
+      }
+
+      &.full-field {
+        label {
+          top: 0;
+        }
+      }
+    }
+
+    .form-text, .form-area, .form-textarea {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .form-actions {
+      padding: 21px 0 68px;
+
+      @include media("<desktop") {
+        padding: 27px 0 98px;
+      }
+
+      @include media("<tablet") {
+        padding: 20px 0 40px;
+      }
+    }
+  }
+}
+
+.b-results {
+  text-align: center;
+  padding: 43px 0 78px;
+
+  h4 {
+    line-height: 42px;
+    margin: 0 auto 16px;
+    width: 480px;
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+
+  .w-btn {
+    padding: 17px 0 15px;
+
+    @include media("<desktop") {
+      padding: 14px 0 15px;
+    }
+  }
+
+  .b-list {
+    padding: 26px 0 0;
+  }
+}
+
+.b-legal-text {
+  padding: 33px 0 0;
+  text-align: center;
+
+  .wrapper {
+    width: 525px;
+    margin: 0 auto;
+
+    @include media("<tablet") {
+      width: 100%;
+    }
+  }
+}
+
+.b-toolkit-box, .b-generic-box {
+  padding: 33px 0 266px;
+
+  @include media("<desktop") {
+    padding: 21px 0 108px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 130px;
+    margin: -14px 0 0;
+  }
+
+  .b-description {
+    padding: 0 0 53px;
+
+    @include media("<desktop") {
+      padding: 0 0 38px;
+    }
+
+    @include media("<tablet") {
+      padding: 0;
+    }
+  }
+
+  h1  {
+    line-height: 60px;
+    margin: 0 0 30px;
+
+    @include media("<desktop") {
+      margin: 0 0 16px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 9px;
+      line-height: 36px;
+    }
+  }
+
+  p {
+    @include media("<tablet") {
+      padding: 0 0 17px;
+    }
+  }
+}

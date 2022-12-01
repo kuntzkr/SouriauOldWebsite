@@ -1,0 +1,13 @@
+name = Souriau Page Node View
+description = Overwrite node_view via PageManager
+core = 7.x
+package = Souriau Features
+version = 7.x-0.45
+dependencies[] = ctools
+dependencies[] = page_manager
+features[ctools][] = page_manager:pages_default:1
+features[features_api][] = api:2
+features[page_manager_handlers][] = node_view__capability-landing
+features[page_manager_handlers][] = node_view__http_response_fc9b6e16-90c3-4d3f-b749-c2727d8a35d3
+features[page_manager_handlers][] = node_view__panel_context_898b6882-9692-4563-9ca6-cfb800501990
+features[page_manager_handlers][] = site_template__panel_context_b1fa20ae-395a-4176-8558-541626ddfe9a

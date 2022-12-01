@@ -1,0 +1,586 @@
+/**
+ * Style to handle the tree structure style for the download center filters.
+ * And other redesign style for download center.
+ */
+.hummingbird-treeview,
+.hummingbird-treeview * {
+  list-style: none;
+  line-height: 16px;
+  font-family: AvenirStd, Helvetica, Arial, sans-serif;
+}
+.hummingbird-treeview {
+  padding: 20px 5px 20px 0px;
+}
+.hummingbird-treeview label {
+  font-weight: normal;
+}
+.sub-parent i label {
+    margin-left: 10px;
+}
+.hummingbird-treeview .clear-buttons button {
+  font-size: 12px;
+  padding: 5px;
+  text-align: center;
+  display: inline-block;
+  margin: 4px;
+  width: calc(50% - 16px);
+  cursor: pointer;
+  box-shadow: 0px 0px rgba(0,0,0,0.2), 0px 0px rgba(0,0,0,0.19);
+  letter-spacing: 0;
+}
+.hummingbird-treeview .clear-buttons {
+  text-align: center;
+  width: 100%;
+}
+.hummingbird-treeview .clear-buttons button:hover {
+  color: #484444;
+  box-shadow: 0px 0px rgba(0,0,0,0.24), 0px 0px rgba(0,0,0,0.19);
+}
+.hummingbird-treeview ul li input[type=checkbox] {
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+  appearance: checkbox;
+  position: absolute;
+}
+.hummingbird-treeview ul:not(.hummingbird-base) {
+  display: none;
+}
+.hummingbird-treeview .fa {
+  font-style: normal;
+  cursor: pointer;
+}
+.hummingbird-treeview ul li::before {
+  background: none;
+}
+.b-view-results.table-view .b-product-item .pic {
+  padding-bottom:10px;
+  height: 185px;
+  max-width: 100%;
+}
+.hummingbird-treeview ul li.parent ul {
+  padding-left: 5px;
+}
+.hummingbird-treeview ul li.parent > label > input[type=checkbox] {
+  display: none;
+}
+.hummingbird-treeview ul li.parent li.sub-parent ul {
+  padding-left: 22px;
+}
+.hummingbird-treeview ul li.parent li.sub-parent ul li {
+  padding: 0px;
+}
+.hummingbird-treeview ul li > i.fa.fa-plus::before,
+.hummingbird-treeview ul li > i.fa.fa-minus::before {
+  content: '';
+  display: inline-block;
+  float: left;
+  background-image: url(../images/icons.png);
+  width: 10px;
+  height: 15px;
+  margin-top: 3px;
+  margin-right: 3px;
+}
+.hummingbird-treeview ul li > i.fa.fa-plus::before {
+  background-position: -3px 118px;
+}
+.hummingbird-treeview ul li > i.fa.fa-minus::before {
+  background-position: 60px 118px;
+}
+.hummingbird-treeview ul li:not(.parent) > i::after {
+  display: none;
+}
+.main-content .hummingbird-treeview ul {
+    margin: 0 0 5px;
+}
+.filter-col {
+  width: 27%;
+  float: left;
+  margin-right: 40px;
+}
+.result-col  {
+  width: calc(73% - 40px);
+  float: left;
+}
+.b-filters .form-type-checkbox label[for="certificates"] {
+  border: 1px solid #d99694;
+  color: #d99694;
+}
+.b-filters .form-type-checkbox input[type="checkbox"]:checked + label[for="certificates"] {
+  background: #d99694;
+}
+.b-filters .form-type-checkbox label[for="selector-guides"] {
+  border: 1px solid #93cddd;
+  color: #93cddd;
+}
+.b-filters .form-type-checkbox input[type="checkbox"]:checked + label[for="selector-guides"] {
+  background: #93cddd;
+}
+.b-filters .form-type-checkbox label[for="capabilities"] {
+  border: 1px solid #e46c0a;
+  color: #e46c0a;
+}
+.b-filters .form-type-checkbox input[type="checkbox"]:checked + label[for="capabilities"] {
+  background: #e46c0a;
+}
+.b-filters .form-type-checkbox label[for="datasheets"] {
+  border: 1px solid #00b050;
+  color: #00b050;
+}
+.b-filters .form-type-checkbox input[type="checkbox"]:checked + label[for="datasheets"] {
+  background: #00b050;
+}
+.b-filters .form-type-checkbox label[for="catalogues"]{
+  border: 1px solid #0070c0;
+  color: #0070c0;
+}
+.b-filters .form-type-checkbox input[type="checkbox"]:checked + label[for="catalogues"] {
+  background: #0070c0;
+}
+.b-download-center #documents-filter {
+  clear: both;
+  width: 100%;
+}
+.result-col .searchbox {
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+  height: 50px;
+}
+.b-download-center .customForms-processed .form-item input[type="text"] {
+  float: left;
+  width: 40%;
+  padding: 5px;
+  border: 1px solid #7199c9;
+  color: #7199c9;
+  border-radius: 3px;
+}
+.b-download-center .customForms-processed .form-item input[type="text"]::placeholder {
+  font-size: 12px;
+  color: #7199c9;
+}
+.btn.link-view-all-results {
+  padding: 0;
+  margin: 7px 0 0px -22px;
+  min-height: 10px;
+  height: 15px;
+  width: 20px;
+  float: left;
+  background: none;
+}
+.b-download-center .ico-search {
+  fill: #5679a9;
+}
+.main-title {
+  width: calc(75% - 40px);
+  margin-left: auto;
+  margin-right: 0;
+  margin-bottom: 15px;
+}
+.main-title::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+.b-download-center .main-title h1 {
+  font-size: 26px;
+  float: left;
+  margin-bottom: 15px;
+}
+.b-download-center .main-title h1:after {
+  content: "";
+  display: block;
+  margin: 0 auto;
+  width: 50%;
+  border-bottom: 1px solid #b21c1c;
+  float: left;
+}
+.b-download-center .item-document .b-wrapper {
+  width: 500px;
+  float: left;
+}
+.b-download-center .item-document label.document-type {
+  float: left;
+  margin: 0px 0 0 10px;
+}
+.result-col .b-result-view #list-view .b-result-wrapper {
+  padding: 20px 20px 1px 20px;
+}
+.result-col .b-result-view #table-view .b-result-wrapper {
+  padding: 20px 0px 1px 20px;
+}
+.result-col .b-view-params {
+  float: left;
+  padding: 10px;
+  width: 10%;
+}
+#documents-filter .b-form.labelBehavior-processed {
+  float: left;
+  width: 90%;
+}
+.b-view-params .b-params {
+  width: 50px;
+  height: 22px;
+}
+.b-view-results.table-view .b-product-item{
+  width: calc(33.33% - 20px);
+}
+.result-col .b-result-view {
+  clear: both;
+}
+.result-col .text-results {
+  float: left;
+  min-height: 30px;
+  width: 100%;
+  color: #787c7f;
+  padding: 5px;
+  text-align: left;
+  font-size: 12px;
+}
+.b-download-center .b-filters .b-type-filters .form-type-checkbox label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: capitalize;
+  border-radius: 3px;
+}
+.b-view-results.list-view .b-product-item label {
+  float:left;
+  width: 30%;
+}
+.b-view-results.list-view .b-product-item .b-product-info span.ico-pdf, .b-view-results.list-view .b-product-item .b-product-info span.ico-ipaper{
+  width: 20px;
+  height: 20px;
+  float: left;
+  margin-right: 10px;
+  fill: #ff3a3a;
+}
+.b-view-results.list-view .b-product-item h4, .b-view-results.list-view  .b-product-item h4 a {
+  font-size: 16px;
+  line-height: 36px;
+  color: #2a4278;
+  text-decoration: none;
+  float: left;
+  width: 70%;
+  font-family: AvenirStd, Helvetica, Arial, sans-serif;
+}
+.b-view-results.list-view .b-product-item h4 a {
+  margin-top: -5px;
+}
+.b-view-results.table-view .b-product-item h4, .b-view-results.table-view  .b-product-item h4 a {
+  font-size: 16px;
+  line-height: 24px;
+  text-decoration: none;
+  text-align: center;
+  color: #2a4278;
+  font-family: AvenirStd, Helvetica, Arial, sans-serif;
+  margin: 15px 0px;
+
+}
+.b-view-results.table-view  .b-product-item:nth-child(4n) {
+  margin-right: 16px;
+}
+.b-info label {
+  padding: 4px 5px;
+  color: #fff;
+  font-family: OpenSans, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 22px;
+  width: 100%;
+  text-align: center;
+  border-radius: 3px;
+}
+.b-info label[for="catalogues"]  {
+  background-color: #0070c0;
+}
+.b-info label[for="datasheets"]  {
+  background-color: #00b050;
+}
+.b-info label[for="capabilities"] {
+  background-color: #e46c0a;
+}
+.b-info label[for="selector-guides"] {
+  background-color: #93cddd;
+}
+.b-info label[for="certificates"] {
+  background-color: #d99694;
+}
+#filter-nav-mobile {
+  display: none;
+}
+
+#treeview li.parent ul li label span {
+  top: 0;
+  left: 0;
+  display: inline-block;
+  padding: 0px 3px 1px 24px;
+  width: 100%;
+}
+#treeview li.parent ul li.sub-parent ul li label {
+  margin: 4px 0px;
+  position: relative;
+}
+.hummingbird-treeview ul li.parent input[type="checkbox"] {
+  top: -3px;
+}
+.parent > label {
+  margin-left: 22px;
+}
+.hummingbird-treeview li.parent ul li.sub-parent ul input[type="checkbox"] {
+  top: -6px;
+}
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  #treeview li.parent ul li label span {
+    padding: 0px 3px 1px 22px;
+  }
+  .hummingbird-treeview li.parent ul li.sub-parent.standard-connectors input[type="checkbox"],
+  .hummingbird-treeview li.parent ul li.sub-parent.accessories input[type="checkbox"] {
+    top: 1px !important;
+  }
+  .hummingbird-treeview ul li.parent input[type="checkbox"] {
+    top: 1px;
+  }
+  .hummingbird-treeview li.parent ul li.sub-parent input[type="checkbox"] {
+    top: -3px !important;
+  }
+}
+
+.b-view-results {
+  padding: 0;
+}
+.b-view-results.table-view {
+  padding: 0 0 0px;
+}
+.result-col .b-result-view #list-view .view-more.blue-btn,
+.result-col .b-result-view #table-view .view-more.blue-btn {
+  margin-top: 50px;
+}
+.hummingbird-treeview  button.filter-btn,
+.hummingbird-treeview  button.filter-btn:visited {
+  background: #4f81bd;
+  border-color: transparent;
+  color: #fff;
+}
+.hummingbird-treeview  button.filter-btn:hover {
+  color: #4f81bd;
+  border-color: #4f81bd;
+  background: transparent;
+}
+#part-number-results figure.pic {
+  border: 1px solid #a5a1a11a;
+  box-shadow: 0 8px 6px -6px #8c8080cc;
+}
+.link-list-view,
+.link-table-view {
+  cursor: pointer;
+}
+#treeview li.parent > i.fa {
+  font-style: normal;
+  cursor: pointer;
+  width: 100px;
+  height: 28px;
+  position: absolute;
+  display: inline;
+  z-index: 1000;
+}
+.b-product-item .b-info {
+  padding: 25px 0 0px 0;
+}
+.b-view-results.table-view .b-product-item .b-info {
+  padding: 22px 0 0px 0;
+}
+/* Media queries. */
+@media only screen and (min-width: 1024px) {
+  .filter-close {
+    display: none;
+  }
+}
+@media only screen and (max-width: 980px) {
+  .hummingbird-treeview .clear-buttons button {
+    width: 100px;
+  }
+}
+@media only screen and (max-width: 768px ) {
+  .hummingbird-treeview ul li.parent input[type="checkbox"] {
+    top: 1px;
+  }
+  #treeview li.parent ul li label span {
+    padding: 0px 3px 1px 22px;
+  }
+}
+@media only screen and (width: 768px ) {
+  .b-view-results.list-view .b-product-item h4 a {
+    line-height: 19px;
+  }
+}
+
+@media only screen and (max-width: 767px ) {
+  .hummingbird-treeview  button.filter-btn:hover {
+    background: #4f81bd;
+    border-color: transparent;
+    color: #fff;
+  }
+  #treeview_container {
+    display: none;
+    position: fixed;
+    top: 0px;
+    left:0;
+    z-index: 100;
+    height: 100%;
+    width: 100%;
+    opacity: 1;
+    overflow: auto;
+    background-color: #fff;
+    transform: translateX(-100%);
+    -webkit-transform: translateX(-100%);
+  }
+  #filter-nav-mobile {
+    display: block;
+    margin-bottom: 15px;
+    text-align: center;
+    float: none;
+    padding: 0;
+  }
+  #treeview_container .ico-close .svg-ico {
+    width: 15px;
+    height: 15px;
+    float: right;
+    margin-top: -12px;
+    position: relative;
+    margin-right: 8px;
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+  }
+  .main-title {
+    width: 90%;
+    margin: 0 auto;
+  }
+  .hummingbird-treeview .clear-buttons button {
+    font-size: 11px;
+    width: 100px;
+  }
+  #documents-filter .b-form.labelBehavior-processed {
+    width: 100%;
+  }
+  .b-download-center .customForms-processed .form-item input[type="text"] {
+    float: left;
+    width: 100%;
+    margin-left: 0;
+  }
+  .b-product-item .b-product-info {
+    width: 60%;
+    float:left;
+    padding-right: 10px;
+  }
+  .b-product-item .b-category-info {
+    width: 40%;
+    float: left;
+    margin: 15px 0px;
+  }
+  .b-product-item .b-info {
+    /*margin-top: 15px;*/
+    margin-top: 5px;
+  }
+  .b-view-results.table-view .b-product-item .b-info {
+    padding: 0;
+  }
+  .b-view-results.table-view .b-product-item{
+    width: 100%;
+  }
+  .b-view-results.table-view .b-product-item h4, .b-view-results.table-view  .b-product-item h4 a {
+    text-align: unset;
+  }
+  .filter-col {
+    width: 100%;
+    margin: 0 auto;
+    float: unset;
+  }
+  .result-col {
+    width: 100%;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  .b-download-center .customForms-processed .title {
+    margin-left: unset;
+  }
+  .b-info label {
+    width: 150px;
+    padding: 4px 6px;
+  }
+  .result-col .b-result-view #table-view .view-more.blue-btn {
+    width: 158px;
+    margin: 50px auto 0 auto;
+  }
+  .hummingbird-treeview ul li.parent input[type="checkbox"] {
+    top: 0px;
+  }
+  .hummingbird-treeview ul li.sub-parent ul input[type="checkbox"] {
+    top: -3px;
+  }
+  #treeview li.parent ul li label span {
+    padding: 0px 3px 1px 24px;
+  }
+}
+
+@-webkit-keyframes slide-in {
+  100% { -webkit-transform: translateX(0%); }
+}
+@-moz-keyframes slide-in {
+  100% { -webkit-transform: translateX(0%); }
+}
+@-ms-keyframes slide-in {
+  100% { -webkit-transform: translateX(0%); }
+}
+@-o-keyframes slide-in {
+  100% { -webkit-transform: translateX(0%); }
+}
+@keyframes slide-in {
+  100% { transform: translateX(0%); }
+}
+@-webkit-keyframes slide-out {
+  0% { -webkit-transform: translateX(0%); }
+  50% { transform: translateX(-50%); }
+  100% { -webkit-transform: translateX(-100%); }
+}
+@-moz-keyframes slide-out {
+  0% { -webkit-transform: translateX(0%); }
+  50% { transform: translateX(-50%); }
+  100% { -webkit-transform: translateX(-100%); }
+}
+@-ms-keyframes slide-out {
+  0% { -webkit-transform: translateX(0%); }
+  50% { transform: translateX(-50%); }
+  100% { -webkit-transform: translateX(-100%); }
+}
+@-o-keyframes slide-out {
+  0% { -webkit-transform: translateX(0%); }
+  50% { transform: translateX(-50%); }
+  100% { -webkit-transform: translateX(-100%); }
+}
+@keyframes slide-out {
+  0% { transform: translateX(0%); }
+  50% { transform: translateX(-50%); }
+  100% { transform: translateX(-100%); }
+}
+
+@media only screen and (max-width: 380px) {
+  .b-download-center .main-title h1 {
+    font-size: 22px;
+    margin-top: 25px;
+  }
+  .b-product-item .b-category-info {
+    padding-top: 10px;
+  }
+  .b-info label {
+    width: 100%;
+    padding: 6px 5px;
+    margin-top: 8px;
+  }
+}
+@media only screen and (max-width: 360px) {
+  .b-info label {
+    margin-top: -5px;
+  }
+}

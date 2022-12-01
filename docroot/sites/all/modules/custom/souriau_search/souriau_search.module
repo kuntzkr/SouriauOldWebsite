@@ -1,0 +1,1858 @@
+<?php
+/**
+ * @file
+ * Souriau Ecommerce module.
+ */
+
+define('PRODUCT_SEARCH_INDEX', 'products_search_index');
+
+/**
+ * Implements hook_search_api_item_type_info_alter().
+ */
+function souriau_search_search_api_item_type_info_alter(array &$infos) {
+  module_load_include('php', 'search_api_et', 'includes/SearchApiEtHelper');
+
+  foreach (entity_get_property_info() as $type => $property_info) {
+    if (isset($infos[SearchApiEtHelper::getItemType($type)])) {
+      $info = entity_get_info($type);
+      $infos[SearchApiEtHelper::getItemType($type)]['datasource controller'] = 'SouriauSearchDatasourceController';
+      $infos[SearchApiEtHelper::getItemType($type)]['name'] = t('Souriau Mixed !type', array('!type' => $info['label']));
+    }
+  }
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_search_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' || $module == 'ctools' || $module == 'page_manager') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_search_menu() {
+  $items['souriau/ajax/search-pager/%/%'] = [
+    'title' => 'Search AHAH callback',
+    'page callback' => 'souriau_search_pager_callback',
+    'page arguments' => [3, 4],
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function souriau_search_entity_property_info_alter(&$info) {
+  // Define usage property info for files.
+  $info['commerce_product']['properties']['category'] = [
+    'type' => 'list<node>',
+    'label' => t('Category'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_category_getter_callback',
+  ];
+  $info['commerce_product']['properties']['subcategory'] = [
+    'type' => 'list<node>',
+    'label' => t('Subcategory (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_subcategory_getter_callback',
+  ];
+  $info['commerce_product']['properties']['product_series'] = [
+    'type' => 'list<taxonomy_term>',
+    'label' => t('Product series (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_product_series_getter_callback',
+  ];
+  $info['commerce_product']['properties']['sku_string'] = [
+    'type' => 'string',
+    'label' => t('SKU as string for sort (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_sku_string_getter_callback',
+  ];
+  $info['node']['properties']['title_field_string'] = [
+    'type' => 'string',
+    'label' => t('title_field as string for sort (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_title_getter',
+  ];
+
+  $info['node']['properties']['type_weight'] = [
+    'type' => 'integer',
+    'label' => t('type weight for sort (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_type_weight_string_getter_callback',
+  ];
+
+  $info['node']['properties']['search_title'] = [
+    'type' => 'text',
+    'label' => t('type weight for sort'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_title_getter',
+  ];
+
+  $info['node']['properties']['product_series_text'] = [
+    'type' => 'list<text>',
+    'label' => t('Product series text for search'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_product_series_text_getter',
+  ];
+
+  $info['node']['properties']['partial_title'] = [
+    'type' => 'text',
+    'label' => t('Support partial title search'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_title_getter',
+  ];
+  $info['commerce_product']['properties']['partial_sku'] = [
+    'type' => 'text',
+    'label' => t('Support partial sku search'),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_partial_sku_getter',
+  ];
+  $info['commerce_product']['properties']['domains'] = [
+    'type' => 'list<node>',
+    'label' => t('Available in domains', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_domains_getter_callback',
+  ];
+  $info['node']['properties']['product_series_weight'] = [
+    'type' => 'integer',
+    'label' => t('product series weight for productrange sort (Technical facets, please do not touch)', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    'sanitized' => TRUE,
+    'getter callback' => 'souriau_search_product_series_weight_getter_callback',
+  ];
+  return $info;
+}
+
+/**
+ * Get list of domain_id where the product is available.
+ */
+function souriau_search_domains_getter_callback($product, array $options, $name, $type, $info) {
+  $available_in_domains = [];
+
+  $domains = domain_id_list();
+  foreach ($domains as $domain_id) {
+    if (souriau_common_sku_is_available_in_domain($product, $domain_id)) {
+      $available_in_domains[] = $domain_id;
+    }
+  }
+
+  return $available_in_domains;
+}
+
+/**
+ * Getter callback for type_weight for search.
+ */
+function souriau_search_type_weight_string_getter_callback($entity, array $options, $name, $type, $info) {
+  $weigths = [
+    'productrange' => 0,
+    'productrangehub' => 0,
+    'application' => 1,
+    'capability' => 2,
+    'news' => 3,
+    'product' => 4,
+  ];
+  list(, , $bundle) = entity_extract_ids($type, $entity);
+  return isset($weigths[$bundle]) ? $weigths[$bundle] : 999;
+}
+
+/**
+ * Getter callback for product series weight for productrange sort.
+ */
+function souriau_search_product_series_weight_getter_callback($entity, array $options, $name, $type, $info) {
+  if (!in_array($entity->type, ['productrange', 'productrangehub'])) {
+    return;
+  }
+  $wrapper = entity_metadata_wrapper('node', $entity);
+  $product_series = $wrapper->language($info['langcode'])->field_product_series->value();
+
+  return ($product_series->weight != 0) ? $product_series->weight : 9999;
+}
+
+/**
+ * Getter callback for SKU as string for search.
+ */
+function souriau_search_sku_string_getter_callback($product, array $options, $name, $type, $info) {
+  return $product->sku;
+}
+
+/**
+ * Getter callback for listing subcategories of SKU.
+ */
+function souriau_search_subcategory_getter_callback($product, array $options, $name, $type, $info) {
+  $part_number = souriau_common_load_part_number_by_sku($product->sku);
+  $product_ranges = souriau_common_get_product_ranges($part_number);
+  $subcategory_ids = souriau_common_get_subcategories_by_product_ranges($product_ranges);
+  return $subcategory_ids;
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_search_category_getter_callback($product, array $options, $name, $type, $info) {
+  $part_number = souriau_common_load_part_number_by_sku($product->sku);
+  $product_ranges = souriau_common_get_product_ranges($part_number);
+  $category_ids = souriau_common_get_categories_for_product_ranges($product_ranges);
+  return $category_ids;
+}
+
+/**
+ * Getter callback for listing usage of a file by other entities.
+ */
+function souriau_search_product_series_getter_callback($product, array $options, $name, $type, $info) {
+  return souriau_common_get_product_series_value_from_product($product, 'tid');
+}
+
+/**
+ * Tab machine name getter.
+ *
+ * @param string $tab
+ *   Tab name for js side.
+ *
+ * @return string
+ *   Tab machine name.
+ */
+function souriau_search_machine_name($tab) {
+  $ret = $tab;
+  $active_tab = isset($_GET['active_tab']) ? $_GET['active_tab'] : 'all';
+  $tabs_info = souriau_search_tabs_info($active_tab);
+  foreach ($tabs_info as $machine_name => $tab_info) {
+    if ($tab_info['html_id'] == $tab) {
+      $ret = $machine_name;
+      break;
+    }
+  }
+  return $ret;
+}
+
+/**
+ * Get tab groups.
+ *
+ * @return array
+ *   The tab group.
+ */
+function souriau_search_get_groups($tabs, $index = []) {
+  if (empty($index) && !is_object($index)) {
+    $index = search_api_index_load(PRODUCT_SEARCH_INDEX);
+  }
+
+  $groups = [
+    'all' => $index->options['datasource']['bundles'],
+    'productrange' => ['productrange', 'productrangehub'],
+    'product' => 'product',
+    'application' => 'application',
+    'capability' => 'capability',
+    'news' => 'news',
+  ];
+
+  if (empty($tabs)) {
+    return $groups;
+  }
+  if (!is_array($tabs)) {
+    $tabs = [$tabs];
+  }
+  foreach ($tabs as $tab) {
+    if (isset($groups[$tab])) {
+      return [$tab => $groups[$tab]];
+    }
+  }
+}
+
+/**
+ * Menu callback, handles Ajax requests for next page data.
+ *
+ * @param string $tab
+ *   Search tab ID.
+ * @param string $keyword
+ *   Search keyword.
+ *
+ * @return array
+ *   Ajax commands array.
+ */
+function souriau_search_pager_callback($tab, $keyword = '') {
+  $filters = [];
+  if (!empty($_POST)) {
+    $filters += souriau_search_product_filter_form_process($_POST);
+  }
+  elseif (!empty($_GET)) {
+    $data = souriau_search_get_preprocess();
+    $filters += souriau_search_product_filter_form_process($data);
+  }
+
+  if ($keyword == 'search') {
+    $keyword = '';
+  }
+  if (empty($filters['keyword'])) {
+    unset($filters['keyword']);
+  }
+  $filters += [
+    'keyword' => decode_entities($keyword),
+  ];
+  $tab = souriau_search_machine_name($tab);
+
+  $results[$tab] = souriau_search_apply_filter_helper($tab, $filters, FALSE);
+  $nodes = $results[$tab]['results'][$tab];
+  $active_filters = isset($results[$tab]['active_filters']) ? $results[$tab]['active_filters'] : [];
+  $tab_data = souriau_search_tab_info($tab);
+  $commands = [];
+  $settings = [];
+  if (!isset($_GET['page'])) {
+    $commands[] = ajax_command_remove('#' . $tab_data['html_id'] . ' .b-view-results .b-product-item');
+  }
+
+  // We must use add per node append command for proper work auto height
+  // in table mode.
+  foreach ($nodes['node'] as $node) {
+    $commands[] = ajax_command_append('#' . $tab_data['html_id'] . ' .b-view-results', trim(drupal_render($node)));
+  }
+  if ($_POST['view_type'] == 'table-view') {
+    $commands[] = ajax_command_invoke('#' . $tab_data['html_id'] . ' .b-view-results  .b-product-item', 'matchHeight');
+  }
+  $commands[] = ajax_command_invoke(NULL, 'resizeSearchImages', ['#' . $tab_data['html_id'] . ' .b-view-results']);
+
+  $settings['souriauSearchPager']['NextPage'][$tab_data['html_id']] = isset($results[$tab]['next_page'][$tab]) ? $results[$tab]['next_page'][$tab] : 0;
+  $commands[] = ajax_command_settings($settings, TRUE);
+  if ($settings['souriauSearchPager']['NextPage'][$tab_data['html_id']] > 0) {
+    $commands[] = ajax_command_invoke('#' . $tab_data['html_id'] . ' .w-btn.text-center', 'show');
+  }
+  else {
+    $commands[] = ajax_command_invoke('#' . $tab_data['html_id'] . ' .w-btn.text-center', 'hide');
+  }
+  $count = isset($results[$tab]['count'][$tab]) ? $results[$tab]['count'][$tab] : 0;
+  $search_info = [
+    '#theme' => 'souriau_search_info',
+    '#count' => format_plural($count, '1 item', '@count items'),
+    '#filters' => $active_filters,
+  ];
+  $jquery_invoke_function = ($count > 0) ? 'removeClass' : 'addClass';
+  $commands[] = ajax_command_invoke('#' . $tab_data['html_id'] . ' .b-view-params .b-params', $jquery_invoke_function, ['hidden']);
+  $commands[] = ajax_command_replace('#' . $tab_data['html_id'] . ' .b-search-info', render($search_info));
+  if ($tab == 'product') {
+    $tab_title = $tab_data['name'];
+    $tab_title .= ' (' . $count . ')';
+    $commands[] = ajax_command_html('.b-tabs .nav-tabs li.active a', $tab_title);
+  }
+
+  return ['#type' => 'ajax', '#commands' => $commands];
+}
+
+/**
+ * Apply filter helper.
+ *
+ * @param string $tabs
+ *   An array of tab machine names for which we get results.
+ * @param array $filters
+ *   Filters array.
+ * @param bool $ajax
+ *   If TRUE return #ajax render array.
+ * @param bool $pager
+ *   If TRUE we in pager mode, used with $ajax= TRUE.
+ *
+ * @return array|bool
+ *   Count/view array or #ajax render array or FALSE on no results.
+ */
+function souriau_search_apply_filter_helper($tabs = [], $filters = [], $ajax = FALSE, $pager = FALSE) {
+  global $language;
+  // Temporaty setup to disable pages > 10.
+  $page = isset($_GET['page']) ? $_GET['page'] : 0;
+
+  $ret = [
+    'count' => [],
+    'next_page' => [],
+    'results' => [],
+  ];
+  $results = [];
+
+  $term = $filters['keyword'];
+  $sort = isset($filters['sort']) ? $filters['sort'] : 'ASC';
+  unset($filters['keyword']);
+  unset($filters['sort']);
+
+  // Create Search_API objects.
+  list($index, $service) = _souriau_common_get_search_api_objects(PRODUCT_SEARCH_INDEX);
+
+  $tabs = souriau_search_get_groups($tabs, $index);
+  $page_size = 6;
+  $offset = $page * $page_size;
+  $sort_data = [
+    'all' => [
+      'type_weight' => 'ASC',
+      'product_series_weight' => 'ASC',
+      'field_sticky' => 'DESC',
+      'title_field_string' => 'ASC'
+    ],
+    'productrange' => [
+      'product_series_weight' => 'ASC',
+      'title_field_string' => 'ASC'
+    ],
+    'product' => [
+      'field_sticky' => 'DESC',
+      'field_sku_products:sku_string' => 'ASC',
+      'title_field_string' => 'ASC'
+    ],
+    'application' => [
+      'title_field_string' => 'ASC'
+    ],
+    'capability' => [
+      'title_field_string' => 'ASC'
+    ],
+    'news' => [
+      'title_field_string' => 'ASC'
+    ],
+  ];
+
+  foreach ($tabs as $group => $types) {
+    $domain = domain_get_domain();
+    $query = new SearchApiQuery($index);
+    $query->setOption('parse mode', 'terms');
+    $query->keys($term);
+    $query->range($offset, $page_size);
+    $group_sort_order = $sort_data[$group];
+    if ($sort == 'DESC') {
+      // Invert sort orders.
+      $fixed_sort_order = ['field_sticky', 'type_weight'];
+      foreach ($group_sort_order as $field_name => $sort_order) {
+        if (in_array($field_name, $fixed_sort_order)) {
+          continue;
+        }
+        $group_sort_order[$field_name] = $sort_order == 'ASC' ? 'DESC' : 'ASC';
+      }
+    }
+    foreach ($group_sort_order as $sort_field => $sort_order) {
+      $query->sort($sort_field, $sort_order);
+    }
+
+    if (!is_array($types)) {
+      $types = [$types];
+    }
+    $filter = $query->createFilter('OR');
+    foreach ($types as $type) {
+      $sub_filter = $query->createFilter('AND');
+      $sub_filter->condition('type', $type);
+      if ($type != 'product') {
+        $sub_filter->condition('search_api_language', $language->language);
+      }
+      else {
+        // Filter by Domain, only for Products.
+        $sub_filter->condition('field_sku_products:domains', $domain['domain_id']);
+      }
+      $filter->filter($sub_filter);
+    }
+    $query->filter($filter);
+
+    $query->fields($index->getFulltextFields());
+
+    if (!empty($filters) && $group == 'product') {
+      $active_filters_items = [];
+      souriau_search_apply_filter_helper_filter_process($active_filters_items, $query, $filters);
+      $ret['active_filters'] = [
+        '#theme' => 'active_filters',
+        '#items' => $active_filters_items,
+      ];
+    }
+    $search_result = $service->search($query);
+
+    $ret['count'][$group] = (int) $search_result['result count'];
+    $items_from_start = ($page + 1) * $page_size;
+    $ret['next_page'][$group] = ($items_from_start < $ret['count'][$group]) ? ($page + 1) : 0;
+    if (!empty($search_result['results'])) {
+      $results[$group] = $search_result['results'];
+    }
+  }
+
+  if (empty($results)) {
+    return $ret;
+  }
+
+  foreach ($results as $group => $result) {
+    $extracted_ids = souriau_common_search_api_extract_entity_ids($result, $index);
+    $entities = entity_load($extracted_ids['entity_type'], $extracted_ids['ids']);
+    $ret['results'][$group] = entity_metadata_view_single($entities, 'search_result', $language->language, $extracted_ids['entity_type']);
+  }
+  if ($ajax) {
+    // Return ajax commands set for ajax requests.
+    $commands = [];
+    $commands[] = ajax_command_replace('.b-cnt-result', '<div class="b-cnt-result">' . format_plural($result['count'], '1 Item', '@count Items') . '</div>');
+    if ($pager) {
+      $commands[] = ajax_command_append('.b-list-documents', $result['view']);
+    }
+    else {
+      $commands[] = ajax_command_replace('.b-list-documents', '<div class="b-list-documents">' . render($ret['results']) . '</div>');
+    }
+    if ($result['next_page'] > 0) {
+      $commands[] = ajax_command_invoke('.w-btn.text-center', 'show');
+    }
+    else {
+      $commands[] = ajax_command_invoke('.w-btn.text-center', 'hide');
+    }
+    return array('#type' => 'ajax', '#commands' => $commands);
+  }
+
+  // Return results.
+  return $ret;
+}
+
+/**
+ * Active filters theme helper.
+ *
+ * @param array $active_filters_items
+ *   Result array with active filter items theme elements.
+ * @param \SearchApiQuery $query
+ *   Search api query.
+ * @param array $filters
+ *   Active facets list.
+ */
+function souriau_search_apply_filter_helper_filter_process(&$active_filters_items, SearchApiQuery $query, $filters) {
+  global $language;
+  unset($filters['sort']);
+  unset($filters['keyword']);
+  foreach ($filters as $filter_name => $value) {
+    $filter = $query->createFilter('AND');
+    $add_filter = TRUE;
+    switch ($value['widget']) {
+      case 'souriau_common_checkbox':
+        $sub_filter = $query->createFilter('OR');
+        if (!is_array($value['value'])) {
+          $value['value'] = [$value['value']];
+        }
+        foreach ($value['value'] as $sub_filter_value) {
+          $sub_filter->condition($filter_name, $sub_filter_value);
+        }
+        $filter->filter($sub_filter);
+        $filter_value = $value['value'];
+        $filter_title = $value['title'];
+        $active_filters_items[] = [
+          '#theme' => 'active_filter_item',
+          '#machine_name' => $filter_name,
+          '#title' => $filters[$filter_name]['title'] . ' : ' . $filter_title,
+          '#value' => $filter_value,
+          '#type' => 'souriau_common_checkbox',
+        ];
+        break;
+
+      case 'souriau_common_dropdown_list':
+        $filter_value = $value['value'];
+        $filter_title = $filter_value;
+        if ($filter_name == 'field_sku_products:product_series') {
+          $entity = entity_load_single('taxonomy_term', $filter_value);
+          $filter_title = souriau_common_get_taxonomy_name($entity, $language);
+        }
+        if ($filter_name == 'field_sku_products:field_sku_application') {
+          $entity = entity_load_single('node', $filter_value);
+          $filter_title = souriau_common_get_field_value('node', $entity, 'title_field', $language->language);
+        }
+        $filter->condition($filter_name, $filter_value);
+        $active_filters_items[] = [
+          '#theme' => 'active_filter_item',
+          '#machine_name' => $filter_name,
+          '#title' => $filters[$filter_name]['title'] . ' : ' . $filter_title,
+          '#value' => $filter_value,
+          '#type' => 'souriau_common_dropdown_list',
+        ];
+        break;
+
+      case 'souriau_common_number_compare':
+        $filter_value = [
+          'value' => $value['value'][0],
+          'sign' => $value['sign'],
+        ];
+        if ($filter_value['value'] == 'none') {
+          $add_filter = FALSE;
+          break;
+        }
+
+        $filter->condition($filter_name, $filter_value['value'], $filter_value['sign']);
+        $active_filters_items[] = [
+          '#theme' => 'active_filter_item',
+          '#machine_name' => $filter_name,
+          '#title' => $filters[$filter_name]['title'] . ' : ' . $value['sign'] . ' ' . $value['value'][0],
+          '#value' => $value['sign'] . ' ' . $value['value'][0],
+          '#type' => 'souriau_common_number_compare',
+        ];
+        break;
+
+      case 'souriau_common_boolean':
+        $filter_value = $value['value'];
+        $filter_value_text = $filter_value == 'true' ?
+          t('Yes', [], ['context' => SOURIAU_COMMON_T_OTHER]) :
+          t('No', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+        $filter_title = $value['title'] . ' : ' . $filter_value_text;
+        if ($filter_value == 'none') {
+          $add_filter = FALSE;
+          break;
+        }
+        $real_filter_value = $filter_value == 'true' ? TRUE : FALSE;
+        $filter->condition($filter_name, $real_filter_value);
+        $active_filters_items[] = [
+          '#theme' => 'active_filter_item',
+          '#machine_name' => $filter_name,
+          '#title' => $filter_title,
+          '#value' => $filter_value,
+          '#type' => 'souriau_common_boolean',
+        ];
+        break;
+
+      case 'souriau_common_radios':
+        $filter_value = $value['value'];
+        if (is_array($filter_value)) {
+          $filter_value = reset($filter_value);
+        }
+        if ($filter_value == 'none') {
+          $add_filter = FALSE;
+          break;
+        }
+        $filter->condition($filter_name, $filter_value);
+        $filter_title = $value['title'];
+        if ($value['facet'] == 'field_sku_products:category') {
+          $entity = entity_load_single('node', $filter_value);
+          $filter_title = souriau_common_get_field_value('node', $entity, 'title_field', $language->language);
+        }
+        if (isset($filters['field_sku_products:subcategory']) && $filter_name == 'field_sku_products:subcategory') {
+          $entity = entity_load_single('node', $filter_value);
+          $filter_title = souriau_common_get_field_value('node', $entity, 'title_field', $language->language);
+        }
+        $active_filters_items[] = [
+          '#theme' => 'active_filter_item',
+          '#machine_name' => $filter_name,
+          '#title' => $filters[$filter_name]['title'] . ' : ' . $filter_title,
+          '#value' => $filter_value,
+          '#type' => 'souriau_common_radios',
+        ];
+        break;
+    }
+    if ($add_filter) {
+      $query->filter($filter);
+    }
+  }
+}
+
+/**
+ * Results count helper.
+ *
+ * @return int
+ *   Results count.
+ */
+function souriau_search_get_results_count_helper($search_id) {
+  $count = 0;
+  // Gets result count.
+  $searches = search_api_current_search($search_id);
+  if (!empty($searches)) {
+    list(, $count_results) = $searches;
+    $count = $count_results['result count'];
+  }
+  return $count;
+}
+
+/**
+ * Implements search form builder.
+ */
+function souriau_search_search_form($form, &$form_state, $keyword) {
+  $form['keyword'] = [
+    '#type' => 'textfield',
+    '#title' => t('Keyword', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+  ];
+
+  if (!empty($keyword)) {
+    $form['keyword']['#default_value'] = $keyword;
+  }
+
+  return $form;
+}
+
+/**
+ * Get active facets helper.
+ *
+ * @param string $index_name
+ *   Search imdex name.
+ *
+ * @return array
+ *   Active facets list.
+ */
+function souriau_search_get_active_facets($index_name, &$data, $category_id = NULL, $subcategory_id = NULL, $term_id = NULL, $filters = []) {
+  $visible_facets = [];
+  $visible_facets[] = [
+    'weight' => -1002,
+    'name' => 'field_sku_products:category',
+  ];
+  $visible_facets[] = [
+    'weight' => -1001,
+    'name' => 'field_sku_products:subcategory',
+  ];
+  $visible_facets[] = [
+    'weight' => -1000,
+    'name' => 'field_sku_products:product_series',
+  ];
+
+  $realm = facetapi_realm_load('block');
+  $adapter = facetapi_adapter_load('search_api@' . $index_name);
+  $facets = $adapter->getEnabledFacets('block');
+  $real_visible_facets = [
+    'field_sku_products:category' => [
+      'facet' => $facets['field_sku_products:category'],
+      'settings' => $adapter->getFacetSettings($facets['field_sku_products:category'], $realm),
+    ],
+  ];
+  if (!empty($data['field_sku_products:field_sku_application']) && empty($category_id)) {
+    $real_visible_facets['field_sku_products:field_sku_application'] = [
+      'facet' => $facets['field_sku_products:field_sku_application'],
+      'settings' => $adapter->getFacetSettings($facets['field_sku_products:field_sku_application'], $realm),
+    ];
+  }
+  if (empty($category_id)) {
+    // Create Search_API objects.
+    list($index, $service) = _souriau_common_get_search_api_objects($index_name);
+
+    $field_info = [
+      'solr_field' => 'field_sku_products:category',
+      'solr_field_type' => $real_visible_facets['field_sku_products:field_sku_application'],
+      'widget' => $real_visible_facets['field_sku_products:field_sku_application']['settings']->settings['widget'],
+      'title' => $real_visible_facets['field_sku_products:field_sku_application']['facet']['label'],
+      'placeholder' => t('All !title', ['!title' => $real_visible_facets['field_sku_products:field_sku_application']['facet']['label']], ['context' => SOURIAU_COMMON_T_OTHER]),
+    ];
+
+    $categories = souriau_search_get_filter_values($index, $service, $field_info, $filters);
+    if (count($categories['result']) != 1) {
+      return $real_visible_facets;
+    }
+    $category_id = key($categories['result']);
+    $data['field_sku_products:category']['field_sku_products:category'] = $category_id;
+  }
+  $facets['field_sku_products:subcategory']['label'] = t('Subcategory', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+  $real_visible_facets['field_sku_products:subcategory'] = [
+    'facet' => $facets['field_sku_products:subcategory'],
+    'settings' => $adapter->getFacetSettings($facets['field_sku_products:subcategory'], $realm),
+  ];
+  $facets['field_sku_products:product_series']['label'] = t('Product series', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+  $real_visible_facets['field_sku_products:product_series'] = [
+    'facet' => $facets['field_sku_products:product_series'],
+    'settings' => $adapter->getFacetSettings($facets['field_sku_products:product_series'], $realm),
+  ];
+  // Default settings.
+  $facet_settings_variable = 'souriau_common_fasets';
+  $default_facet_settings = variable_get($facet_settings_variable);
+  // If settings per category exists.
+  $facet_settings_variable = "souriau_common_fasets_$category_id";
+  $facet_settings = variable_get($facet_settings_variable, $default_facet_settings);
+  // If settings per subcategory exists.
+  $facet_settings_variable = "souriau_common_fasets_$subcategory_id";
+  $facet_settings = variable_get($facet_settings_variable, $facet_settings);
+  // If settings per product series exists.
+  $facet_settings_variable = "souriau_common_fasets_term_$term_id";
+  $facet_settings = variable_get($facet_settings_variable, $facet_settings);
+  foreach ($facet_settings as $facet_name => $facet_setting) {
+    if ($facet_setting['enabled'] != 1) {
+      continue;
+    }
+    $visible_facets[] = array(
+      'weight' => $facet_setting['weight'],
+      'name' => $facet_name,
+    );
+  }
+
+  uasort($visible_facets, 'drupal_sort_weight');
+
+  foreach ($visible_facets as $facet) {
+    if (isset($facets[$facet['name']])) {
+      $real_visible_facets[$facet['name']] = [
+        'facet' => $facets[$facet['name']],
+        'settings' => $adapter->getFacetSettings($facets[$facet['name']], $realm),
+      ];
+    }
+  }
+  return $real_visible_facets;
+}
+
+/**
+ * Filter $_GET request preprocess.
+ *
+ * @return array
+ *   Prepared, filter ready $_GET data.
+ */
+function souriau_search_get_preprocess() {
+  $ret = [];
+  $prefix = 'field_sku_products';
+  foreach ($_GET as $key => $value) {
+    if ($key == 'q') {
+      $ret['keyword'] = preg_replace('/^' . preg_quote('search/', '/') . '/', '', $_GET['q']);
+    }
+    $filter_name = $key;
+    // Search use long filter format only.
+    // To support both GET parameter types
+    // field_sku_products:<filter_name> (long) and <filter_name> (short) we need
+    // convert it to long format i.e. field_sku_products:<filter_name>.
+    if (strpos($key, ':') === FALSE) {
+      $filter_name = implode(':', [$prefix, $key]);
+    }
+    // Only long filter format allowed here.
+    $ret[$filter_name][$filter_name] = $value;
+  }
+
+  // If no found keyword. Transfer empty value.
+  if ($ret['keyword'] == $_GET['q']) {
+    $ret['keyword'] = '';
+  }
+
+  $ret += [
+    'index' => PRODUCT_SEARCH_INDEX,
+    'sort' => 'ASC',
+  ];
+  return $ret;
+}
+
+/**
+ * Filter form builder callback.
+ */
+function souriau_search_product_filter_form($form, &$form_state, $tab, $keyword) {
+  $filters = [];
+  $data = [];
+  if (isset($form_state['values'])) {
+    $data = $form_state['input'];
+  }
+  elseif (!empty($_POST)) {
+    $data = $_POST;
+  }
+  elseif (!empty($_GET)) {
+    $data = souriau_search_get_preprocess();
+  }
+
+  $data['index'] = $index_name = PRODUCT_SEARCH_INDEX;
+  $filters += souriau_search_product_filter_form_process($data);
+
+  $sort = isset($data['sort']) ? $data['sort'] : 'ASC';
+  $category_id = isset($data['field_sku_products:category']) ? $data['field_sku_products:category']['field_sku_products:category'] : NULL;
+  $subcategory_id = isset($data['field_sku_products:subcategory']) ? $data['field_sku_products:subcategory']['field_sku_products:subcategory'] : NULL;
+  $term_id = isset($data['field_sku_products:product_series']) ? $data['field_sku_products:product_series']['field_sku_products:product_series'] : NULL;
+  $results = [];
+  $form['#attributes'] = [
+    'class' => ['souriau-search-filer-form'],
+  ];
+  $form['#prefix'] = '<div id="facets-ajax-wrapper">';
+  $form['#suffix'] = '</div>';
+
+  $form['#tree'] = TRUE;
+
+  $filters += [
+    'keyword' => $keyword,
+    'tab' => $tab,
+  ];
+
+  $real_visible_facets = souriau_search_get_active_facets($index_name, $data, $category_id, $subcategory_id, $term_id, $filters);
+
+  // Create Search_API objects.
+  list($index, $service) = _souriau_common_get_search_api_objects($index_name);
+
+  if (count($filters) <= 7) {
+    $form['filter_links'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => [
+          'hidden'
+        ],
+      ],
+    ];
+  }
+
+  foreach ($real_visible_facets as $filter_field => $facet_info) {
+    $field_info = [
+      'solr_field' => $filter_field,
+      'solr_field_type' => $facet_info['facet']['field type'],
+      'widget' => $facet_info['settings']->settings['widget'],
+      'title' => $facet_info['facet']['label'],
+      'placeholder' => t('All !title', ['!title' => $facet_info['facet']['label']], ['context' => SOURIAU_COMMON_T_OTHER]),
+    ];
+
+    $results[$filter_field] = souriau_search_get_filter_values($index, $service, $field_info, $filters);
+    $form_data = [
+      'results' => $results,
+      'filter_field' => $filter_field,
+      'field_info' => $field_info,
+      'data' => $data,
+      'filters' => $filters,
+    ];
+
+    $translatable = in_array($filter_field, souriau_search_get_sku_translatable_fields(TRUE));
+    switch ($field_info['widget']) {
+      case 'souriau_common_checkbox':
+        $form[$filter_field] = _souriau_search_souriau_common_checkbox($form_data, $translatable);
+        break;
+
+      case 'souriau_common_dropdown_list':
+        $form[$filter_field] = _souriau_search_souriau_common_dropdown_list($form_data, $translatable);
+        break;
+
+      case 'souriau_common_number_compare':
+        $form[$filter_field] = _souriau_search_souriau_common_number_compare($form_data);
+        break;
+
+      case 'souriau_common_boolean':
+        $form[$filter_field] = _souriau_search_souriau_common_boolean($form_data);
+        break;
+
+      case 'souriau_common_radios':
+        $form[$filter_field] = _souriau_search_souriau_common_radios($form_data, $translatable);
+        break;
+    }
+    $form[$filter_field][$filter_field]['#ajax'] = [
+      'callback' => 'souriau_search_product_filter_update_callback',
+      'progress' => 'souriau_hover_progress',
+    ];
+  }
+  if (count($filters) <= 7) {
+    $form['filter_links'][] = [
+      '#type' => 'markup',
+      '#markup' => souriau_search_get_url($results, $filters),
+    ];
+  }
+  $form['category'] = [
+    '#type' => 'hidden',
+    '#value' => $category_id,
+  ];
+  $form['index'] = [
+    '#type' => 'hidden',
+    '#value' => $index_name,
+  ];
+  $form['tab'] = [
+    '#type' => 'hidden',
+    '#value' => $tab,
+  ];
+  $form['keyword'] = [
+    '#type' => 'hidden',
+    '#value' => $keyword,
+  ];
+  $form['sort'] = [
+    '#type' => 'hidden',
+    '#value' => $sort,
+  ];
+
+  $form['actions'] = [
+    '#type' => 'actions',
+    'submit' => [
+      '#type' => 'submit',
+      '#value' => t('APPLY FILTERS', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      '#attributes' => [
+        'class' => ['btn', 'orange-btn-hover', 'a-right'],
+      ],
+      '#ajax' => [
+        'callback' => 'souriau_search_apply_filter_callback',
+        'progress' => 'souriau_hover_progress',
+      ],
+    ],
+    'clear_filter' => [
+      '#type' => 'markup',
+      '#markup' => '<a href="#" class="clear-filter close-filters" data-block-clear="search-filters">' . t('CLEAR FILTERS', [], ['context' => SOURIAU_COMMON_T_OTHER]) . '</a>',
+    ],
+    '#attributes' => [
+      'class' => ['a-right'],
+    ],
+  ];
+
+  return $form;
+}
+
+/**
+ * Implements souriau_search_product_filter_form submit handler.
+ */
+function souriau_search_product_filter_form_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Filter category selection ajax callback.
+ */
+function souriau_search_product_filter_update_callback(&$form, &$form_state) {
+  $ret = ['#type' => 'ajax', '#commands' => []];
+  if (!empty($form_state['values']['category']) && !empty($form_state['values']['field_sku_products:category']['field_sku_products:category']) && $form_state['values']['category'] != $form_state['values']['field_sku_products:category']['field_sku_products:category']) {
+    $form = souriau_search_product_filter_clean_form_values($form_state);
+  }
+  $ret['#commands'][] = ajax_command_replace('#facets-ajax-wrapper', render($form));
+  $ret['#commands'][] = ajax_command_souriau_common_calc_indent('#b-filters');
+  $ret['#commands'][] = [
+    'command' => 'search_filter_scroller',
+    'triggering_element' => $form_state['triggering_element']['#id'],
+  ];
+  return $ret;
+}
+
+/**
+ * Clean facets values of filter form.
+ *
+ * @see souriau_search_product_filter_form()
+ * @see souriau_search_product_filter_update_callback()
+ */
+function souriau_search_product_filter_clean_form_values($form_state) {
+  foreach ($form_state['values'] as $facet_name => $facet_value) {
+    if ($facet_name == 'field_sku_products:category') {
+      continue;
+    }
+    if (!isset($facet_value[$facet_name])) {
+      continue;
+    }
+    if (!is_array($facet_value[$facet_name])) {
+      // Deleting facet value in the input array, because: $data statement in the souriau_search_product_filter_form() function.
+      $form_state['input'][$facet_name][$facet_name] = "";
+    }
+    else {
+      // Same for array.
+      foreach ($form_state['input'][$facet_name][$facet_name] as &$value) {
+        $value = NULL;
+      }
+    }
+  }
+  // Rebuild form with updated values.
+  return drupal_build_form('souriau_search_product_filter_form', $form_state);
+}
+
+/**
+ * Get facet url helper.
+ *
+ * @param array $results
+ *   Filters values keyed by filter name.
+ * @param array $filters
+ *   Active filters.
+ *
+ * @return string
+ *   Facet url.
+ */
+function souriau_search_get_url($results, $filters) {
+  $ret = [];
+  $url = implode('/', ['search', $filters['keyword']]);
+  $query = [];
+  $base_query = [];
+  unset($filters['keyword']);
+  unset($filters['tab']);
+  unset($filters['sort']);
+  foreach ($filters as $filter_name => $filter_data) {
+    list(, $filter) = explode(':', $filter_name);
+    $base_query[$filter] = $filter_data['value'];
+  }
+  foreach ($results as $filter_name => $filter_rusult) {
+    if ($filter_rusult['count'] == 0 || isset($filters[$filter_name])) {
+      continue;
+    }
+    foreach ($filter_rusult['result'] as $key => $name) {
+      $query = $base_query;
+      list(, $filter) = explode(':', $filter_name);
+      $query[$filter] = $key;
+      $query['active_tab'] = 'part-number';
+      $ret[] = l($name, $url, ['query' => $query, 'absolute' => TRUE]);
+    }
+  }
+  return implode('', $ret);
+}
+
+/**
+ * Filter apply button ajax callback.
+ */
+function souriau_search_apply_filter_callback(&$form, &$form_state) {
+  $values = $form_state['values'];
+  $keyword = $values['keyword'];
+  $tab = $values['tab'];
+  $ret = souriau_search_pager_callback($tab, $keyword);
+  $ret['#commands'][] = ajax_command_replace('#facets-ajax-wrapper', render($form));
+  $ret['#commands'][] = ajax_command_invoke('.b-main-filter-area.open a.close-link', 'click');
+  $ret['#commands'][] = ajax_command_souriau_common_calc_indent('#b-filters');
+  return $ret;
+}
+
+/**
+ * Implements souriau_search_product_filter_form submit.
+ */
+function souriau_search_product_filter_form_process(&$data) {
+  $values = $data;
+  $index_name = $values['index'];
+  $sort = $values['sort'];
+  $keyword = empty($values['keyword']) ? '' : $values['keyword'];
+
+  $category_ids = isset($values['field_sku_products:category']) ? $values['field_sku_products:category']['field_sku_products:category'] : NULL;
+  $subcategory_ids = isset($values['field_sku_products:subcategory']) ? $values['field_sku_products:subcategory']['field_sku_products:subcategory'] : NULL;
+  $term_id = isset($values['field_sku_products:product_series']) ? $values['field_sku_products:product_series']['field_sku_products:product_series'] : NULL;
+  $facets = souriau_search_get_active_facets($index_name, $data, $category_ids, $subcategory_ids, $term_id);
+  $filters = [];
+  if (!empty($values['category']) && !empty($values['field_sku_products:category']) && $values['category'] != $values['field_sku_products:category']['field_sku_products:category']) {
+    $changed = TRUE;
+  }
+  foreach ($values as $facet_name => $facet) {
+    if (isset($facets[$facet_name])) {
+      if (!empty($changed) && $facet_name != 'field_sku_products:category') {
+        unset($data[$facet_name]);
+        continue;
+      }
+      $field_info = $facets[$facet_name];
+      souriau_search_product_filter_form_process_info_getter($filters, $field_info, $facet);
+    }
+  }
+
+  foreach ($filters as $facet_name => $facet) {
+    if ((empty($facet['value'])) ||
+      (is_array($facet['value']) && $facet['value'] == [0 => 1])) {
+      unset($filters[$facet_name]);
+    }
+
+  }
+
+  $filters['sort'] = $sort;
+  $filters['keyword'] = $keyword;
+  return $filters;
+}
+
+/**
+ * Filter data filter form helper.
+ *
+ * @param array $filters
+ *   Active fileter array.
+ * @param array $field_info
+ *   Facet field info.
+ * @param array $facet
+ *   Active facet data.
+ */
+function souriau_search_product_filter_form_process_info_getter(&$filters, $field_info, $facet) {
+  $facet_name = key($facet);
+  switch ($field_info['settings']->settings['widget']) {
+    case 'souriau_common_checkbox':
+      $value = array_keys($facet[$facet_name]);
+      $filters[$facet_name] = [
+        'facet' => $facet_name,
+        'widget' => $field_info['settings']->settings['widget'],
+        'title' => $field_info['facet']['label'],
+        // @todo For boolean.
+        // 'value' => $facet[$facet_name][1] == 1
+        'value' => $value,
+      ];
+      break;
+
+    case 'souriau_common_dropdown_list':
+      $filters[$facet_name] = [
+        'facet' => $facet_name,
+        'widget' => $field_info['settings']->settings['widget'],
+        'title' => $field_info['facet']['label'],
+        'value' => $facet[$facet_name],
+      ];
+      break;
+
+    case 'souriau_common_number_compare':
+      $sign = !empty($facet[$facet_name]['sign']) ? $facet[$facet_name]['sign'] : '=';
+      $value = [];
+      foreach ($facet[$facet_name] as $key => $item) {
+        if ($key !== 'sign' && !empty($item)) {
+          $value[] = $item;
+        }
+      }
+      $filters[$facet_name] = [
+        'facet' => $facet_name,
+        'widget' => $field_info['settings']->settings['widget'],
+        'title' => $field_info['facet']['label'],
+        'sign'  => $sign,
+        'value' => $value,
+      ];
+      break;
+
+    case 'souriau_common_boolean':
+      $value = array_filter($facet[$facet_name]);
+      if (!empty($value)) {
+        $value = reset($value);
+      }
+
+      $filters[$facet_name] = [
+        'facet' => $facet_name,
+        'widget' => $field_info['settings']->settings['widget'],
+        'title' => $field_info['facet']['label'],
+        'value' => $value,
+      ];
+      break;
+
+    case 'souriau_common_radios':
+      $filters[$facet_name] = [
+        'facet' => $facet_name,
+        'widget' => $field_info['settings']->settings['widget'],
+        'title' => $field_info['facet']['label'],
+        'value' => $facet[$facet_name],
+      ];
+      break;
+  }
+}
+
+
+/**
+ * Filters values getter.
+ *
+ * @param \SearchApiIndex $index
+ *   Search API index.
+ * @param object $service
+ *   Search API server.
+ * @param array $field_info
+ *   Field info array @see souriau_dc_filter_settings() for details.
+ *
+ * @return array
+ *   Filter allowed values.
+ */
+function souriau_search_get_filter_values(\SearchApiIndex $index, $service, $field_info, $filters) {
+  global $language;
+  $keyword = $filters['keyword'];
+  $tab = $filters['tab'];
+  $domain = domain_get_domain();
+  unset($filters['keyword']);
+  unset($filters['tab']);
+
+  $result = [];
+  $count = [];
+
+  $query = new SearchApiQuery($index);
+
+  $query->setOption('parse mode', 'terms');
+
+  // KeyWord.
+  $query->keys($keyword);
+
+  $filter = $query->createFilter('AND');
+  // $tab = 'product'.
+  $filter->condition('type', $tab);
+  // Filter by Domain, only for Products.
+  $filter->condition('field_sku_products:domains', $domain['domain_id']);
+  $query->filter($filter);
+
+  if (!empty($filters) && $field_info['solr_field'] != 'field_sku_products:category') {
+    $active_filters_items = [];
+    souriau_search_apply_filter_helper_filter_process($active_filters_items, $query, $filters);
+  }
+  if ($field_info['solr_field'] == 'field_sku_products:category' && isset($filters['field_sku_products:category'])) {
+    $active_filters_items[] = [
+      '#theme' => 'active_filter_item',
+      '#machine_name' => $filters['field_sku_products:category']['facet'],
+      '#title' => $filters['field_sku_products:category']['title'],
+      '#value' => $filters['field_sku_products:category']['value'],
+      '#type' => 'souriau_common_radios',
+    ];
+  }
+
+  $query->setOption('search_api_facets', [
+    $field_info['solr_field'] => [
+      'field' => $field_info['solr_field'],
+      'limit' => 100,
+      'min_count' => 0,
+      'missing' => FALSE,
+    ],
+  ]);
+  $query->setOption('facet', TRUE);
+  // No fields.
+  $query->fields($index->getFulltextFields());
+  // SET LIMITS!
+  $query->range(NULL, 10);
+  $search_result = $service->search($query);
+  if (!empty($search_result['search_api_facets'])) {
+    $values = [];
+    foreach ($search_result['search_api_facets'][$field_info['solr_field']] as $data) {
+      if ($data['count'] == 0) {
+        continue;
+      }
+      $filter = trim($data['filter'], '"');
+      $values[] = $filter;
+      $count[$filter] = $data['count'];
+    }
+    $entity_types = array_keys(entity_get_info());
+    if (in_array($field_info['solr_field_type'], $entity_types)) {
+      $entities = entity_load($field_info['solr_field_type'], $values);
+      foreach ($entities as $entity_id => $entity) {
+        if ($field_info['solr_field_type'] == 'taxonomy_term' && $entity->vocabulary_machine_name == 'product_series') {
+          $result[$entity_id] = souriau_common_get_taxonomy_name($entity, $language);
+          continue;
+        }
+        $wrapper = entity_metadata_wrapper($field_info['solr_field_type'], $entity)->language($language->language);
+        $result[$entity_id] = isset($wrapper->title_field) ? $wrapper->title_field->value() : $wrapper->label();
+      }
+    }
+    else {
+      $result = array_combine($values, $values);
+    }
+  }
+  // Add ASC sort.
+  asort($result);
+  return ['result' => $result, 'count' => $count];
+}
+
+/**
+ * Tab info getter.
+ *
+ * @param string $tab
+ *   Tab machine name.
+ *
+ * @return array
+ *   Tab info.
+ */
+function souriau_search_tab_info($tab) {
+  $active_tab = isset($_GET['active_tab']) ? $_GET['active_tab'] : 'all';
+  $tabs_info = souriau_search_tabs_info($active_tab);
+  return isset($tabs_info[$tab]) ? $tabs_info[$tab] : [];
+}
+
+/**
+ * All tabs info helper.
+ *
+ * @param string $active_tab
+ *   Active tab name.
+ *
+ * @return array
+ *   All tabs info.
+ */
+function souriau_search_tabs_info($active_tab = 'all') {
+  if ($active_tab == 'part-number') {
+    return [
+      'product' => [
+        'name' => t('Part numbers', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+        'total' => 0,
+        'html_id' => 'part-number',
+        'active' => $active_tab == 'part-number',
+      ],
+    ];
+  }
+  return [
+    'all' => [
+      'name' => t('All results', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'all',
+      'active' => $active_tab == 'all',
+    ],
+    'product' => [
+      'name' => t('Part numbers', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'part-number',
+      'active' => $active_tab == 'part-number',
+    ],
+    'productrange' => [
+      'name' => t('Product ranges', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'range',
+      'active' => $active_tab == 'range',
+    ],
+    'application' => [
+      'name' => t('Applications', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'application',
+      'active' => $active_tab == 'application',
+    ],
+    'capability' => [
+      'name' => t('Capabilities', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'capabilities',
+      'active' => $active_tab == 'capabilities',
+    ],
+    'news' => [
+      'name' => t('News', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+      'total' => 0,
+      'html_id' => 'news',
+      'active' => $active_tab == 'news',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_facetapi_facet_info_alter().
+ */
+function souriau_search_facetapi_facet_info_alter(array &$facet_info, array $searcher_info) {
+  foreach ($facet_info as $facet_name => $item) {
+    if (!empty($facet_info[$facet_name]['translated'])) {
+      continue;
+    }
+    $facet_info[$facet_name]['label'] = t($facet_info[$facet_name]['label'], [], ['context' => SOURIAU_COMMON_T_FACETS]);
+    $facet_info[$facet_name]['translated'] = TRUE;
+  }
+}
+
+/**
+ * Helper function for build radios element of search_filter_form.
+ *
+ * @see souriau_search_product_filter_form()
+ */
+function _souriau_search_souriau_common_radios($form_data = [], $translatable = FALSE) {
+  $defaults = [
+    'results' => [],
+    'filter_field' => '',
+    'field_info' => [],
+    'data' => [],
+    'filters' => [],
+  ];
+  $form_data += $defaults;
+  $results = $form_data['results'];
+  $filter_field = $form_data['filter_field'];
+
+  if (empty($results[$filter_field]['result'])) {
+    return;
+  }
+
+  $field_info = $form_data['field_info'];
+  $data = $form_data['data'];
+
+  $form = _souriau_search_souriau_common_fieldset($field_info, [
+    'right-col',
+    'b-radio-label',
+    'b-number-compare'
+  ]);
+  $options = [];
+  if ($field_info['solr_field'] != 'field_sku_products:category' && !empty($form_data['filters'][$filter_field]['value'])  && $form_data['filters'][$filter_field]['value'] != 'none') {
+    $options['none'] = t('Reset filter', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+  }
+  foreach ($results[$filter_field]['result'] as $tid => $tag) {
+    if ($translatable) {
+      $options[$tid] = t($tag . ' (!count)', ['!count' => $results[$filter_field]['count'][$tid]], ['context' => SOURIAU_COMMON_T_SKU]);
+    }
+    else {
+      $options[$tid] = $tag . ' (' . $results[$filter_field]['count'][$tid] . ')';
+    }
+  }
+  $form[$filter_field] = [
+    '#title' => '',
+    '#type' => 'radios',
+    '#options' => $options,
+    '#attributes' => [
+      'data-filter-type' => 'souriau_common_radios',
+      'data-filter-id' => $filter_field,
+    ],
+  ];
+  if (isset($data[$filter_field][$filter_field]) && isset($form[$filter_field]['#options'][$data[$filter_field][$filter_field]])) {
+    $form[$filter_field]['#default_value'] = $data[$filter_field][$filter_field];
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function for build boolean element of search_filter_form.
+ *
+ * @see souriau_search_product_filter_form()
+ */
+function _souriau_search_souriau_common_boolean($form_data = []) {
+  $defaults = [
+    'results' => [],
+    'filter_field' => '',
+    'field_info' => [],
+    'data' => [],
+    'filters' => [],
+  ];
+  $form_data += $defaults;
+  $results = $form_data['results'];
+  $filter_field = $form_data['filter_field'];
+
+  $results[$filter_field] = array_filter($results[$filter_field]);
+  if (empty($results[$filter_field]['count']) || !is_array($results[$filter_field]['count'])) {
+    return;
+  }
+
+  if ($results[$filter_field]['count'][0] == 0 && $results[$filter_field]['count'][1] == 0) {
+    return;
+  }
+
+  $field_info = $form_data['field_info'];
+
+  $form = _souriau_search_souriau_common_fieldset($field_info, ['right-col', 'b-checkbox-label']);
+
+  $options = [];
+  foreach ($results[$filter_field]['count'] as $key => $count) {
+    if ($key == 0) {
+      $options['false'] = t('No (!count)', ['!count' => $count], ['context' => SOURIAU_COMMON_T_OTHER]);
+    }
+    else {
+      $options['true'] = t('Yes (!count)', ['!count' => $count], ['context' => SOURIAU_COMMON_T_OTHER]);
+    }
+  }
+
+  $form[$filter_field] = [
+    '#title' => '',
+    '#type' => 'checkboxes',
+    '#options' => $options,
+    '#attributes' => [
+      'data-filter-type' => 'souriau_common_boolean',
+      'data-filter-id' => $filter_field,
+    ],
+  ];
+
+  return $form;
+}
+
+/**
+ * Helper function for build compare number element of search_filter_form.
+ *
+ * @see souriau_search_product_filter_form()
+ */
+function _souriau_search_souriau_common_number_compare($form_data = []) {
+  $defaults = [
+    'results' => [],
+    'filter_field' => '',
+    'field_info' => [],
+    'data' => [],
+    'filters' => [],
+  ];
+  $form_data += $defaults;
+  $results = $form_data['results'];
+  $filter_field = $form_data['filter_field'];
+
+  if (empty($results[$filter_field]['result'])) {
+    return;
+  }
+
+  $field_info = $form_data['field_info'];
+  $data = $form_data['data'];
+  $filters = $form_data['filters'];
+
+  $form = _souriau_search_souriau_common_fieldset($field_info, [
+    'right-col',
+    'b-radio-label',
+    'b-number-compare'
+  ]);
+  $form[$filter_field]['sign'] = [
+    '#title' => '',
+    '#type' => 'select',
+    '#options' => drupal_map_assoc(['>=', '<=', '>', '<']),
+    '#empty_option' => '=',
+    '#attributes' => [
+      'placeholder' => '=',
+      'data-filter-id' => $filter_field,
+      'data-jcf' => drupal_json_encode(['multipleCompactStyle' => 'false']),
+      'class' => ['round jcf-hidden']
+    ],
+    '#ajax' => [
+      'callback' => 'souriau_search_product_filter_update_callback',
+      'progress' => 'souriau_hover_progress',
+    ],
+  ];
+  $options = [];
+  if (!empty($filters[$filter_field]['value'][0]) && $filters[$filter_field]['value'][0] != 'none') {
+    $options['none'] = t('Reset filter', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+  }
+  foreach ($results[$filter_field]['result'] as $key => $option) {
+    $options[$key] = $option . ' (' . $results[$filter_field]['count'][$key] . ')';
+  }
+  $form[$filter_field][] = [
+    '#type' => 'radios',
+    '#options' => $options,
+    '#theme_wrappers' => [],
+    '#attributes' => [
+      'data-filter-type' => 'souriau_common_number_compare',
+      'data-filter-id' => $filter_field,
+    ],
+    '#ajax' => [
+      'callback' => 'souriau_search_product_filter_update_callback',
+      'progress' => 'souriau_hover_progress',
+    ],
+  ];
+  if (isset($data[$filter_field][$filter_field])) {
+    $form[$filter_field]['#default_value'] = $data[$filter_field][$filter_field];
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function for build dropdown list element of search_filter_form.
+ *
+ * @see souriau_search_product_filter_form()
+ */
+function _souriau_search_souriau_common_dropdown_list($form_data = [], $translatable = FALSE) {
+  $defaults = [
+    'results' => [],
+    'filter_field' => '',
+    'field_info' => [],
+    'data' => [],
+    'filters' => [],
+  ];
+  $form_data += $defaults;
+  $results = $form_data['results'];
+  $filter_field = $form_data['filter_field'];
+
+  if (empty($results[$filter_field]['result'])) {
+    return;
+  }
+
+  $field_info = $form_data['field_info'];
+  $data = $form_data['data'];
+
+  $form = _souriau_search_souriau_common_fieldset($field_info, ['right-col']);
+  $options = [];
+  foreach ($results[$filter_field]['result'] as $key => $option) {
+    global $language;
+    if ($filter_field == 'field_sku_products:subcategory') {
+      $entity = entity_load_single('node', $option);
+      $option = souriau_common_get_field_value('node', $entity, 'title_field', $language->language);
+      $options[$key] = $option . ' (' . $results[$filter_field]['count'][$key] . ')';
+    }
+    elseif ($filter_field == 'field_sku_products:product_series') {
+      $entity = entity_load_single('taxonomy_term', $key);
+      $filter_title = souriau_common_get_taxonomy_name($entity, $language);
+      $options[$key] = $filter_title . ' (' . $results[$filter_field]['count'][$key] . ')';
+    }
+    elseif ($translatable) {
+      $options[$key] = t($option . ' (!count)', ['!count' => $results[$filter_field]['count'][$key]], ['context' => SOURIAU_COMMON_T_SKU]);
+    }
+    else {
+      $options[$key] = $option . ' (' . $results[$filter_field]['count'][$key] . ')';
+    }
+  }
+
+  $form[$filter_field] = [
+    '#title' => '',
+    '#type' => 'select',
+    '#options' => $options,
+    '#empty_option' => t('— Select —', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#attributes' => [
+      'placeholder' => $field_info['placeholder'],
+      'data-jcf' => drupal_json_encode(['multipleCompactStyle' => 'false']),
+      'data-filter-type' => 'souriau_common_dropdown_list',
+      'data-filter-id' => $filter_field,
+      'class' => ['round jcf-hidden'],
+    ],
+  ];
+  if (isset($data[$filter_field][$filter_field])) {
+    $form[$filter_field]['#default_value'] = $data[$filter_field][$filter_field];
+  }
+
+  return $form;
+}
+
+/**
+ * Helper function for build checkbox element of search_filter_form.
+ *
+ * @see souriau_search_product_filter_form()
+ */
+function _souriau_search_souriau_common_checkbox($form_data = [], $translatable = FALSE) {
+  $defaults = [
+    'results' => [],
+    'filter_field' => '',
+    'field_info' => [],
+    'data' => [],
+    'filters' => [],
+  ];
+  $form_data += $defaults;
+  extract($form_data);
+  $results[$filter_field]['result'] = array_filter($results[$filter_field]['result']);
+  if (empty($results[$filter_field]['result'])) {
+    return;
+  }
+  $form = _souriau_search_souriau_common_fieldset($field_info, ['right-col', 'b-checkbox-label']);
+  foreach ($results[$filter_field]['result'] as $tid => $tag) {
+    $form[$filter_field][$tid] = [
+      '#title' => ($translatable) ? t($tag . ' (!count)', ['!count' => $results[$filter_field]['count'][$tid]], ['context' => SOURIAU_COMMON_T_SKU]) : $tag . ' (' . $results[$filter_field]['count'][$tid] . ')',
+      '#type' => 'checkbox',
+      '#attributes' => [
+        'data-filter-type' => 'souriau_common_checkbox',
+        'data-filter-id' => $filter_field,
+        'data-filter-value' => $tag,
+      ],
+    ];
+    if (isset($data[$filter_field][$filter_field])) {
+      $form[$filter_field]['#default_value'] = $data[$filter_field][$filter_field];
+    }
+  }
+  return $form;
+}
+
+/**
+ * Helper function for add fieldset form element into search_filter_form.
+ */
+function _souriau_search_souriau_common_fieldset($field_info, $wrapper_class = []) {
+  return [
+    '#title' => $field_info['title'],
+    '#type' => 'fieldset',
+    '#souriau_settings' => [
+      'content_wrapper_class' => $wrapper_class,
+    ],
+  ];
+}
+
+/**
+ * Provide Solr dynamic fields as Search API data types.
+ *
+ * This serves as a placeholder for documenting additional keys for
+ * hook_search_api_data_type_info() which are recognized by this module to
+ * automatically support dynamic field types from the schema.
+ *
+ * @return array
+ *   In addition to the keys for the individual types that are defined by
+ *   hook_search_api_data_type_info(), the following keys are regonized:
+ *   - prefix: The Solr field name prefix to use for this type. Should match
+ *     two existing dynamic fields definitions with names "{PREFIX}s_*" and
+ *     "{PREFIX}m_*".
+ *   - always multiValued: (optional) If TRUE, only the dynamic field name
+ *     prefix (without the "_*" portion) with multiValued="true" should be given
+ *     by "prefix", instead of the common prefix part for both the single-valued
+ *     and the multi-valued field. This should be the case for all fulltext
+ *     fields, since they might already be tokenized by the Search API. Defaults
+ *     to FALSE.
+ *
+ * @see hook_search_api_data_type_info()
+ */
+function souriau_search_search_api_data_type_info() {
+  return array(
+    'edge_n2_kw_text' => array(
+      'name' => t('Fulltext (w/ partial matching)'),
+      'fallback' => 'text',
+      'prefix' => 'tem',
+      'always multiValued' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Value getter callback for partial title field.
+ */
+function souriau_search_title_getter($entity, array $options, $name, $type, $info) {
+  if ($entity->type == 'product') {
+    return $entity->title;
+  }
+  return souriau_common_get_field_value('node', $entity, 'title_field', $info['langcode']);
+}
+
+/**
+ * Value getter callback for partial title field.
+ */
+function souriau_search_product_series_text_getter($entity, array $options, $name, $type, $info) {
+  if ($entity->type == 'product') {
+    return souriau_common_get_product_series_value($entity, 'field_display_name');
+  }
+}
+
+/**
+ * Value getter callback for partial sku field.
+ */
+function souriau_search_partial_sku_getter($entity, array $options, $name, $type, $info) {
+  return empty($entity->sku) ? '' : $entity->sku;
+}
+
+/**
+ * Implements hook_entity_translation_insert().
+ */
+function souriau_search_entity_insert($entity, $type) {
+  // Only on Creation PartNumber.
+  if ($type != 'node' || $entity->type != 'product') {
+    return;
+  }
+
+  list($entity_id) = entity_extract_ids($type, $entity);
+  $item_id = SearchApiEtHelper::buildItemId($entity_id, LANGUAGE_NONE);
+
+  entity_get_controller($type)->resetCache(array($entity_id));
+  search_api_track_item_insert(SearchApiEtHelper::getItemType($type), array($item_id));
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function souriau_search_entity_update($entity, $type) {
+  // Only on updating SKU and untranslatable PartNumber.
+  if (!in_array($type, ['commerce_product', 'node']) || !in_array($entity->type, ['product', 'sku'])) {
+    return;
+  }
+
+  // We only react on entity operations for types with property information, as
+  // we don't provide search integration for the others.
+  if (!entity_get_property_info($type)) {
+    return;
+  }
+
+  if ($type == 'commerce_product') {
+    // On change of SKU mark PartNumber for reindex.
+    $product = souriau_common_load_part_number_by_sku($entity->sku);
+
+    if (empty($product)) {
+      return;
+    }
+  }
+
+  $product = empty($product) ? $entity : $product;
+  $item_id = SearchApiEtHelper::buildItemId($product->nid, LANGUAGE_NONE);
+  $et_entity_type = SearchApiEtHelper::getItemType('node');
+  search_api_track_item_change($et_entity_type, array($item_id));
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function souriau_search_entity_delete($entity, $type) {
+  // Only on deletion PartNumber.
+  if ($type != 'node' || $entity->type != 'product') {
+    return;
+  }
+
+  list($entity_id) = entity_extract_ids($type, $entity);
+  $item_id = SearchApiEtHelper::buildItemId($entity_id, LANGUAGE_NONE);
+  search_api_track_item_delete(SearchApiEtHelper::getItemType($type), array($item_id));
+}
+
+/**
+ * Helper function for getting SKU translatable attributes.
+ */
+function souriau_search_get_sku_translatable_fields($for_search_filters = FALSE) {
+  $field_translatable = [
+    'field_sku_connector_type',
+    'field_sku_receptacle_mount_type',
+    'field_sku_plug_type',
+    'field_sku_coupling',
+    'field_sku_shell_material',
+    'field_sku_plating',
+    'field_sku_contact_plating',
+    'field_sku_contact_type',
+    'field_sku_contact_gender',
+    'field_sku_contact_delivery',
+    'field_sku_contact_packaging',
+    'field_sku_manufacturing_process',
+    'field_sku_fiber_optic_contact_te',
+    'field_sku_active_part_technology',
+    'field_sku_pcb_length',
+    'field_sku_connector_accessory_op',
+    'field_sku_backshell_type',
+    'field_sku_cable_diameter',
+    'field_sku_backshell_angle',
+    'field_sku_cable_type',
+    'field_sku_cable_ending',
+    'field_sku_body',
+    'field_sku_module',
+    'field_sku_function',
+    'field_sku_environmental',
+    'field_sku_connector_side_1',
+    'field_sku_gender_side_1',
+    'field_sku_ending_1',
+    'field_sku_connector_side_2',
+    'field_sku_gender_side_2',
+    'field_sku_ending_2',
+    'field_sku_description_sealing_le',
+    'field_sku_first_mate_last_break_',
+    'field_sku_last_mate_first_break_',
+    'field_sku_current_breaking_capac',
+    'field_sku_nut_material',
+    'field_sku_insert_material',
+    'field_sku_flammability_rating',
+    'field_sku_fire_smoke',
+    'field_sku_uv',
+    'field_sku_fluids',
+    'field_sku_touchproof',
+    'field_sku_vibrations',
+    'field_sku_shock',
+    'field_sku_certification_ul',
+    'field_sku_certification_csa',
+    'field_sku_certification_iec',
+    'field_sku_plating_detail',
+    'field_sku_type_accessory',
+    'field_sku_type_tool',
+    'field_sku_suitable_for',
+    'field_sku_contact_active_part_te',
+    'field_sku_ferrule_material',
+    'field_sku_type_fiber',
+    'field_sku_ferrule_holder',
+    'field_sku_fiber_dimension',
+    'field_sku_overmolding_material',
+  ];
+  if ($for_search_filters) {
+    array_walk($field_translatable, function(&$value, $key) {
+      $value = 'field_sku_products:' . $value;
+    });
+  }
+
+  return $field_translatable;
+}

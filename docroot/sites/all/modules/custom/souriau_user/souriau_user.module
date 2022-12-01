@@ -1,0 +1,877 @@
+<?php
+
+/**
+ * @file
+ * Souriau User module.
+ */
+
+include_once 'souriau_user.mail.inc';
+
+define('SOURIAU_PASSWORD_RESET_TIMEOUT', variable_get('user_password_reset_timeout', '604800'));
+define('SOURIAU_USER_SCREENING_REQUEST_TYPE', 'xml');
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function souriau_user_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' || $module == 'ctools' || $module == 'page_manager') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_user_menu() {
+  $items['souriau/ajax/%ctools_js/%/%'] = [
+    'title' => 'Contact',
+    'page callback' => 'souriau_user_confirm_unsubscribe_callback',
+    'page arguments' => [2, 3, 4],
+    'access callback' => 'user_is_logged_in',
+    'delivery callback' => 'ajax_deliver',
+    'theme callback' => 'ajax_base_page_theme',
+  ];
+
+  $items['user/%user/delete/%ctools_js'] = [
+    'page callback' => 'souriau_user_popup_user_delete_callback',
+    'page arguments' => [1, 3],
+    'access callback' => 'souriau_user_popup_user_delete_access',
+    'access arguments' => [1],
+    'type' => MENU_CALLBACK,
+  ];
+
+  return $items;
+}
+
+/**
+ * Access callback for checking current user with url user.
+ */
+function souriau_user_popup_user_delete_access($profile) {
+  global $user;
+  return ($user->uid == $profile->uid);
+}
+
+/**
+ * Project Delete AJAX callback.
+ */
+function souriau_user_popup_user_delete_callback($user, $ajax) {
+  if ($ajax) {
+    ctools_include('ajax');
+    ctools_include('modal');
+    $form_state = array(
+      'ajax' => TRUE,
+    );
+
+    $form_state['user_id'] = $user->uid;
+
+    // Use ctools to generate ajax instructions for the browser to create
+    // a form in a modal popup.
+    $commands = ctools_modal_form_wrapper('souriau_user_popup_user_delete_form', $form_state);
+    $commands[] = ajax_command_invoke('#modalContent', 'addClass', ['remove-popup']);
+
+    // If the form has been submitted, there may be additional instructions
+    // such as dismissing the modal popup.
+    if (!empty($form_state['ajax_commands'])) {
+      $commands = $form_state['ajax_commands'];
+    }
+
+    // Return the ajax instructions to the browser via ajax_render().
+    print ajax_render($commands);
+    drupal_exit();
+  }
+  else {
+    return drupal_get_form('souriau_user_popup_user_delete_form');
+  }
+}
+
+/**
+ * Confirmation form for project delete.
+ */
+function souriau_user_popup_user_delete_form($form, $form_state) {
+  $form = [];
+  $form['content_title'] = [
+    '#markup' => t('Delete my account', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#prefix' => '<div class="popup-title"><h2 id="modal-title" class="modal-title">',
+    '#suffix' => '</h2></div>',
+  ];
+
+  $form['content_text'] = [
+    '#markup' => t("You’re about to delete your account. Would you like to continue?", [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#prefix' => '<div class="b-text"><p>',
+    '#suffix' => '</p></div>',
+  ];
+
+  $form['actions'] = [
+    '#prefix' => '<div class="w-btn wide-btns">',
+    '#suffix' => '</div>',
+  ];
+
+  $form['actions']['cancel'] = [
+    '#type' => 'submit',
+    '#value' => t('CANCEL'),
+    '#attributes' => ['class' => ['blue-btn', 'btn-cancel']],
+    '#submit' => ['souriau_user_popup_user_delete_form_cancel'],
+  ];
+
+  $form['actions']['confirm'] = [
+    '#type' => 'submit',
+    '#value' => t('CONFIRM'),
+    '#attributes' => ['class' => ['orange-btn-hover']],
+    '#submit' => ['souriau_user_popup_user_delete_form_confirm'],
+    '#prefix' => '<div class="w-btn-stretch">',
+    '#suffix' => '</div>',
+  ];
+
+  return $form;
+}
+
+/**
+ * Callback form for project delete confirm button.
+ */
+function souriau_user_popup_user_delete_form_confirm($form, &$form_state) {
+  global $user;
+  module_load_include('pages.inc', 'user');
+  // Send email to the user to inform that about account deletion.
+  drupal_mail('souriau_user', 'user_deleted', $user->mail, $user->language, ['user' => $user]);
+  // Delete entity and redirect to my projects.
+  user_delete($form_state['user_id']);
+  user_logout_current_user();
+  $redirect_url = format_string('user/login');
+  $form_state['ajax_commands'][] = ctools_ajax_command_redirect($redirect_url);
+  $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+  $form_state['ajax_commands'][] = souriau_common_ajax_set_message('.pane-page-content', t('user account deleted', [], ['context' => SOURIAU_COMMON_T_USER]));
+}
+
+/**
+ * Callback form for project delete cancel button.
+ */
+function souriau_user_popup_user_delete_form_cancel($form, &$form_state) {
+  $form_state['ajax_commands'][] = ctools_modal_command_dismiss();
+}
+
+/**
+ * Unsubscribe link in newsletter form on edit user page menu callback.
+ */
+function souriau_user_confirm_unsubscribe_callback($js = NULL, $element = NULL, $form_id = NULL) {
+  $form_state = [
+    'triggered_link' => [
+      'element' => $element,
+      'form_id' => $form_id,
+    ]
+  ];
+
+  $confirm_options = [
+    'question' => t('Do you confirm that you want to unsubscribe to our newsletter?', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'description' => '',
+    'yes' => t('Unsubscribe', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'no' => t('Cancel', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'name' => t('Confirm', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  return souriau_common_confirm_callback($form_state, $confirm_options);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_user_form_user_register_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+  ctools_add_js('souriau_user_register', 'souriau_user');
+  // Hide all domain options.
+  $form['domain']['#access'] = FALSE;
+  if (!empty($user->uid)) {
+    // This alter is only for Sign Up form.
+    // Nothing to do here.
+    return;
+  }
+  $form['field_postal_address']['und'][0]['organisation_block']['organisation_name']['#required'] = TRUE;
+  $form['field_postal_address']['und'][0]['street_block']['thoroughfare']['#required'] = TRUE;
+  $form['field_postal_address']['und'][0]['locality_block']['postal_code']['#required'] = TRUE;
+  $form['field_postal_address']['und'][0]['locality_block']['locality']['#required'] = TRUE;
+  $form['field_postal_address']['und'][0]['locality_block']['administrative_area']['#required'] = TRUE;
+  // Hide unnecessary fields.
+  $form['field_postal_address']['und']['#title'] = NULL;
+  $form['field_postal_address']['und'][0]['#title'] = NULL;
+  $form['field_postal_address']['und'][0]['organisation_block']['#weight'] = 300;
+  $form['field_postal_address']['und'][0]['street_block']['#weight'] = 301;
+  $form['field_postal_address']['und'][0]['phone_block']['#weight'] = 302;
+  $form['field_postal_address']['und'][0]['name_block']['#weight'] = 303;
+  $form['field_postal_address']['und'][0]['locality_block']['#weight'] = 304;
+  $form['field_postal_address']['und'][0]['country']['#weight'] = 305;
+  $form['field_postal_address']['und'][0]['civility']['#access'] = FALSE;
+  $form['field_order_history_access_st']['#access'] = FALSE;
+
+  // Set max charactes to 50 for address fields.
+  $form['field_postal_address']['und'][0]['street_block']['thoroughfare']['#maxlength'] = 50;
+  $form['field_postal_address']['und'][0]['street_block']['premise']['#maxlength'] = 50;
+
+  $form['field_subscribe_newsletter']['#theme_wrappers'] = [];
+  $form['field_receive_sms_notifications']['#theme_wrappers'] = [];
+  $form['field_allow_usage_of_data']['#theme_wrappers'] = [];
+
+  // Email.
+  unset($form['account']['mail']['#description']);
+  $form['group_email']['account']['mail']['#title'] = t('Email address', [], ['context' => SOURIAU_COMMON_T_USER]);
+  $form['field_postal_address']['und'][0]['country']['#title'] = t('Location', [], ['context' => SOURIAU_COMMON_T_USER]);
+  $form['account']['mail']['#datatype'] = 'email';
+
+  // Password.
+  unset($form['account']['pass']['#description']);
+
+  // Phones.
+  $mobile = &$form['field_postal_address']['und'][0]['phone_block']['mobile_number'];
+  $mobile['#title'] = t('Mobile phone', [], ['context' => SOURIAU_COMMON_T_USER]);
+  $phone = &$form['field_postal_address']['und'][0]['phone_block']['phone_number']['phone_number'];
+  $phone['#title'] = t('Phone', [], ['context' => SOURIAU_COMMON_T_USER]);
+
+  // Checkboxes.
+  $allow_data_use = &$form['field_allow_usage_of_data'];
+  $allow_data_use['und']['#title'] = t('By signing up, I allow SOURIAU - SUNBANK Connection Technologies to use my information', [], ['context' => SOURIAU_COMMON_T_USER]);
+
+  // Buttons.
+  $form['actions']['#souriau_settings'] = [
+    'align' => 'center',
+    'text_align' => 'center',
+  ];
+  $form['actions']['cancel'] = [
+    '#markup' => l(t('CANCEL', [], ['context' => SOURIAU_COMMON_T_USER]), 'user/login', ['attributes' => ['class' => ['btn', 'blue-btn']]])
+  ];
+  $form['actions']['submit']['#attributes']['class'] = [
+    'a-right'
+  ];
+  $form['actions']['submit']['#souriau_settings'] = [
+    'hover_color' => 'orange',
+  ];
+  $form['actions']['submit']['#value'] = t('VALID & CREATE', [], ['context' => SOURIAU_COMMON_T_USER]);
+
+  $form['#submit'][] = 'souriau_user_register_submit';
+}
+
+/**
+ * Submit handler for redirect after registration.
+ */
+function souriau_user_register_submit($form, &$form_state) {
+  // Redirect user to login if not activated after screening.
+  $form_state['redirect'] = ($form['#user']->status === TRUE) ? 'user/space' : 'user';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_user_form_user_login_block_alter(&$form, &$form_state, $form_id) {
+  $form['links'] = [
+    '#type' => 'container',
+    '#attributes' => [
+      'class' => ['w-btn', 'text-right'],
+    ],
+  ];
+  $form['links']['forgot'] = [
+    '#theme' => 'link',
+    '#path' => 'user/password',
+    '#text' => t('Forgotten password ?', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#options' => [
+      'attributes' => ['class' => ['link-forgot-pass']],
+    ],
+  ];
+
+  $form['actions']['submit']['#value'] = t('CONNECT TO MY ACCOUNT', [], ['context' => SOURIAU_COMMON_T_USER]);
+  $form['actions']['submit']['#souriau_settings'] = [
+    'hover_color' => 'orange',
+  ];
+  $form['actions']['#souriau_settings'] = [
+    'align' => 'center',
+    'text_align' => 'center',
+  ];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function souriau_user_form_user_pass_alter(&$form, &$form_state, $form_id) {
+  $form['name']['#title'] = t('Email address',
+    [], ['context' => SOURIAU_COMMON_T_USER]);
+  $form['name']['#datatype'] = 'email';
+  $form['actions']['submit']['#value'] = t('SEND ME AN EMAIL',
+    [], ['context' => SOURIAU_COMMON_T_USER]);
+  $form['actions']['submit']['#souriau_settings'] = [
+    'hover_color' => 'orange',
+  ];
+  $form['actions']['#souriau_settings'] = [
+    'align' => 'center',
+    'text_align' => 'center',
+  ];
+}
+
+/**
+ * User edit form builder.
+ */
+function souriau_user_user_edit_form($form, &$form_state) {
+
+  $account = _souria_user_get_account_being_edited();
+  $wrapper = entity_metadata_wrapper('user', $account);
+
+  $form['#tree'] = TRUE;
+
+  $form['login_pass'] = [
+    '#type' => 'fieldset',
+    '#title' => t('LOGIN AND PASSWORD:', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  $form['login_pass']['mail'] = [
+    '#type' => 'textfield',
+    '#title' => t('Email address', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#default_value' => $account->mail,
+    '#required' => TRUE,
+    '#datatype' => 'email',
+  ];
+
+  $form['login_pass']['pass'] = [
+    '#type' => 'password_confirm',
+    '#title' => t('Password', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#title_display' => 'invisible',
+  ];
+
+  $form['info'] = [
+    '#type' => 'fieldset',
+    '#title' => t('YOUR INFOS:', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  $form['info']['field_first_name'] = [
+    '#type' => 'textfield',
+    '#title' => t('First Name', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#default_value' => $wrapper->field_first_name->value(),
+  ];
+
+  $form['info']['field_last_name'] = [
+    '#type' => 'textfield',
+    '#title' => t('Last Name', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#default_value' => $wrapper->field_last_name->value(),
+  ];
+
+  $postal_address = $wrapper->field_postal_address->value();
+
+  $postal_fields = [
+    'organisation_name' => t('Company', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'job_position' => t('Job Position', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'phone_number' => t('Phone', [], ['context' => SOURIAU_COMMON_T_USER]),
+    'mobile_number' => t('Mobile Phone', [], ['context' => SOURIAU_COMMON_T_USER]),
+  ];
+
+  foreach ($postal_fields as $field => $title) {
+    $form['info'][$field] = [
+      '#type' => 'textfield',
+      '#title' => $title,
+      '#default_value' => $postal_address[$field],
+    ];
+  }
+
+  $form['info']['field_receive_sms_notifications'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Receive SMS notifications', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#default_value' => $wrapper->field_receive_sms_notifications->value(),
+  ];
+
+  $form['actions'] = [
+    '#type' => 'actions',
+    '#souriau_settings' => [
+      'allign' => 'center',
+      'text_align' => 'center',
+    ]
+  ];
+
+  $form['actions']['edit'] = [
+    '#type' => 'submit',
+    '#value' => t('Update infos', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#souriau_settings' => [
+      'color' => 'blue',
+    ]
+  ];
+  return $form;
+}
+
+/**
+ * User edit form submitter.
+ */
+function souriau_user_user_edit_form_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  $account = _souria_user_get_account_being_edited();
+  if (empty($account->original)) {
+    $account->original = _souria_user_get_account_being_edited($account->uid);
+  }
+  $edit = (array) $account->original;
+  foreach ($edit as $key => $item) {
+    if (!is_array($item)) {
+      unset($edit[$key]);
+    }
+  }
+
+  $postal_fields = [
+    'organisation_name',
+    'job_position',
+    'phone_number',
+    'mobile_number',
+  ];
+  foreach ($postal_fields as $field) {
+    $edit['field_postal_address'][LANGUAGE_NONE][0][$field] = $values['info'][$field];
+  }
+  // Add default Civility value to prevent notices.
+  $value = isset($account->field_postal_address[LANGUAGE_NONE][0]['civility']) ? $account->field_postal_address[LANGUAGE_NONE][0]['civility'] : '';
+  $edit['field_postal_address'][LANGUAGE_NONE][0]['civility'] = $value;
+
+  $account_fields = [
+    'field_first_name',
+    'field_last_name',
+    'field_receive_sms_notifications',
+  ];
+  foreach ($account_fields as $field) {
+    $edit[$field][LANGUAGE_NONE][0]['value'] = $values['info'][$field];
+  }
+
+  if (!empty($values['login_pass']['mail'])) {
+    unset($account->mail);
+    $edit['mail'] = $values['login_pass']['mail'];
+  }
+  if (!empty($values['login_pass']['pass'])) {
+    unset($account->pass);
+    $edit['pass'] = $values['login_pass']['pass'];
+    // Reset the flood control when someone changes their password.
+    if (variable_get('user_failed_login_identifier_uid_only', FALSE)) {
+      // Register flood events based on the uid only, so they apply for any
+      // IP address. This is the most secure option.
+      $identifier = $account->uid;
+    }
+    else {
+      // The default identifier is a combination of uid and IP address. This
+      // is less secure but more resistant to denial-of-service attacks that
+      // could lock out all users with public user names.
+      $identifier = $account->uid . '-' . ip_address();
+    }
+    if (!flood_is_allowed('failed_login_attempt_user', variable_get('user_failed_login_user_limit', 5), variable_get('user_failed_login_user_window', 21600), $identifier)) {
+      flood_clear_event('failed_login_attempt_user', $identifier);
+    }
+  }
+  user_save($account, $edit);
+  drupal_set_message(t('Your information have been updated', [], ['context' => SOURIAU_COMMON_T_USER]));
+}
+
+/**
+ * User edit ECT customer ID builder.
+ */
+function souriau_user_user_customer_id_form($form, &$form_state) {
+
+  $form['#tree'] = TRUE;
+  $account = _souria_user_get_account_being_edited();
+  $wrapper = entity_metadata_wrapper('user', $account);
+
+  $form['field_ect_customer_id_requested'] = [
+    '#type' => 'textfield',
+    '#title' => t('ECT customer ID', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#default_value' => $wrapper->field_ect_customer_id_requested->value(),
+  ];
+
+  $form['actions'] = [
+    '#type' => 'actions',
+    '#souriau_settings' => [
+      'allign' => 'center',
+      'text_align' => 'center',
+    ]
+  ];
+
+  $form['actions']['edit'] = [
+    '#type' => 'submit',
+    '#value' => t('SEND REQUEST', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#souriau_settings' => [
+      'color' => 'blue',
+    ]
+  ];
+  return $form;
+}
+
+/**
+ * User edit form submitter.
+ */
+function souriau_user_user_customer_id_form_submit($form, &$form_state) {
+  global $language;
+  $values = $form_state['values'];
+  $account = _souria_user_get_account_being_edited();
+
+  if (empty($values['field_ect_customer_id_requested'])) {
+    return;
+  }
+
+  // Get the default csr email.
+  $csr_mail = souriau_common_get_csr_for_country();
+  $csr_mail = str_replace(' ', '', $csr_email);
+  if (!empty($csr_mail)) {
+    // Notify system.
+    drupal_mail('souriau_user', 'approve_ect_access', $csr_mail, $language, ['user' => $account]);
+  }
+  // Inform user.
+  drupal_mail('souriau_user', 'request_ect_access', $account->mail, user_preferred_language($account), ['user' => $account]);
+
+  $edit['field_ect_customer_id_requested'][LANGUAGE_NONE][0]['value'] = $values['field_ect_customer_id_requested'];
+  $access_status = !empty($account->field_order_history_access_st) ? $account->field_order_history_access_st[LANGUAGE_NONE][0]['value'] : "";
+  if ($access_status != "" && $access_status != 'approved' && $access_status != 'denied') {
+    $edit['field_order_history_access_st'][LANGUAGE_NONE][0]['value'] = 'pending';
+  }
+  user_save($account, $edit);
+}
+
+/**
+ * User edit page newsletter form builder.
+ */
+function souriau_user_newsletter_form($form, &$form_state) {
+  $account = _souria_user_get_account_being_edited();
+  $form['#tree'] = TRUE;
+  $list = souriau_newsletter_get_mailchimp_list();
+  $subscribed = [];
+  $form['lists'] = souriau_common_interest_groups_form_elements($list, [], $account->mail);
+
+  foreach ($form['lists'] as $group_id => $group) {
+    $form['lists'][$group_id]['#title_display'] = 'invisible';
+  }
+
+  if (!empty($subscribed)) {
+    $form['lists']['#default_value'] = $subscribed;
+  }
+
+  $form['actions'] = [
+    '#type' => 'actions',
+    '#souriau_settings' => [
+      'align' => 'center',
+      'text_align' => 'center',
+    ]
+  ];
+
+  $form['actions']['subscribe'] = [
+    '#type' => 'submit',
+    '#value' => t('UPDATE THEMATICS', [], ['context' => SOURIAU_COMMON_T_USER]),
+    '#souriau_settings' => [
+      'color' => 'blue',
+    ],
+    '#submit' => ['souriau_user_newsletter_form_subscribe_submit'],
+  ];
+
+  ctools_include('modal');
+  ctools_modal_add_js();
+
+  if (mailchimp_is_subscribed($list->id, $account->mail)) {
+    $form['actions']['unsubscribe'] = [
+      '#type' => 'link',
+      '#title' => t('UNSUBSCRIBE', [], ['context' => SOURIAU_COMMON_T_USER]),
+      '#souriau_settings' => [
+        'color' => 'blue',
+      ],
+      '#href' => url('souriau/ajax/nojs/unsubscribe/souriau_user_newsletter_form', ['absolute' => TRUE]),
+      '#prefix' => '<div class="w-btn">',
+      '#suffix' => '</div>',
+      '#attributes' => [
+        'class' => [
+          'unsubscribe-link',
+          'ctools-use-modal',
+          'ctools-modal-souriau-modal-style'
+        ],
+      ],
+    ];
+  }
+  return $form;
+}
+
+/**
+ * User edit page newsletter form subscribe submit.
+ */
+function souriau_user_newsletter_form_subscribe_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  $account = _souria_user_get_account_being_edited();
+  $user_wrapper = entity_metadata_wrapper('user', $account);
+  $postal_address = $user_wrapper->field_postal_address->value();
+
+  $selected_groups = $values['lists'];
+  $selected_thematics = [];
+  foreach ($selected_groups as $group) {
+    $selected_thematics += $group;
+  }
+
+  $list = souriau_newsletter_get_mailchimp_list();
+  $groups = $list->intgroups;
+
+  module_load_include('inc', 'souriau_newsletter', 'souriau_newsletter.pages');
+  $grouping = souriau_newsletter_pages_prepare_groups($groups, $selected_thematics);
+
+  $civility = ['mr' => t('Mr.'), 'ms' => t('Ms.')];
+  $merge_vars = [
+    'EMAIL' => $account->mail,
+    'FNAME' => $user_wrapper->field_last_name->value(),
+    'LNAME' => $user_wrapper->field_last_name->value(),
+    'CIVILITY' => isset($civility[$postal_address['civility']]) ? $civility[$postal_address['civility']] : '',
+  ];
+
+  $double_optin = FALSE;
+  $member_info = mailchimp_get_memberinfo($list->id, $account->mail);
+  if (isset($member_info->status) && $member_info->status == 'unsubscribed') {
+    $msg = t('We sent confirmation message. Your preferences will be updated after confirmation, please check your email', [], ['context' => SOURIAU_COMMON_T_USER]);
+    $double_optin = TRUE;
+  }
+
+  if (mailchimp_subscribe($list->id, $account->mail, $merge_vars, $grouping, $double_optin)) {
+    $user_wrapper->field_subscribe_newsletter->set(1);
+    $user_wrapper->save();
+    $msg = empty($msg) ? t('Your preferences have been updated', [], ['context' => SOURIAU_COMMON_T_USER]) : $msg;
+    drupal_set_message($msg);
+  }
+  else {
+    drupal_set_message(t('Something went wrong during updating preferences, please try again later.', [], ['context' => SOURIAU_COMMON_T_USER]), 'error');
+  }
+}
+
+/**
+ * User edit page newsletter form unsubscribe submit.
+ */
+function souriau_user_newsletter_form_unsubscribe_submit($form, &$form_state) {
+  if (!$form_state['programmed']) {
+    return;
+  }
+
+  $account = _souria_user_get_account_being_edited();
+  $list = souriau_newsletter_get_mailchimp_list();
+  if (mailchimp_unsubscribe($list->id, $account->mail)) {
+    $account = user_load($account->uid);
+    $user_wrapper = entity_metadata_wrapper('user', $account);
+    $user_wrapper->field_subscribe_newsletter->set(0);
+    $user_wrapper->save();
+  }
+}
+
+/**
+ * Implements hook_user_presave().
+ */
+function souriau_user_user_presave(&$edit, $account, $category) {
+  $field_order_history_access_st = !empty($account->field_order_history_access_st[LANGUAGE_NONE][0]['value']) ?
+    $account->field_order_history_access_st[LANGUAGE_NONE][0]['value'] : "";
+
+  $access_status = !empty($edit['field_order_history_access_st'][LANGUAGE_NONE][0]['value']) ?
+    $edit['field_order_history_access_st'][LANGUAGE_NONE][0]['value'] :
+    $field_order_history_access_st;
+
+  $field_ect_customer_numbers = !empty($account->field_ect_customer_numbers[LANGUAGE_NONE][0]['value']) ?
+    $account->field_ect_customer_numbers[LANGUAGE_NONE][0]['value'] : "";
+
+  $account_numbers = !empty($edit['field_ect_customer_numbers'][LANGUAGE_NONE][0]['value']) ?
+    $edit['field_ect_customer_numbers'][LANGUAGE_NONE][0]['value'] :
+    $field_ect_customer_numbers;
+
+  if (empty($account->is_new)) {
+    $role = user_role_load_by_name('client');
+    $edit['roles'][$role->rid] = 0;
+    if ($access_status == "approved" &&  !empty($account_numbers)) {
+      $edit['roles'][$role->rid] = $role->name;
+    }
+  }
+
+  $souriau_settings = variable_get('souriau_common_settings');
+  $screening_status = isset($souriau_settings['ocr_screening']['screening_status']) ? $souriau_settings['ocr_screening']['screening_status'] : TRUE;
+  if ($screening_status === TRUE) {
+    _souriau_user_check_screening($edit, $account);
+  }
+}
+
+/**
+ * Get the account being edited.
+ */
+function _souria_user_get_account_being_edited($user_id = NULL) {
+  global $user;
+  if (!empty($user_id)) {
+    return user_load($user_id);
+  }
+
+  $user_id = arg(1);
+  if (empty($user_id) || !is_numeric($user_id)) {
+    return $user;
+  }
+
+  return user_load($user_id);
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function souriau_user_user_update(&$edit, $account, $category) {
+  if (!empty($edit['is_new'])) {
+    return;
+  }
+
+  if (isset($edit['pass']) && $edit['pass'] != $account->original->pass) {
+    drupal_mail('souriau_user', 'password_changed', $account->mail, user_preferred_language($account), ['user' => $account]);
+  }
+
+  if (!isset($edit['field_order_history_access_st'][LANGUAGE_NONE][0]['value'])) {
+    return;
+  }
+  $account_access_st = field_get_items('user', $account, 'field_order_history_access_st', $account->language);
+  $account_access_st = $account_access_st[0]['value'];
+  $edit_access_st = $edit['field_order_history_access_st'][LANGUAGE_NONE][0]['value'];
+  if ($edit_access_st != $account_access_st) {
+    switch ($edit_access_st) {
+      case 'approved':
+        $mail_type = 'approve_ect_approve';
+        break;
+
+      case 'denied':
+        $mail_type = 'approve_ect_deny';
+        break;
+
+      default:
+        return;
+    }
+
+    drupal_mail('souriau_user', $mail_type, $account->mail, user_preferred_language($account), ['user' => $account]);
+  }
+}
+
+/**
+ * Helper function for OCR screening process.
+ */
+function _souriau_user_check_screening(&$edit, $account) {
+  $souriau_settings = variable_get('souriau_common_settings');
+  $field_postal_address = $edit['field_postal_address'][LANGUAGE_NONE][0];
+
+  $data = [
+    'load_data' => 'Y',
+    'screen_data' => 'Y',
+    'a_entityid' => '1',
+    'name' => $field_postal_address['organisation_name'],
+    'cntry_code' => $field_postal_address['country'],
+    'address1' => $field_postal_address['thoroughfare'],
+    'address2' => $field_postal_address['premise'],
+    'city' => $field_postal_address['locality'],
+    'state_name' => $field_postal_address['administrative_area'],
+    'zipcode' => $field_postal_address['postal_code'],
+  ];
+
+  $status = _souriau_user_check_screening_status($data);
+
+  if ($status === 'Approved') {
+    if ($edit['field_customer_type'][LANGUAGE_NONE][0]['value'] == 'idontknow') {
+      // Send email to CSR.
+      $csr_email = !empty($souriau_settings['ocr_screening']['csr_email']) ? $souriau_settings['ocr_screening']['csr_email'] : NULL;
+
+      if (!empty($csr_email)) {
+        drupal_mail('souriau_user', 'ocr_screening_csr', $csr_email, $account->language, ['user' => $account]);
+      }
+    }
+  }
+  else {
+    // Send email to TCM.
+    $tcm_email = !empty($souriau_settings['ocr_screening']['tcm_email']) ? $souriau_settings['ocr_screening']['tcm_email'] : NULL;
+
+    if (!empty($tcm_email)) {
+      drupal_mail('souriau_user', 'ocr_screening_rejected', $tcm_email, $account->language, ['user' => $account]);
+    }
+    $edit['status'] = FALSE;
+    // Send email to the user to inform that the account is blocked.
+    drupal_mail('souriau_user', 'ocr_user_rejected', $account->mail, $account->language, ['user' => $account]);
+  }
+}
+
+/**
+ * Helper function for screening XML parsing.
+ */
+function _souriau_user_check_screening_status($data) {
+  $souriau_settings = variable_get('souriau_common_settings');
+  // Request headers.
+  $headers = ['Content-Type' => 'text/xml; charset=UTF-8'];
+  if ('json' == SOURIAU_USER_SCREENING_REQUEST_TYPE) {
+    $headers = ['Content-Type' => 'text/json; charset=UTF-8'];
+  }
+
+  $data['username'] = !empty($souriau_settings['ocr_screening']['webservice_username']) ? $souriau_settings['ocr_screening']['webservice_username'] : 'WebServ1896!SSL';
+  $data['email'] = !empty($souriau_settings['ocr_screening']['webservice_email']) ? $souriau_settings['ocr_screening']['webservice_email'] : 'brian.hall@esterline.com';
+  $data['key_nm'] = !empty($souriau_settings['ocr_screening']['webservice_key']) ? $souriau_settings['ocr_screening']['webservice_key'] : '0000001-SAS';
+
+  $options = [
+    'method' => 'GET',
+    'headers' => $headers,
+  ];
+
+  $screening_url = !empty($souriau_settings['ocr_screening']['screening_url']) ? $souriau_settings['ocr_screening']['screening_url'] : 'https://ocrtest.esterline.net/dpss/resultHostedService.ocr';
+  $url = url($screening_url, ['query' => $data]);
+
+  $response = drupal_http_request($url, $options);
+
+  if ($response->code != 200) {
+    $error = t('Error while trying to get response from OCR. Please try again later', [], ['context' => SOURIAU_COMMON_T_OTHER]);
+    watchdog('souriau_user', $error, [], 1);
+    drupal_set_message($error);
+    return;
+  }
+
+  libxml_use_internal_errors(TRUE);
+  $xml_data = new SimpleXMLElement($response->data);
+
+  $errors = libxml_get_errors();
+  if (count($errors) > 0) {
+    foreach ($errors as $error) {
+      $error_message = t('OCR Screening: ', [], ['context' => SOURIAU_COMMON_T_OTHER]) . $error->message;
+      watchdog('souriau_user', $error_message, [], 1);
+    }
+    return;
+  }
+
+  return $xml_data->EachGivenName->Status->__toString();
+}
+
+/**
+ * Implements hook_cronapi().
+ */
+function souriau_user_cronapi($op, $job = NULL) {
+  $items['souriau_user_screening_export'] = array(
+    'description' => 'New users list export.',
+    // Daily 03:30 AM.
+    'rule' => '30 03 * * *',
+  );
+
+  return $items;
+}
+
+/**
+ * Callback for cronapi for exporting and sending new users list to TCM.
+ */
+function souriau_user_screening_export() {
+  global $language;
+  $souriau_settings = variable_get('souriau_common_settings');
+
+  // Save new users to csv file.
+  $new_folder = 'private://user-screening-export/';
+  file_unmanaged_delete_recursive($new_folder);
+  file_prepare_directory($new_folder, FILE_CREATE_DIRECTORY);
+
+  if (drupal_is_cli()) {
+    global $user;
+    $original_user = $user;
+    $user = user_load(1);
+
+    $output = views_embed_view('souriau_screening_users_list', 'screening_list');
+
+    // Restore the user.
+    $user = $original_user;
+  }
+  else {
+    $output = views_embed_view('souriau_screening_users_list', 'screening_list');
+  }
+
+  $file_name = 'eBusiness_screening_' . date('Ymd', strtotime('-1 days')) . '.csv';
+  file_unmanaged_save_data($output, $new_folder . $file_name, FILE_EXISTS_REPLACE);
+
+  // Send email to TCM only if there are any new users.
+  if (substr_count($output, "\n") > 1) {
+    $tcm_email = !empty($souriau_settings['ocr_screening']['tcm_email']) ? $souriau_settings['ocr_screening']['tcm_email'] : 'mmahe@souriau.com';
+    $tcm_email_cc = !empty($souriau_settings['ocr_screening']['screening_cc_email']) ? $souriau_settings['ocr_screening']['screening_cc_email'] : 'lumoreau@souriau.com';
+
+    $attachment = ['filepath' => $new_folder . $file_name];
+    $params = [
+      'attachment' => $attachment,
+      'cc' => $tcm_email_cc,
+    ];
+    drupal_mail('souriau_user', 'ocr_new_user_list', $tcm_email, $language, $params);
+  }
+}

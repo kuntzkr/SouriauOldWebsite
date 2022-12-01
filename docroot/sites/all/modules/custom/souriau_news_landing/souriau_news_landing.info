@@ -1,0 +1,4 @@
+name = Souriau News Landing
+description = Provides special logic for News Landing page.
+core = 7.x
+package = SOURIAU

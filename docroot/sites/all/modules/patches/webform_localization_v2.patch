@@ -1,0 +1,18 @@
+diff --git a/webform_localization.info b/webform_localization.info
+index f6b0736..9fb3094 100644
+--- a/webform_localization.info
++++ b/webform_localization.info
+@@ -5,12 +5,9 @@ core = 7.x
+ package = Webform
+ php = 5.3
+ dependencies[] = locale
+-dependencies[] = translation
+ dependencies[] = variable
+-dependencies[] = i18n_translation
+ dependencies[] = i18n_string
+-dependencies[] = webform (4.x)
++dependencies[] = webform
+ test_dependencies[] = token
+-test_dependencies[] = i18n_block
+ 
+ files[] = tests/webform_localization.test

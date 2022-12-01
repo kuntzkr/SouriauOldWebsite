@@ -1,0 +1,41 @@
+diff --git a/addressfield.address_formats.inc b/addressfield.address_formats.inc
+index 6bcec74..d27457a 100644
+--- a/addressfield.address_formats.inc
++++ b/addressfield.address_formats.inc
+@@ -28,7 +28,8 @@
+ function addressfield_get_address_format($country_code) {
+   $default_values = array(
+     'used_fields' => array('locality'),
+-    'required_fields' => array('locality'),
++    // 'required_fields' => array('locality').
++    'required_fields' => array(),
+     'dependent_locality_label' => t('Suburb'),
+     'locality_label' => t('City'),
+     'administrative_area_label' => t('Province'),
+diff --git a/plugins/format/address.inc b/plugins/format/address.inc
+index e9b801f..b62486d 100644
+--- a/plugins/format/address.inc
++++ b/plugins/format/address.inc
+@@ -126,6 +126,11 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+     '#weight' => 100,
+   );
+ 
++  // Set address line 1 not required, if no country.
++  if (empty($address['country'])) {
++    $format['street_block']['thoroughfare']['#required'] = FALSE;
++  }
++
+   if (empty($format['locality_block']['postal_code']['#access'])) {
+     // Remove the prefix from the first widget of the block.
+     $element_children = element_children($format['locality_block']);
+@@ -284,8 +289,8 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+       $format['country']['#empty_value'] = '';
+       // Hide all other fields until the country is selected.
+       if (empty($address['country'])) {
+-        $format['street_block']['#access'] = FALSE;
+-        $format['locality_block']['#access'] = FALSE;
++        $format['street_block']['#access'] = TRUE;
++        $format['locality_block']['#access'] = TRUE;
+       }
+     }
+   }

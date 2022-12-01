@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau View Query Pathauto feature.
+ */
+
+include_once 'souriau_view_query_pathauto.features.inc';

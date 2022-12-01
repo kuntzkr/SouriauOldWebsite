@@ -1,0 +1,330 @@
+<?php
+
+/**
+ * @file
+ * Souriau Ecommerce ERP module.
+ */
+
+include_once 'souriau_eco_erp.inc';
+use phpseclib3\Net\SFTP;
+
+/**
+ * Implements hook_permission().
+ */
+function souriau_eco_erp_permission() {
+  return [
+    'souriau_eco_erp_dashboard' => [
+      'title' => t('Access to ecommerce dashboard'),
+    ],
+    'souriau_eco_erp_dashboard_send_request' => [
+      'title' => t('Access to send request to ERP system'),
+    ],
+    'souriau_eco_erp_mouser_orders' => [
+      'title' => t('Access to Mouser orders dashboard'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function souriau_eco_erp_views_api() {
+  return [
+    'api' => 3,
+    'path' => drupal_get_path('module', 'souriau_eco_erp') . '/views',
+  ];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_eco_erp_menu() {
+
+  $items['admin/dashboard/ecommerce'] = [
+    'title' => 'Ecommerce',
+    'menu_name' => 'menu-admin-menu',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => ['souriau_eco_erp_dashboard'],
+    'page callback' => 'souriau_eco_erp_pages_default_callback',
+    'file' => 'souriau_eco_erp.pages.inc',
+  ];
+  $items['admin/dashboard/ecommerce/orders'] = [
+    'title' => 'Orders',
+    'menu_name' => 'menu-admin-menu',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => ['souriau_eco_erp_dashboard'],
+    'page callback' => 'souriau_eco_erp_pages_orders_callback',
+    'file' => 'souriau_eco_erp.pages.inc',
+  ];
+  $items['admin/commerce/orders/%commerce_order/erp'] = [
+    'title' => 'ERP',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => ['souriau_eco_erp_dashboard_send_request'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_eco_erp_ui_form', 3],
+    'file' => 'souriau_eco_erp.forms.inc',
+  ];
+
+  $items['admin/commerce/orders/%commerce_order/approve'] = [
+    'title' => 'Approve',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => ['souriau_eco_erp_mouser_orders'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_eco_erp_order_item_approve_callback', 3],
+    'file' => 'souriau_eco_erp.forms.inc',
+  ];
+
+  $items['admin/commerce/orders/%commerce_order/cancel'] = [
+    'title' => 'Cancel',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => ['souriau_eco_erp_mouser_orders'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['souriau_eco_erp_order_item_cancel_callback', 3],
+    'file' => 'souriau_eco_erp.forms.inc',
+  ];
+
+  $items['admin/commerce/orders/confirm'] = [
+    'title' => 'Confirm',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments' => ['souriau_eco_erp_mouser_orders'],
+    'page callback' => 'souriau_eco_erp_pages_confirm_callback',
+    'file' => 'souriau_eco_erp.forms.inc',
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function souriau_eco_erp_entity_insert($entity, $type) {
+  if ($type != 'commerce_order' || $entity->type != 'samples_order') {
+    return;
+  }
+
+  // Sample order notify.
+  if ($entity->status == 'pending') {
+    _souriau_eco_erp_commerce_order_samples_order_notify($entity);
+  }
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function souriau_eco_erp_entity_update($entity, $type) {
+  if ($type != 'commerce_order' || $entity->type != 'samples_order') {
+    return;
+  }
+
+  // Sample order notify.
+  if (($entity->status == 'checkout_complete') && $entity->original->status != 'checkout_complete') {
+    _souriau_eco_erp_commerce_order_samples_order_notify($entity);
+  }
+}
+
+/**
+ * Samples orders. Notify ERP system.
+ */
+function _souriau_eco_erp_commerce_order_samples_order_notify(&$order) {
+  global $language, $base_url;
+  $site_commerce_settings = variable_get('souriau_site_settings_souriau_ecommerce');
+  $ecommerce_stock_system = isset($site_commerce_settings['stock']['system']) ? $site_commerce_settings['stock']['system'] : 'worldwide_stock';
+  $sample_wrapper = entity_metadata_wrapper('commerce_order', $order)->language($language->language);
+  if ('mouser_stock' == $ecommerce_stock_system) {
+    // Commerce order status update for mouser orders.
+    commerce_order_status_update($order, 'pending');
+    // Mouser only sample order additional status update.
+    $sample_wrapper->field_commerce_mouser_status->set('waiting for approval');
+  }
+  else {
+    // Worldwide orders status update.
+    commerce_order_status_update($order, 'completed');
+  }
+  // Save base url to identify each order domain.
+  $sample_wrapper->field_commerce_shipping_provider->set($base_url . '/' . $language->language);
+  commerce_order_save($order);
+}
+
+/**
+ * Implements hook_cronapi().
+ */
+function souriau_eco_erp_cronapi($op, $job = NULL) {
+  $items['souriau_eco_erp_update_order_status'] = [
+    'description' => 'Order Tracking of sample orders from USA only.',
+    // Every 30 minutes.
+    'rule' => '*/30 * * * *',
+  ];
+
+  $items['souriau_eco_erp_load_mouser_stock'] = [
+    'description' => 'Load mouser stock table with real time data from mouser FTP.',
+    // Daily 12:45.
+    'rule' => '45 12 * * *',
+  ];
+
+  return $items;
+}
+
+/**
+ * Helper function to update order status based on mouser API.
+ */
+function souriau_eco_erp_update_order_status() {
+  global $language;
+  if (drupal_is_cli()) {
+    global $user;
+    $original_user = $user;
+    $user = user_load(1);
+
+    $view_data = views_get_view_result('souriau_eco_erp_orders', 'page_3');
+
+    // Restore the user.
+    $user = $original_user;
+  }
+  else {
+    $view_data = views_get_view_result('souriau_eco_erp_orders', 'page_3');
+  }
+
+  foreach ($view_data as $order_item) {
+    // Preparing request to get order history.
+    $xml = _souriau_eco_erp_get_order_history_prepare_request($order_item->field_field_commerce_mouser_orderno[0]['raw']['value'], SOURIAU_ECO_ERP_REQUEST_TYPE);
+
+    // Mouser response data.
+    $order_history = souriau_eco_erp_get_response(_souriau_eco_erp_mouser_urls('get_order_history'), $xml);
+
+    if (!empty($order_history['Errors'])) {
+      $error = reset($order_history['Errors']);
+      watchdog('souriau_eco_erp', 'Error while trying to get Order History of %order_number from Mouser: %message',
+      ['%order_number' => $order_item->order_id, '%message' => $error['Message']]);
+      continue;
+    }
+    if (isset($order_history['OrderStatus']) && isset($order_history['Invoices']['Invoice'])) {
+      $order_status = drupal_strtolower($order_history['OrderStatus']);
+      $invoice = $order_history['Invoices']['Invoice'];
+      $ship_url = souriau_eco_erp_find_ship_url($invoice);
+      // Check shipment status and a valid tracking numbers from response.
+      if (!empty($ship_url) && in_array($order_status, ['shipped', 'backordered'])) {
+        $order_obj = commerce_order_load($order_item->order_id);
+        $order_wrapper = entity_metadata_wrapper('commerce_order', $order_obj)->language($language->language);
+        // Saving shipment records of each orders.
+        $order_wrapper->field_commerce_mouser_status->set('shipped');
+        $order_wrapper->field_commerce_shipped_date->set(strtotime($invoice['ShipDate']));
+        $order_wrapper->field_commerce_shipping_provider->set($invoice['ShippingMethod']);
+        $order_wrapper->field_commerce_shipment_tracker->set($invoice['TrackingNumbers']['TrackingNumber']);
+        $order_wrapper->field_commerce_shipping_link->set($ship_url);
+
+        commerce_order_status_update($order_obj, 'shipped');
+        commerce_order_save($order_obj);
+      }
+    }
+  }
+}
+
+/**
+ * Function to get shipping tracking URL.
+ */
+function souriau_eco_erp_find_ship_url($invoice) {
+  if (empty($invoice['TrackingNumbers']['TrackingNumber'])) {
+    return;
+  }
+
+  $shipping_method = drupal_strtolower(substr($invoice['ShippingMethod'], 0, 3));
+  switch ($shipping_method) {
+    case 'fed':
+      $query = [
+        'action' => 'track',
+        'tracknumbers' => $invoice['TrackingNumbers']['TrackingNumber'],
+      ];
+      $url = 'https://www.fedex.com/apps/fedextrack';
+      break;
+
+    case 'ups':
+      $query = [
+        'tracknum' => $invoice['TrackingNumbers']['TrackingNumber'],
+        'track.x' => 'Track',
+      ];
+      $url = 'http://wwwapps.ups.com/etracking/tracking.cgi';
+      break;
+
+    default:
+      return;
+  }
+
+  return url($url, ['query' => $query, 'external' => TRUE]);
+}
+
+/**
+ * Helper function for cron to load data to mouser stock.
+ */
+function souriau_eco_erp_load_mouser_stock() {
+  $site_mouser_settings = variable_get('souriau_site_settings_variables');
+
+  $server = isset($site_mouser_settings['mouser-ftp']['server']) ? $site_mouser_settings['mouser-ftp']['server'] : 'b2bgateway.mouser.com';
+  $username = isset($site_mouser_settings['mouser-ftp']['username']) ? $site_mouser_settings['mouser-ftp']['username'] : 'Souriau';
+  $password = isset($site_mouser_settings['mouser-ftp']['password']) ? $site_mouser_settings['mouser-ftp']['password'] : '$gu#VeWiBx!';
+
+  $filename = '/SOURIAU_MOUSER_INV_' . date('Ymd') . '.csv';
+  $new_folder = 'private://mouser-inv';
+  file_prepare_directory($new_folder, FILE_CREATE_DIRECTORY);
+
+  include '../vendor/autoload.php';
+  $sftp = new SFTP($server);
+
+  if (!$sftp->login($username, $password)) {
+    throw new Exception('Login failed');
+  }
+
+  $sftp->get($filename, function ($output) use ($filename, $new_folder) {
+    file_save_data($output, $new_folder . $filename, FILE_EXISTS_REPLACE);
+  });
+
+  $csv = array_map('str_getcsv', file($new_folder . $filename));
+
+  foreach ($csv as $key => $row) {
+    // Add the item to the queue.
+    DrupalQueue::get('souriau_eco_erp_mouser')->createItem([
+      'key' => $key,
+      'row' => $row
+    ]);
+  }
+  DrupalQueue::get('souriau_eco_erp_mouser')->createItem(['key' => 'LAST', 'row' => NULL]);
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function souriau_eco_erp_cron_queue_info() {
+  return [
+    'souriau_eco_erp_mouser' => [
+      'worker callback' => 'souriau_eco_erp_mouser_queue_worker',
+      'skip on cron' => FALSE,
+      // Max time 10 minutes for job.
+      'time' => 60 * 10,
+    ],
+  ];
+}
+
+/**
+ * Queue callback function for mouser FTP.
+ */
+function souriau_eco_erp_mouser_queue_worker($data) {
+  extract($data);
+  db_set_active('stock_management');
+  if ($key === 0) {
+    db_truncate('mouser_stock')->execute();
+  }
+  if ($key === 'LAST') {
+    db_query("UPDATE {mouser_stock} SET part_number = REPLACE(part_number, '-', '')");
+    db_query("UPDATE {mouser_stock} SET part_number = REPLACE(part_number, '.', '')");
+    db_query("UPDATE {mouser_stock} SET part_number = REPLACE(part_number, ' ', '')");
+    db_set_active();
+    return;
+  }
+  db_insert('mouser_stock')
+    ->fields([
+      'part_number' => $row[0],
+      'quantity' => $row[1],
+    ])->execute();
+  db_set_active();
+}

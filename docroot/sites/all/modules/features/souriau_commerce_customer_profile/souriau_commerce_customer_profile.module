@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Commerce Customer Profile feature.
+ */
+
+include_once 'souriau_commerce_customer_profile.features.inc';

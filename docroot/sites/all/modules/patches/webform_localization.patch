@@ -1,0 +1,32 @@
+diff --git a/webform_localization.info b/webform_localization.info
+index 03cf8ba..a5546fc 100644
+--- a/webform_localization.info
++++ b/webform_localization.info
+@@ -5,23 +5,15 @@ core = 7.x
+ package = Webform
+ php = 5.3
+ dependencies[] = locale
+-dependencies[] = block
+-dependencies[] = translation
+ dependencies[] = i18n
+ dependencies[] = variable
+-dependencies[] = i18n_translation
+-dependencies[] = i18n_block
+ dependencies[] = i18n_string
+-dependencies[] = webform (4.x)
++dependencies[] = webform
+ test_dependencies[] = locale
+-test_dependencies[] = block
+-test_dependencies[] = translation
+ test_dependencies[] = token
+ test_dependencies[] = i18n
+ test_dependencies[] = variable
+-test_dependencies[] = i18n_translation
+-test_dependencies[] = i18n_block
+ test_dependencies[] = i18n_string
+-test_dependencies[] = webform (4.x)
++test_dependencies[] = webform
+ 
+-files[] = tests/webform_localization.test
++files[] = tests/webform_localization.test
+\ No newline at end of file

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau CT News feature.
+ */
+
+include_once 'souriau_ct_news.features.inc';

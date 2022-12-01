@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Entity Advice feature.
+ */
+
+include_once 'souriau_entity_advice.features.inc';

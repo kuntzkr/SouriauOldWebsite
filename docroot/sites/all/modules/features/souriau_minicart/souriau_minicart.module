@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau Minicart feature.
+ */
+
+include_once 'souriau_minicart.features.inc';

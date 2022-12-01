@@ -1,0 +1,32 @@
+.b-download-center {
+  padding: 21px 0 77px;
+
+  @include media("<desktop") {
+    padding: 19px 0 71px;
+  }
+
+  @include media("<tablet") {
+    padding: 0 0 60px;
+  }
+
+  .clear-filter {
+    color: $blue3;
+    font-size: 12px;
+    letter-spacing: 0.86px;
+    line-height: 24px;
+    text-decoration: none;
+    @include transition(opacity 0.3s ease-in-out);
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      text-decoration: none;
+      opacity: 0.7;
+    }
+  }
+
+  .view-more {
+    @include media("<tablet") {
+      display: block;
+    }
+  }
+}

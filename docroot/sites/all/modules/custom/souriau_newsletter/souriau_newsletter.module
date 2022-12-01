@@ -1,0 +1,192 @@
+<?php
+/**
+ * @file
+ * Souriau Newsletter.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function souriau_newsletter_menu() {
+  $items['souriau/ajax/newsletter'] = array(
+    'title' => 'Newslatter Ajax Callback',
+    'page callback' => 'souriau_newsletter_form_callback',
+    'file' => 'souriau_newsletter.pages.inc',
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+    'delivery callback' => 'ajax_deliver',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function souriau_newsletter_theme($existing, $type, $theme, $path) {
+  return [
+    'souriau_newsletter_newsletter_form' => [
+      'template'  => 'souriau-newsletter-newsletter-form',
+      'variables' => ['params' => NULL],
+      'render element' => 'element',
+      'path' => drupal_get_path('theme', 'souriau') . '/templates/blocks',
+    ],
+    'souriau_newsletter_popup_groups' => [
+      'template'  => 'souriau-newsletter-popup-groups',
+      'variables' => [
+        '_data' => NULL,
+        '_html' => NULL,
+      ],
+      'render element' => 'element',
+    ],
+    'newsletter_congratulation' => [
+      'render element' => 'element',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_newsletter_preprocess_souriau_newsletter_newsletter_form(&$variables) {
+  drupal_add_library('system', 'drupal.ajax');
+  $_html = &$variables['_html'];
+
+  $url = url('souriau/ajax/newsletter');
+  $button = [
+    '#theme' => 'button',
+    '#attributes' => [
+      'class' => [
+        'btn',
+        'btn_search',
+        'ctools-use-modal',
+        'ctools-modal-souriau-modal-style',
+        'gtm_element',
+      ],
+      'data-ajax-url' => $url,
+      'data-gtm-category' => 'Button',
+      'data-gtm-action' => 'Newsletter',
+      'data-gtm-label' => drupal_get_title(),
+      'id' => 'souriau-newsletter-ajax-subscribe-submit',
+    ],
+    '#value' => t('KEEP IN TOUCH', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+  ];
+  $_html['email'] = !empty($variables['email']) ? $variables['email'] : '';
+  $_html['error'] = !empty($variables['error']) ? 'error' : '';
+  $_html['error_msg'] = !empty($variables['error_msg']) ? $variables['error_msg'] : '';
+  $_html['url'] = $url;
+  $_html['button'] = drupal_render($button);
+
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function souriau_newsletter_preprocess_souriau_newsletter_popup_groups(&$variables) {
+  $_html = &$variables['_html'];
+  $_data = &$variables['_data'];
+
+  // Current list.
+  $list = $variables['list'];
+  $_data['groups'] = $list->intgroups;
+
+  // Button.
+  $url = url('souriau/ajax/newsletter');
+  $button['actions'] = [
+    '#type' => 'actions',
+    '#souriau_settings' => [
+      'align' => 'center',
+      'text_align' => 'center',
+    ]
+  ];
+
+  $button['actions']['subscribe'] = [
+    '#type' => 'submit',
+    '#value' => t('I subscribe', [], ['context' => SOURIAU_COMMON_T_OTHER]),
+    '#souriau_settings' => [
+      'color' => 'blue',
+    ],
+    '#attributes' => [
+      'class' => ['btn'],
+      'data-ajax-url' => $url,
+      'id' => 'souriau-newsletter-ajax-popup-submit',
+    ],
+  ];
+
+  $_html['error'] = !empty($variables['error']) ? $variables['error'] : '';
+  $_html['url'] = $url;
+  $_html['email'] = !empty($variables['email']) ? $variables['email'] : '';
+  $_html['button'] = drupal_render($button);
+}
+
+/**
+ * Theme('newsletter_congratulation') process.
+ */
+function theme_newsletter_congratulation($variables) {
+  $success = t('Your subscription has been taken in account', [], ['context' => 'SOURAIU: other']);
+  return '<label>' . $success . '</label>';
+}
+
+/**
+ * Additional form element for define active mailchimp list.
+ *
+ * @see souriau_common_form_site_settings_variables()
+ */
+function souriau_newsletter_conf_form($default) {
+  $mc_lists = mailchimp_get_lists();
+  $options = [];
+  foreach ($mc_lists as $mc_list) {
+    $options[$mc_list->id] = $mc_list->name;
+  }
+  $form = [
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#title' => t('Newsletter mailchimp lists', [], ['context' => SOURIAU_COMMON_T_ADMIN]),
+  ];
+
+  $form['refresh'] = [
+    '#type' => 'markup',
+    '#markup' => l(t('Refresh lists from MailChimp'),
+    'admin/config/services/mailchimp/list_cache_clear',
+    ['query' => drupal_get_destination()]),
+  ];
+
+  if (empty($mc_lists)) {
+    drupal_set_message(t('You don\'t have any lists configured in your MailChimp account, (or you haven\'t configured your API key correctly on the Global Settings tab). Head over to !link and create some lists, then come back here and click "Refresh lists from MailChimp"',
+      array('!link' => l(t('MailChimp'), 'https://admin.mailchimp.com/lists/'))), 'warning');
+  }
+
+  $form['lists'] = [
+    '#type' => 'radios',
+    '#title' => 'lists',
+    '#options' => $options,
+    '#default_value' => $default['lists'],
+  ];
+  return $form;
+}
+
+/**
+ * Helper function. Return active mailchimp list.
+ */
+function souriau_newsletter_get_mailchimp_list() {
+  // Mailchimp cofig.
+  $default_value = variable_get('souriau_site_settings_variables');
+  $mailchimp_conf = isset($default_value['mailchimp']) ? $default_value['mailchimp'] : [];
+
+  // Available lists.
+  $mc_lists = mailchimp_get_lists();
+
+  if (empty($mc_lists)) {
+    drupal_set_message(t('You don\'t have any lists configured in your MailChimp account, (or you haven\'t configured your API key correctly on the Global Settings tab). Head over to !link and create some lists, then come back here and click "Refresh lists from MailChimp"',
+      array('!link' => l(t('MailChimp'), 'https://admin.mailchimp.com/lists/'))), 'warning');
+    return [];
+  }
+
+  $list = isset($mc_lists[$mailchimp_conf['lists']]) ? $mc_lists[$mailchimp_conf['lists']] : array_shift($mc_lists);
+
+  if (!isset($list->intgroups)) {
+    $list->intgroups = [];
+  }
+
+  return $list;
+}

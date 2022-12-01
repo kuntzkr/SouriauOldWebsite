@@ -1,0 +1,14 @@
+name = Souriau My account Landing Feature
+core = 7.x
+package = Souriau Features
+version = 7.x-0.02
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = menu
+dependencies[] = page_manager
+dependencies[] = souriau_common
+dependencies[] = souriau_user
+features[ctools][] = page_manager:pages_default:1
+features[features_api][] = api:2
+features[menu_custom][] = user-menu
+features[page_manager_pages][] = souriau_my_account_landing

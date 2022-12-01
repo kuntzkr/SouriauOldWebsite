@@ -1,0 +1,12 @@
+diff --git a/advpoll.module b/advpoll.module
+index 8540d0e..826036b 100644
+--- a/advpoll.module
++++ b/advpoll.module
+@@ -284,6 +284,7 @@ function advpoll_theme($existing, $type, $theme, $path) {
+  */
+ function advpoll_node_presave($node) {
+   if ($node->type === 'advpoll') {
++    $nid = !empty($node->nid) ? $node->nid : NULL;
+ 
+     $lang = entity_language('node', $node);
+ 

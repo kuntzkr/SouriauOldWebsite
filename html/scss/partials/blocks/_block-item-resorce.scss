@@ -1,0 +1,236 @@
+.b-item-resorce {
+  width: 300px;
+  display: inline-block;
+  min-height: 406px;
+  margin: 0 16px 20px 0;
+  vertical-align: top;
+  position: relative;
+  @include box-sizing(border-box);
+  @include clearfix();
+
+  -webkit-box-shadow: 0px 0px 15px 5px rgba(0, 0, 0, 0.1);
+  -moz-box-shadow: 0px 0px 15px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 0px 15px 5px rgba(0, 0, 0, 0.1);
+
+  @include media("<desktop") {
+    padding: 14px 17px 24px 36px;
+    width: auto;
+    display: block;
+    min-height: 1px;
+    margin: 0 0 14px;
+  }
+
+  @include media("<tablet") {
+    padding: 0;
+    margin: 0 0 18px;
+  }
+
+  &:nth-child(3n) {
+    margin-right: 0;
+  }
+
+  .b-top {
+    position: relative;
+    display: block;
+
+    @include clearfix();
+
+    @include media("<desktop") {
+      float: right;
+      margin: 0 0 0 20px;
+    }
+
+    @include media("<tablet") {
+      float: none;
+      margin: 0;
+    }
+
+    .pic {
+      height: 158px;
+      overflow: hidden;
+
+      @include media("<desktop") {
+        width: 300px;
+      }
+
+      @include media("<tablet") {
+        width: 100%;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+      }
+    }
+  }
+
+  .b-no-permision {
+    background: rgba(42,66,120,0.5);
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    color: $white;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    line-height: 18px;
+    text-transform: uppercase;
+    text-align: center;
+    z-index: 3;
+
+    span {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      -moz-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+      -webkit-transform: translateY(-50%);
+    }
+  }
+
+  .b-links {
+    position: absolute;
+    z-index: 2;
+    right: 20px;
+    top: 20px;
+
+    .link {
+      margin-left: 19px;
+      float: left;
+    }
+  }
+
+  .b-course-info {
+    position: absolute;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    color: $white;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    background: #ff3a3a;
+    text-align: center;
+    padding: 3px 5px;
+  }
+
+  .b-content {
+    padding: 20px 36px 85px;
+
+    @include media("<desktop") {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    @include media("<tablet") {
+      overflow: visible;
+      padding: 20px 36px 30px;
+    }
+  }
+
+  .info {
+    color: $grey;
+    font-family: $main-sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    margin: 0 0 10px;
+
+    @include media("<desktop") {
+      margin-top: 4px;
+    }
+
+    @include media("<tablet") {
+      margin-top: 0;
+    }
+
+    .title {
+      font-weight: bold;
+    }
+
+    .b-date {
+      padding: 0 0 18px;
+      display: block;
+
+      @include media("<desktop") {
+        padding: 20px 0 0;
+      }
+
+      @include media("<tablet") {
+        padding: 0px 0 18px;
+      }
+    }
+  }
+
+  .w-tags {
+    margin: 0 0 14px;
+  }
+
+  h3 {
+    color: $blue3;
+    font-family: $avenir-next-regular;
+    font-size: 20px;
+    font-weight: normal;
+    line-height: 36px;
+    margin: 0 0 10px;
+
+    @include media("<desktop") {
+      margin: 0 0 17px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 25px;
+    }
+  }
+
+  h4 {
+    color: $blue3;
+    font-family: $avenir-next-regular;
+    font-size: 24px;
+    font-weight: normal;
+    line-height: 36px;
+    margin: 0 0 10px;
+
+    @include media("<desktop") {
+      margin: 0 0 17px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 25px;
+    }
+  }
+
+  .w-btn {
+    position: absolute;
+    bottom: 30px;
+    left: 10px;
+    right: 10px;
+
+    @include media("<desktop") {
+      position: static;
+      text-align: left;
+      margin: 0 0 14px;
+    }
+
+    @include media("<tablet") {
+      text-align: center;
+      margin: 0 -25px 16px;
+    }
+
+    &.top-indent {
+      bottom: 46px;
+    }
+
+    .btn {
+      min-width: 218px;
+      padding-left: 26px;
+      padding-right: 26px;
+    }
+  }
+}

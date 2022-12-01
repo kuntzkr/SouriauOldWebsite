@@ -1,0 +1,22 @@
+<?php
+/**
+ * @file
+ * Site Overrides install hooks.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function site_overrides_install() {
+  // Force higher module weight to override contributed modules.
+  site_overrides_update_7001();
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Increase module weight.
+ */
+function site_overrides_update_7001() {
+  db_query("UPDATE {system} SET weight = 10 WHERE name = 'site_overrides'");
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau My account Landing Feature feature.
+ */
+
+include_once 'souriau_my_account_landing_feature.features.inc';

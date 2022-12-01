@@ -1,0 +1,120 @@
+.b-newsletter {
+  background: $orange;
+  padding: 43px 0 61px;
+
+  @include media("<desktop") {
+    padding: 38px 0 61px;
+  }
+
+  @include media("<tablet") {
+    padding: 46px 0 55px;
+    text-align: center;
+  }
+
+  h3 {
+    display: block;
+    color: $white;
+    font-family: $avenir-next-regular;
+    font-size: 32px;
+    line-height: 36px;
+    margin: 0 0 12px;
+
+    @include media("<desktop") {
+      margin: 0 0 18px 19px;
+    }
+
+    @include media("<tablet") {
+      font-size: 24px;
+      line-height: 32px;
+      margin: 0 0 9px;
+    }
+  }
+
+
+  .form-item {
+    margin: 0;
+    overflow: hidden;
+
+    @include media("<desktop") {
+      margin: 0 0 0 19px;
+    }
+
+    @include media("<tablet") {
+      margin: 0 0 10px;
+    }
+
+    label {
+      color: $white;
+      font-family: $avenir-next-regular;
+      font-size: 24px;
+      line-height: 30px;
+      top: 20px;
+      padding: 0;
+      opacity: 0.6;
+
+      @include media("<tablet") {
+        text-align: center;
+        width: 100%;
+      }
+    }
+
+    &.focus-label .form-text {
+      border-bottom: 1px solid #ff9762;
+      color: $white;
+    }
+
+    &.error .form-text {
+      border-bottom-color: #f51616;
+    }
+  }
+
+  .form-actions {
+    margin-left: 40px;
+    padding: 20px 0 0;
+
+    @include media("<desktop") {
+      margin: 0 4px 0 20px;
+    }
+
+    @include media("<tablet") {
+      display: table-footer-group;
+      float: none;
+      margin: 0;
+    }
+
+    .btn {
+      margin: 0;
+      @include transition(all 0.4s ease-in-out);
+      .no-touchevents &:hover,
+      .no-js &:hover{
+        text-decoration: none;
+        color: $orange;
+        background: $white;
+      }
+    }
+  }
+
+  .form-text {
+    color: $white;
+    font-family: $avenir-next-regular;
+    font-size: 24px;
+    line-height: 30px;
+    background: none;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #ff9762;
+    padding: 0px 0 7px;
+
+    @include media("<tablet") {
+      text-align: center;
+      margin:  0 0 17px;
+    }
+  }
+
+  form {
+    @include media("<tablet") {
+      display: table;
+      width: 100%;
+    }
+  }
+}

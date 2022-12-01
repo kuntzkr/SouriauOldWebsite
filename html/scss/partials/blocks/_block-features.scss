@@ -1,0 +1,77 @@
+.b-features {
+  padding: 50px 0 40px;
+
+  @include media("<desktop") {
+    padding: 22px 0 30px;
+  }
+
+  @include media("<tablet") {
+    padding: 12px 0 42px;
+  }
+
+  .container {
+    @include media("<tablet") {
+      padding: 0 35px;
+      display: table;
+      width: 100%;
+    }
+  }
+
+  .title {
+    vertical-align: top;
+    overflow: hidden;
+
+    @include media("<tablet") {
+      overflow: visible;
+      display: table-header-group;
+    }
+
+    h3 {
+      color: $blue2;
+      font-size: 24px;
+      line-height: 36px;
+
+      @include media("<tablet") {
+        line-height: 32px;
+        margin: 0 0 26px;
+      }
+    }
+  }
+
+  .b-main-info {
+    width: 528px;
+    margin: 7px 0 20px 30px;
+    float: right;
+
+    -webkit-column-count: 2;
+    -moz-column-count: 2;
+    column-count: 2;
+    -webkit-column-gap: 12px;
+    -moz-column-gap: 12px;
+    column-gap: 12px;
+
+    ul {
+      margin: 0;
+      padding: 0;
+
+      li {
+        display: inline-block;
+        @include box-sizing(border-box);
+        width: 100%;
+      }
+    }
+
+    @include media("<desktop") {
+      width: 481px;
+    }
+
+    @include media("<tablet") {
+      width: auto;
+      float: none;
+      margin: 0 0 0 2px;
+      -webkit-column-count: 1;
+      -moz-column-count: 1;
+      column-count: 1;
+    }
+  }
+}

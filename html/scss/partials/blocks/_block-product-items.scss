@@ -1,0 +1,254 @@
+.product-items {
+  margin: 0 -10px;
+  @include clearfix();
+
+  @include media("<desktop") {
+    margin: 0 -7px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 auto;
+    width: 249px;
+    position: relative;
+  }
+
+  .w-btn {
+    margin: 19px 0 0;
+    opacity: 0;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -150%;
+    @include transition(all 0.1s ease-in-out);
+  }
+
+  .item {
+    background: #FFF;
+    width: 220px;
+    min-height: 304px;
+    margin: 0 10px 20px;
+    text-align: center;
+    padding: 0 15px 20px;
+    @include box-sizing(border-box);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 22px 40px rgba(169, 169, 169, 0.5);
+    vertical-align: top;
+    text-decoration: none;
+    word-wrap: break-word;
+    display: inline-block;
+    display: -webkit-inline-flex;
+    display: inline-flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+
+    @include media("<desktop") {
+      margin: 0 7px 14px;
+      width: 233px;
+    }
+
+    @include media("<tablet") {
+      width: 249px;
+      min-height: 298px;
+      margin: 0 0 10px;
+    }
+
+    .no-touchevents &:hover,
+    .no-js &:hover{
+      text-decoration: none;
+
+      .block-behavior {
+        visibility: hidden;
+      }
+
+      h3, h4 {
+        color: $orange;
+      }
+
+      .w-btn {
+        opacity: 1;
+        bottom: 13px;
+      }
+    }
+
+    .b-pic {
+      height: 144px;
+      display: block;
+      overflow: hidden;
+      margin: 0 -15px 14px;
+
+      @include media("<tablet") {
+        margin-bottom: 7px;
+      }
+
+      img {
+        min-width: 100%;
+        min-height: 100%;
+        max-width: inherit;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        -moz-transform: translate(-50%, -50%);
+        -ms-transform: translate(-50%, -50%);
+        -webkit-transform: translate(-50%, -50%);
+      }
+
+      .pic {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+    }
+
+    .text {
+      padding: 0 15px;
+      overflow: hidden;
+      position: relative;
+      min-height: 60px;
+      -webkit-flex-grow: 1;
+      flex-grow: 1;
+
+      @include media("<desktop") {
+        padding: 0 21px;
+        min-height: 1px;
+      }
+
+      @include media("<tablet") {
+        padding: 0 30px;
+
+        ul li {
+          padding-left: 21px;
+        }
+      }
+    }
+
+    h3 {
+      color: $blue2;
+      font-size: 24px;
+      line-height: 30px;
+      margin: 0 0 12px;
+
+      @include media("<tablet") {
+        margin: 0 0 14px;
+      }
+    }
+
+    h4 {
+      color: $blue2;
+      font-family: $avenir-next-regular;
+      font-size: 16px;
+      line-height: 24px;
+      margin: 0 0 13px;
+    }
+
+    .block-behavior {
+      text-align: left;
+    }
+
+    ul, ol {
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      color: #4a5763;
+      font-family: "Open Sans";
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 24px;
+    }
+  }
+}
+
+.b-top-products {
+  background: $grey2;
+  padding: 61px 0 66px;
+
+  @include media("<desktop") {
+    padding: 40px 0 27px;
+  }
+
+  .product-items {
+    @include media("<tablet") {
+      background: $white;
+      box-shadow: 0 22px 40px rgba(169, 169, 169, 0.5);
+      margin-bottom: 40px;
+    }
+  }
+
+  .item {
+    @include media("<tablet") {
+      box-shadow: none;
+      margin: 0;
+    }
+  }
+
+
+  h2, h4 {
+    margin: 0 0 30px;
+
+    @include media("<tablet") {
+      text-align: center;
+      margin: 0 0 18px;
+    }
+
+    span {
+      display: inline-block;
+    }
+  }
+
+  &.dark-bg {
+    background: #d5d7de;
+    padding: 69px 0 91px;
+
+    @include media("<desktop") {
+      padding: 44px 0 54px;
+    }
+
+    @include media("<tablet") {
+      padding: 29px 0 78px;
+    }
+
+    h2 {
+      margin: 0 0 41px;
+
+      @include media("<desktop") {
+        margin: 0 0 27px;
+      }
+
+      @include media("<tablet") {
+        margin: 0 0 22px;
+      }
+    }
+  }
+}
+
+.list-products {
+  background: $grey2;
+  padding: 23px 0 56px;
+
+  @include media("<desktop") {
+    padding: 38px 0px 69px;
+  }
+
+  @include media("<tablet") {
+    padding: 9px 0 40px;
+  }
+
+  .product-items {
+    .item {
+      min-height: 329px;
+    }
+
+    .b-pic {
+      margin-bottom: 3px;
+    }
+
+    h3 {
+      margin: 0 0 18px;
+    }
+  }
+}
+
+

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Souriau feeds importer feature.
+ */
+
+include_once 'souriau_feeds_importer.features.inc';

@@ -1,0 +1,15 @@
+diff --git a/domain_locale.module b/domain_locale.module
+index 65244e2..ca4d300 100644
+--- a/domain_locale.module
++++ b/domain_locale.module
+@@ -376,6 +376,10 @@ function domain_locale_language_load($langcode) {
+     WHERE enabled = 1 AND language = :lang
+ SQL;
+ 
++  if (is_object($langcode)) {
++    $langcode = $langcode->language;
++  }
++
+   $lang = db_query($sql, array(':lang' => $langcode))
+     ->fetchObject();
+   return $lang;

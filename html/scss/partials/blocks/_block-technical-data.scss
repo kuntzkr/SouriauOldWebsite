@@ -1,0 +1,102 @@
+.b-technical-data {
+  padding: 51px 0 34px;
+
+  @include media("<desktop") {
+    padding: 53px 0 42px;
+  }
+
+  @include media("<tablet") {
+    margin: 0 15px;
+    padding: 33px 0 38px;
+  }
+
+  h2 {
+    margin: 0 0 19px;
+
+    @include media("<tablet") {
+      margin: 0 0 25px;
+    }
+  }
+
+  .b-data {
+    padding: 0 0 20px;
+  }
+
+  .b-row-title {
+    color: #4a5763;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 18px;
+    border-bottom: 1px solid #f0f1f4;
+    text-transform: uppercase;
+
+    @include media("<tablet") {
+      display: none;
+    }
+
+    @extend .clearfix;
+
+    .col {
+      padding: 10px 18px 7px;
+
+      @include media("<desktop") {
+        padding: 10px 28px 7px;
+      }
+    }
+  }
+
+  .b-row {
+    display: block;
+    overflow: hidden;
+    color: $grey;
+    font-size: 14px;
+    line-height: 24px;
+
+    @extend .clearfix;
+
+    @include media("<tablet") {
+      padding: 0 0 9px;
+    }
+
+    &:nth-child(odd) {
+      background: $grey2;
+
+      @include media("<tablet") {
+        background: none;
+      }
+    }
+  }
+
+  .col {
+    overflow: hidden;
+    padding: 18px;
+
+    @include media("<desktop") {
+      padding: 18px 28px;
+    }
+
+    @include media("<tablet") {
+      padding: 4px 0 0;
+      display: block;
+      overflow: visible;
+    }
+
+    &:first-child {
+      width: 45%;
+      float: left;
+
+      @include media("<desktop") {
+        width: 58%;
+      }
+
+      @include media("<tablet") {
+        float: none;
+        width: auto;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 1px;
+        line-height: 18px;
+      }
+    }
+  }
+}
